@@ -1,0 +1,197 @@
+
+
+@startuml SystemArchitecture V1.0
+skinparam packageStyle rect
+skinparam componentStyle rectangle
+
+package "AuswertungsSystem" {
+
+
+}
+
+package "Server (Mac Mini)" {
+    [DC Kamera B] <--> [DC Web Server]
+    [DC Kamera A] <--> [DC Web Server]
+    [DC Web Server] <..> [AuswertungsSystem]:REST api
+}
+
+package "Kamera A" {
+    [Kamera A] <--> [DC Kamera A]: COM A
+}
+
+package "Kamera B" {
+    [Kamera B] <--> [DC Kamera B]: COM B
+}
+
+package "µC" {
+  [µC] <--> [DC Web Server]: COM X 
+}
+
+package "PositionierungsEinheit A-D" {
+  [PositionierungsEinheit A-D] <-- [µC]: Dataline 
+}
+
+legend
+    |=  |= Description |
+    | DC| Docker Container |
+    | COM X | USB connection on port X |
+    | Dataline | 5 cables each unit |
+endlegend
+
+@enduml 
+
+
+
+@startuml SystemArchitecture V2.0 | Bluetooth
+skinparam packageStyle rect
+skinparam componentStyle rectangle
+
+package "Main System" {
+    [Unity]
+}
+
+package "Server (Mac Mini)" {
+    [DC Kamera B] <--> [DC Web Server]
+    [DC Kamera A] <--> [DC Web Server]
+    [DC Web Server] <..> [Main System]:REST api | ethernet
+    [DC Bluetooth] <--> [DC Web Server]
+}
+
+package "Kamera A" {
+    [Kamera A] <--> [DC Kamera A]: COM A
+}
+
+package "Kamera B" {
+    [Kamera B] <--> [DC Kamera B]: COM B
+}
+
+package "PositionUnit A-D" {
+  [DC Bluetooth] <..> [PositionUnit A-D]: wireless
+}
+
+legend
+    |=  |= Description |
+    | DC| Docker Container |
+    | COM X | USB connection on port X |
+    | DC BLuetooth | process with bluetooth functionalitis |
+endlegend
+
+@enduml 
+
+@startuml SystemArchitecture complete V2.0 | Bluetooth
+skinparam packageStyle rect
+skinparam componentStyle rectangle
+
+package "Main System" {
+}
+
+package "Server (Mac Mini)" {
+    [DC Kamera B] <--> [DC Web Server]
+    [DC Kamera A] <--> [DC Web Server]
+    [DC Web Server] <..> [Main System]:REST api | ethernet
+    [DC Bluetooth] <--> [DC Web Server]
+}
+
+package "Server (Mac Mini2)" {
+    [DC Kamera D] <--> [DC Web Server 2]
+    [DC Kamera E] <--> [DC Web Server 2]
+    [DC Web Server 2] <..> [Main System]:REST api | ethernet
+    [DC Bluetooth 2] <--> [DC Web Server 2]
+}
+
+package "Server (LattePanda A)" {
+    [DC Kamera F] <--> [DC Web Server 3]
+    [DC Kamera G] <--> [DC Web Server 3]
+    [DC Web Server 3] <..> [Main System]:REST api | ethernet
+    [DC Bluetooth 3] <--> [DC Web Server 3]
+}
+
+package "Server (LattePanda B)" {
+    [DC Kamera H] <--> [DC Web Server 4]
+    [DC Kamera K] <--> [DC Web Server 4]
+    [DC Web Server 4] <..> [Main System]:REST api | ethernet
+    [DC Bluetooth 4] <--> [DC Web Server 4]
+}
+
+package "Kamera A" {
+    [Kamera A] <--> [DC Kamera A]: COM A
+}
+
+package "Kamera B" {
+    [Kamera B] <--> [DC Kamera B]: COM B
+}
+
+package "Kamera D" {
+    [Kamera D] <--> [DC Kamera D]: COM A
+}
+
+package "Kamera E" {
+    [Kamera E] <--> [DC Kamera E]: COM B
+}
+
+package "Kamera F" {
+    [Kamera F] <--> [DC Kamera F]: COM A
+}
+
+package "Kamera G" {
+    [Kamera G] <--> [DC Kamera G]: COM B
+}
+
+package "Kamera H" {
+    [Kamera H] <--> [DC Kamera H]: COM A
+}
+
+package "Kamera K" {
+    [Kamera K] <--> [DC Kamera K]: COM B
+}
+
+package "PositionUnit A-D" {
+  [DC Bluetooth] <..> [PositionUnit A-D]: wireless
+}
+
+package "PositionUnit E-H" {
+  [DC Bluetooth 2] <..> [PositionUnit E-H]: wireless
+}
+
+package "PositionUnit I-K" {
+  [DC Bluetooth 3] <..> [PositionUnit I-K]: wireless
+}
+
+package "PositionUnit L-O" {
+  [DC Bluetooth 4] <..> [PositionUnit L-O]: wireless
+}
+
+legend
+    |=  |= Description |
+    | DC| Docker Container |
+    | COM X | USB connection on port X |
+    | DC BLuetooth | process with bluetooth functionalitis |
+    | Main System | "classic" desktop with unity & with power for generate a model out of collected Pictures |
+endlegend
+
+@enduml 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@startuml
+
+class "Benis" as b {
+    +name: string
+    +age: int
+}
+
+@enduml
