@@ -10,7 +10,7 @@ Browser -> Browser:
 Browser -> CameraA: create
 Browser -> Bluetooth: request COM N/Port for Camera A (config)
 Bluetooth -> PosA: request status
-PosA -> Bluetooth: sends status
+PosA --> Bluetooth: sends status
 Bluetooth -> Browser: sends intern port
 Browser -> Browser: save in .json /config/camera/A
 CameraA -> Browser: picture
@@ -35,7 +35,7 @@ Browser -> Browser: get N files from /config
 Browser -> Bluetooth: set init Z for PositionUnits
 Bluetooth -> PosA: set init Z for A 
 
-loop timebased 
+loop each second for defined time
 
     loop Physical Movement
         PosA -> PosA: Execute Movement Step
