@@ -35,7 +35,7 @@ legend
     |=  |= Description |
     | DC| Docker Container |
     | COM X | USB connection on port X |
-    | Dataline | 5 cables each unit |
+    | Dataline | 5 cables each unit 4 for Motor Z 1 for Y |
 endlegend
 
 @enduml 

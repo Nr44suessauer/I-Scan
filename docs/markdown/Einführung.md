@@ -12,4 +12,3 @@
 
     ### Struktur
     Die Arbeit ist in sieben Hauptkapitel unterteilt, die systematisch die Entwicklung des I_Scan Projekts darstellen. Nach der **Einführung** werden im **State of the Art** bestehende 3D-Scanner und relevante Konzepte analysiert. Das Kapitel **Konzept & Planung** beschreibt die System- und Softwarearchitektur sowie die Hardwarewahl. In der **Implementierung** werden der Hardwareaufbau und die Softwareentwicklung detailliert erläutert. Anschließend behandelt die **Benutzerfreundlichkeit** die Interaktion über die REST API und die Nutzung des Scanners. Abschließend fasst die **Zusammenfassung** die Ergebnisse zusammen und gibt einen Ausblick auf zukünftige Entwicklungen. Das **Quellenverzeichnis** rundet die Arbeit ab.
-

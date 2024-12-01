@@ -1,0 +1,59 @@
+@startuml Config Mashine process with bluetooth functionalitis | good case
+collections "Extern System" as Extern
+participant "DC Webserver"  as Browser
+participant "DC Camera A"   as CameraA
+participant "PositionUnit A" as PosA
+participant "DC Bluetooth"  as Bluetooth
+
+Extern -> Browser: POST .json to /config/camera 
+Browser -> Browser: 
+Browser -> CameraA: create
+Browser -> Bluetooth: request COM N/Port for Camera A (config)
+Bluetooth -> PosA: request status
+PosA -> Bluetooth: sends status
+Bluetooth -> Browser: sends intern port
+Browser -> Browser: save in .json /config/camera/A
+CameraA -> Browser: picture
+Browser -> Browser: save in /test/picture/camera/A
+
+Browser -> Browser: save data/status from config in /status/camera/A
+
+Extern -> Browser: GET .json to /status/camera/A/result
+Browser -> Extern: send data | result  &  test/picture/camera/A
+
+@enduml
+
+@startuml Reset Mashine Z process with bluetooth functionalitis | good case
+collections "Extern System" as Extern
+participant "DC Webserver"  as Browser
+participant "DC Camera A"   as CameraA
+participant "PositionUnit A" as PosA
+participant "DC Bluetooth"  as Bluetooth
+
+Extern -> Browser: POST /reset/Z
+Browser -> Browser: get N files from /config
+Browser -> Bluetooth: set init Z for PositionUnits
+Bluetooth -> PosA: set init Z for A 
+
+loop timebased 
+
+    loop Physical Movement
+        PosA -> PosA: Execute Movement Step
+        PosA -> PosA: measurement of Z
+    end
+
+        PosA -> Bluetooth: sends Z value
+end
+
+Bluetooth -> Bluetooth: collecting data from PositionUnit A-C (/config)
+
+alt compare Init Z == Z Data 
+    Bluetooth -> Browser: Debug message each /config  | status Blutooth | Z Value | Z init Value | PositionUnit A 
+else
+    Bluetooth -> Browser: Z Value | for all PositionUnits
+end
+
+Extern -> Browser: GET .json to /status/positionUnit
+Browser -> Extern: send data | Z Value | for all PositionUnits
+
+@enduml
