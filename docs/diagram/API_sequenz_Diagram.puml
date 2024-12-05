@@ -57,3 +57,35 @@ Extern -> Browser: GET .json to /status/positionUnit
 Browser -> Extern: send data | Z Value | for all PositionUnits
 
 @enduml
+
+@startuml "Home/Default Mode" | Mod before the Start , after this scan can be started
+collections "Extern System" as Extern
+participant "DC Webserver"  as Browser
+participant "DC Camera A"   as CameraA
+participant "PositionUnit A" as PosA
+participant "DC Bluetooth"  as Bluetooth
+
+Extern -> Browser: POST /home
+Browser --> Browser: get File from /config  \nNo. of PosUnits & which | \nNo. of Cameras & which | 
+
+Browser -> CameraA: take picture
+CameraA -> Browser: send picture to /test/picture/camera/A
+Browser --> Browser: checks if picture is ok / valid
+Browser -> Bluetooth: request status for PosUnitA
+Bluetooth -> PosA: request status & Z Value
+PosA --> Bluetooth: sends status & Z Value
+
+Bluetooth --> Browser: sends status & Z Value
+Browser --> Browser: check for valid hight
+
+alt valid hight of PosUnit
+    Browser -> Browser: END | now you can load scanflow.json
+else
+    Browser -> Bluetooth: send Z Value to Bluetooth Dc -> PosUnitA 
+    Bluetooth -> PosA: set Z Value
+    PosA --> Bluetooth: sends status & Z Value
+    Bluetooth -> Browser: sends status & Z Value
+end
+
+
+@enduml
