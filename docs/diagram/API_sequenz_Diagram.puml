@@ -87,5 +87,7 @@ else
     Bluetooth -> Browser: sends status & Z Value
 end
 
+Extern -> Browser: GET .json to /status/summary
+Browser --> Extern: send data | status of Camera A \n& PosUnitA + ohther Cameras etc
 
 @enduml
