@@ -7,8 +7,8 @@
     - **Structured Light Scanning**: Projektion von Mustern auf das Objekt zur Erfassung der Geometrie.
     - **Photogrammetrie**: Erstellung von 3D-Modellen aus 2D-Bildern.
     - **Triangulation**: Bestimmung von Punktpositionen durch Messung von Winkeln und Entfernungen.
-    - **Spektralanalyse**: Verwendung von spektralanalytischen Techniken zur Erfassung und Analyse von Lichtwellenlängen, um detaillierte Materialinformationen und präzise Oberflächenstrukturen des Objekts zu bestimmen.
-
+    - **Spektralanalyse**: Verwendung von spektralanalytischen Techniken zur Erfassung und Analyse von Lichtwellenlängen, um detaillierte Materialinformationen und präzise Oberflächenstrukturen des Objekts zu bestimmen. 
+    
     Ein Schwerpunkt ist die Replizierbarkeit mit gängigen, leicht verfügbaren Komponenten. Zudem wird eine flexible und modulare Softwarearchitektur entwickelt, die nicht nur die Integration verschiedener Kameras und Sensoren ermöglicht, sondern auch eine einfache Wartung und Erweiterbarkeit des Systems sicherstellt.
 
     ### Struktur
