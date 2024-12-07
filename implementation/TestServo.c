@@ -5,11 +5,11 @@
 
 // Definitionen für den Servo
 #define SERVO_GPIO_PIN    0        // GPIO-Pin, an den der Servo angeschlossen ist
-#define SERVO_MIN_PULSE   1000      // Minimale Pulsbreite in Mikrosekunden (0°)
-#define SERVO_MAX_PULSE   2000      // Maximale Pulsbreite in Mikrosekunden (180°)
-#define SERVO_NEUTRAL     1500      // Neutralposition des Servos
-#define SERVO_MAX_DEGREE  180       // Maximale Bewegung in Grad
-#define PWM_FREQUENCY     50        // PWM-Frequenz in Hz
+#define SERVO_MIN_PULSE   500     // Minimale Pulsbreite in Mikrosekunden (0°)
+#define SERVO_MAX_PULSE   2500     // Maximale Pulsbreite in Mikrosekunden (180°)
+#define SERVO_NEUTRAL     1500     // Neutralposition des Servos
+#define SERVO_MAX_DEGREE  180      // Maximale Bewegung in Grad
+#define PWM_FREQUENCY     50       // PWM-Frequenz in Hz
 
 // LEDC-Timer- und Kanaldefinitionen
 #define LEDC_TIMER        LEDC_TIMER_0
@@ -19,7 +19,7 @@
 // Berechnung der Duty-Cycle für eine gegebene Pulsbreite
 uint32_t calculate_duty_us(uint32_t pulse_width_us, uint32_t timer_resolution_bits) {
     // Umwandlung von Mikrosekunden in Duty-Cycle-Bits
-    uint32_t duty = (1 << timer_resolution_bits) * pulse_width_us / 20000; // 20000 µs = 20 ms (50 Hz)
+    uint32_t duty = ((uint64_t)(1 << timer_resolution_bits) * pulse_width_us) / 20000; // 20000 µs = 20 ms (50 Hz)
     return duty;
 }
 
@@ -55,7 +55,7 @@ void set_servo_angle(int angle) {
 
     // Berechnung der Pulsbreite
     uint32_t pulse_width = SERVO_MIN_PULSE +
-                           (SERVO_MAX_PULSE - SERVO_MIN_PULSE) * angle / SERVO_MAX_DEGREE;
+                           ((SERVO_MAX_PULSE - SERVO_MIN_PULSE) * angle) / SERVO_MAX_DEGREE;
 
     // Berechnung des Duty-Cycles
     uint32_t duty = calculate_duty_us(pulse_width, 15);
@@ -68,8 +68,12 @@ void set_servo_angle(int angle) {
 void app_main() {
     // Initialisiere den Servo
     init_servo();
+    set_servo_angle(90); // Neutralposition
+
+    vTaskDelay(pdMS_TO_TICKS(10000)); // 10 Sekunden warten
 
     while (1) {
+
         // Servo langsam von 0° auf 180° bewegen
         for (int angle = 0; angle <= 180; angle += 10) {
             set_servo_angle(angle);
