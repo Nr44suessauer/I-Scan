@@ -40,6 +40,7 @@ void test_function()
     }
 }
 
+
 void app_main(void)
 {
 
@@ -50,6 +51,7 @@ void app_main(void)
     while (1) 
     {
         test_function(); 
+        
     }
 }
 
