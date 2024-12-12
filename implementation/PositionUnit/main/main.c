@@ -18,9 +18,17 @@
 uint16_t counter;               // testcounter for things
 
 
+void init_sys()         // @brief Initializes separate functions for the software, including: I²C,Uart etc.
+{
+    init_GPIO();        // config of I/O Pins
+    init_motor_pins();  // config for motorpins^^
+    init_servo();       // sets config for Servo & 90° position
+    configure_led();    // Configure Buildin LED
+}
+
 void test_function()
 {
-    poll_pins(); // polls GPIO Pins (Inputs)
+    poll_GIPO(); // polls GPIO Pins (Inputs)
 
     counter = 0;    // Servo-Counter
 
@@ -36,7 +44,9 @@ void test_function()
         move_motor(1000, 1);
 
         set_servo_angle(counter);
+
         counter += 10;
+
         if (counter > 180)  
         {
             counter = 0;
@@ -47,16 +57,11 @@ void test_function()
 
 void app_main(void)
 {
-
-    init_GPIO();        // config of I/O Pins
-    init_motor_pins();  // config for motorpins^^
-    init_servo();       // sets config for Servo & 90° position
-    configure_led();    // Configure Buildin LED
+    init_sys();
 
     while (1) 
     {
         test_function(); 
-        
     }
 }
 

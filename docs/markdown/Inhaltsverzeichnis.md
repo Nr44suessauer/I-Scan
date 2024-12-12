@@ -20,6 +20,8 @@
 3. [Konzept_&_Planung](#Konzept & Planung)
     3.1 [Systemarchitektur](#Systemarchitektur)
     3.2 [Hardwarewahl](#Hardwarewahl)
+        3.2.1 [MacMini] (#Mac Mini) 
+        3.2.2 [Esp32c6](#Esp32c6)
     3.3 [Softwarearchitektur](#Softwarearchitektur)
     3.4 [Rest_Api](#Rest Api dokumentation)
 4. [Implementierung](#Implementierung)

@@ -22,6 +22,6 @@ void init_GPIO();
  * This file contains the declarations and definitions necessary for polling
  * the input pins to determine their current state.
  */
-void poll_pins();
+void poll_GIPO();
 
 #endif
