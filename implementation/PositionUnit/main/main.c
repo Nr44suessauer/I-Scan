@@ -20,7 +20,7 @@ uint16_t counter;               // testcounter for things
 
 void test_function()
 {
-    poll(); // polls GPIO Pins (Inputs)
+    poll_pins(); // polls GPIO Pins (Inputs)
 
     counter = 0;    // Servo-Counter
 

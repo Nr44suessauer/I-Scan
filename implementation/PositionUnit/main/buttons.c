@@ -8,7 +8,7 @@
      *
      * @param BUTTON_PIN The GPIO pin number connected to the button.
      */
-    
+
 void init_GPIO()
 {
     gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
@@ -26,7 +26,7 @@ void init_GPIO()
  * @param BUTTON_PIN The GPIO pin number connected to the button.
  */
 
-void poll()
+void poll_pins()
 {
     int button_state = gpio_get_level(BUTTON_PIN);
     if (button_state == 0) // Button pressed
