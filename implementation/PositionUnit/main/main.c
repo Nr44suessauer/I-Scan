@@ -13,11 +13,15 @@
 
 #include "include/motor.h"
 #include "include/servo.h"
+#include "include/buttons.h"
 
-uint16_t counter;
+uint16_t counter;               // testcounter for things
+
 
 void test_function()
 {
+    poll(); // polls GPIO Pins (Inputs)
+
     counter = 0;    // Servo-Counter
 
     for (size_t i = 0; i < 18; i++)
@@ -44,6 +48,7 @@ void test_function()
 void app_main(void)
 {
 
+    init_GPIO();        // config of I/O Pins
     init_motor_pins();  // config for motorpins^^
     init_servo();       // sets config for Servo & 90° position
     configure_led();    // Configure Buildin LED
