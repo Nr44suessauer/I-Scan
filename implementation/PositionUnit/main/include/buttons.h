@@ -6,7 +6,7 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 
-#define BUTTON_PIN 17
+#define BUTTON_PIN 18
 
 
 /**

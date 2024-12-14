@@ -32,26 +32,26 @@ void test_function()
 
     counter = 0;    // Servo-Counter
 
-    for (size_t i = 0; i < 18; i++)
-    {
-        led_strip_set_color(COLOR_PURPLE);
-        vTaskDelay(300 / portTICK_PERIOD_MS);
-        led_strip_set_color(COLOR_GREEN);
-        vTaskDelay(300 / portTICK_PERIOD_MS);
-        led_strip_set_color(COLOR_BLUE);
-        vTaskDelay(300 / portTICK_PERIOD_MS);
+    // for (size_t i = 0; i < 18; i++)
+    // {
+    //     led_strip_set_color(COLOR_PURPLE);
+    //     vTaskDelay(300 / portTICK_PERIOD_MS);
+    //     led_strip_set_color(COLOR_GREEN);
+    //     vTaskDelay(300 / portTICK_PERIOD_MS);
+    //     led_strip_set_color(COLOR_BLUE);
+    //     vTaskDelay(300 / portTICK_PERIOD_MS);
 
-        move_motor(1000, 1);
+    //     move_motor(1000, 1);
 
-        set_servo_angle(counter);
+    //     set_servo_angle(counter);
 
-        counter += 10;
+    //     counter += 10;
 
-        if (counter > 180)  
-        {
-            counter = 0;
-        }
-    }
+    //     if (counter > 180)  
+    //     {
+    //         counter = 0;
+    //     }
+    // }
 }
 
 

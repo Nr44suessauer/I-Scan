@@ -31,10 +31,11 @@ void poll_GIPO()
     int button_state = gpio_get_level(BUTTON_PIN);
     if (button_state == 0) // Button pressed
     {
-        printf("Button pressed!\n");
+        printf("Button NOT pressed!\n");
     }
     else
     {
-        printf("Button NOT pressed!\n");
+        printf("Button pressed!\n");
     }
+    vTaskDelay(pdMS_TO_TICKS(200));
 }
