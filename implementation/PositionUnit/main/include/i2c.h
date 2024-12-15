@@ -17,6 +17,7 @@
 
 #define I2C_SLAVE_ADDR              0x10 /*!< I2C slave address */
 
+
 esp_err_t i2c_master_init(void);
 
 esp_err_t i2c_master_write_slave(uint8_t* data, size_t data_len);
@@ -25,9 +26,12 @@ esp_err_t i2c_master_check_slave(void);
 
 esp_err_t i2c_master_read_slave(uint8_t* data, size_t data_len);
 
-// esp_err_t read_register_and_output_uart();
+uint16_t distance_read();
 
 void i2c_scanner(void);
+
+esp_err_t i2c_master_read_register(uint8_t reg_addr, uint8_t* data, size_t data_len);
+
 
 
 #endif // I2C_H

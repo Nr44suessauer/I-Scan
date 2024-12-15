@@ -62,17 +62,23 @@ void test_function()
 
 void app_main(void)
 {
+
+
     init_sys();
 
     while (1) 
     {
-        i2c_master_check_slave(); // Check if I²C is connected
+        //i2c_master_check_slave(); // Check if I²C is connected
         //test_function(); 
         //i2c_scanner();
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    //   read_register_and_output_uart(0x00, 1);
+
+       
+        printf("Value: %d\n",  distance_read());
+
+    
     
     }
 }

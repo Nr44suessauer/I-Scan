@@ -58,6 +58,16 @@ esp_err_t i2c_master_check_slave(void)
     return ret;
 }
 
+esp_err_t i2c_master_read_register(uint8_t reg_addr, uint8_t* data, size_t data_len)
+{
+    esp_err_t ret;
+    ret = i2c_master_write_slave(&reg_addr, 1);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    return i2c_master_read_slave(data, data_len);
+}
+
 void i2c_scanner(void)
 {
     printf("Scanning I2C bus...\n");
@@ -76,7 +86,22 @@ void i2c_scanner(void)
     printf("I2C scan completed.\n");
 }
 
-// esp_err_t read_register_and_output_uart()
-// {
-    
-// }
+uint16_t distance_read()
+{      
+    uint16_t HighByte;
+    uint16_t LowByte;
+
+    uint16_t *HighByteValue = &HighByte;
+    uint16_t *LowByteValue = &LowByte;  
+
+    i2c_master_read_register(0x00, &LowByte, 1);
+    printf("Value LOW: %d\n", *LowByteValue);
+
+    i2c_master_read_register(0x01, &HighByte, 1);
+    printf("Value HIGH: %d\n", *HighByteValue);
+
+    uint16_t ret = (*HighByteValue << 8) | *LowByteValue;
+    // printf("Value: %d\n", myVariable);
+    return ret;
+        
+}
