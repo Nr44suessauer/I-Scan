@@ -28,14 +28,13 @@ void init_sys()         // @brief Initializes separate functions for the softwar
     
     i2c_master_init();  // Initialize I²C
     i2c_master_check_slave(); // Check if I²C is connected
-    i2c_scanner();      // Scan for I²C devices
 
 }
 
 void test_function()
 {
     poll_GIPO(); // polls GPIO Pins (Inputs)
-    i2c_scanner(); // Scans for I²C devices
+    //i2c_scanner(); // Scans for I²C devices
        counter = 0;    // Servo-Counter
 
     // for (size_t i = 0; i < 18; i++)
@@ -67,8 +66,14 @@ void app_main(void)
 
     while (1) 
     {
+        i2c_master_check_slave(); // Check if I²C is connected
         //test_function(); 
-        i2c_scanner();
+        //i2c_scanner();
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    //   read_register_and_output_uart(0x00, 1);
+    
     }
 }
 

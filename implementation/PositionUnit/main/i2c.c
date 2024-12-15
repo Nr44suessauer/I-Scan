@@ -28,6 +28,18 @@ esp_err_t i2c_master_write_slave(uint8_t* data, size_t data_len)
     i2c_cmd_link_delete(cmd);
     return ret;
 }
+esp_err_t i2c_master_read_slave(uint8_t* data, size_t data_len)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (I2C_SLAVE_ADDR << 1) | I2C_MASTER_READ, true);
+    i2c_master_read(cmd, data, data_len, I2C_MASTER_LAST_NACK);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
 esp_err_t i2c_master_check_slave(void)
 {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -64,33 +76,7 @@ void i2c_scanner(void)
     printf("I2C scan completed.\n");
 }
 
-esp_err_t i2c_master_write_to_address(uint8_t slave_addr, uint8_t message)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (slave_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, message, true);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
+// esp_err_t read_register_and_output_uart()
+// {
     
-    printf(ret);
-
-    return ret;
-}
-
-
-esp_err_t i2c_master_read_from_address(uint8_t slave_addr, uint8_t* data, size_t data_len)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (slave_addr << 1) | I2C_MASTER_READ, true);
-    if (data_len > 1) {
-        i2c_master_read(cmd, data, data_len - 1, I2C_MASTER_ACK);
-    }
-    i2c_master_read_byte(cmd, data + data_len - 1, I2C_MASTER_NACK);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
+// }

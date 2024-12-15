@@ -16,6 +16,7 @@
     "idf.toolsPathWin": "C:\\Users\\marcn\\.espressif",
     "idf.flashType": "UART",
     "files.associations": {
-        "cstdint": "c"
+        "cstdint": "c",
+        "iterator": "c"
     }
 }
