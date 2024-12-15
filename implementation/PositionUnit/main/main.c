@@ -14,6 +14,7 @@
 #include "include/motor.h"
 #include "include/servo.h"
 #include "include/buttons.h"
+#include "include/i2c.h"
 
 uint16_t counter;               // testcounter for things
 
@@ -24,13 +25,18 @@ void init_sys()         // @brief Initializes separate functions for the softwar
     init_motor_pins();  // config for motorpins^^
     init_servo();       // sets config for Servo & 90° position
     configure_led();    // Configure Buildin LED
+    
+    i2c_master_init();  // Initialize I²C
+    i2c_master_check_slave(); // Check if I²C is connected
+    i2c_scanner();      // Scan for I²C devices
+
 }
 
 void test_function()
 {
     poll_GIPO(); // polls GPIO Pins (Inputs)
-
-    counter = 0;    // Servo-Counter
+    i2c_scanner(); // Scans for I²C devices
+       counter = 0;    // Servo-Counter
 
     // for (size_t i = 0; i < 18; i++)
     // {
@@ -61,7 +67,8 @@ void app_main(void)
 
     while (1) 
     {
-        test_function(); 
+        //test_function(); 
+        i2c_scanner();
     }
 }
 
