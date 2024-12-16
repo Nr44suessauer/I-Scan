@@ -99,9 +99,7 @@ void i2c_scanner(void)
  * 1. Declares two 8-bit variables, HighByte and LowByte, to store the high and low bytes read from the I2C device.
  * 2. Declares two pointers, HighByteValue and LowByteValue, to point to the addresses of HighByte and LowByte respectively.
  * 3. Reads the high byte from register 0x01 using the i2c_master_read_register function and stores it in HighByte.
- * 4. Prints the value of HighByte for debugging purposes.
  * 5. Reads the low byte from register 0x00 using the i2c_master_read_register function and stores it in LowByte.
- * 6. Prints the value of LowByte for debugging purposes.
  * 7. Combines the high and low bytes to form a 16-bit value by shifting HighByte 8 bits to the left and performing a bitwise OR with LowByte.
  * 8. Returns the combined 16-bit distance value.
  */
@@ -110,8 +108,8 @@ uint16_t distance_read()
     uint8_t HighByte;
     uint8_t LowByte;
 
-    uint16_t *HighByteValue = &HighByte;
-    uint16_t *LowByteValue = &LowByte;  
+    // uint16_t *HighByteValue = &HighByte;
+    // uint16_t *LowByteValue = &LowByte;  
 
     i2c_master_read_register(0x01, &HighByte, 1);
     printf("Value HIGH: %d\n", HighByte);
