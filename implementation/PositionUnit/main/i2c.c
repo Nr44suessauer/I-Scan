@@ -86,21 +86,40 @@ void i2c_scanner(void)
     printf("I2C scan completed.\n");
 }
 
+/**
+ * @brief Reads the distance value from an I2C device.
+ *
+ * This function reads two bytes from an I2C device to calculate the distance.
+ * It reads the high byte from register 0x01 and the low byte from register 0x00.
+ * The two bytes are then combined to form a 16-bit distance value.
+ *
+ * @return uint16_t The 16-bit distance value read from the I2C device.
+ *
+ * The function performs the following steps:
+ * 1. Declares two 8-bit variables, HighByte and LowByte, to store the high and low bytes read from the I2C device.
+ * 2. Declares two pointers, HighByteValue and LowByteValue, to point to the addresses of HighByte and LowByte respectively.
+ * 3. Reads the high byte from register 0x01 using the i2c_master_read_register function and stores it in HighByte.
+ * 4. Prints the value of HighByte for debugging purposes.
+ * 5. Reads the low byte from register 0x00 using the i2c_master_read_register function and stores it in LowByte.
+ * 6. Prints the value of LowByte for debugging purposes.
+ * 7. Combines the high and low bytes to form a 16-bit value by shifting HighByte 8 bits to the left and performing a bitwise OR with LowByte.
+ * 8. Returns the combined 16-bit distance value.
+ */
 uint16_t distance_read()
 {      
-    uint16_t HighByte;
-    uint16_t LowByte;
+    uint8_t HighByte;
+    uint8_t LowByte;
 
     uint16_t *HighByteValue = &HighByte;
     uint16_t *LowByteValue = &LowByte;  
 
-    i2c_master_read_register(0x00, &LowByte, 1);
-    printf("Value LOW: %d\n", *LowByteValue);
-
     i2c_master_read_register(0x01, &HighByte, 1);
-    printf("Value HIGH: %d\n", *HighByteValue);
+    printf("Value HIGH: %d\n", HighByte);
 
-    uint16_t ret = (*HighByteValue << 8) | *LowByteValue;
+    i2c_master_read_register(0x00, &LowByte, 1);
+    printf("Value LOW: %d\n",LowByte);
+
+    uint16_t ret = (HighByte << 8) | LowByte;
     // printf("Value: %d\n", myVariable);
     return ret;
         
