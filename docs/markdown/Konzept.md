@@ -66,3 +66,43 @@ Diese Module werden ihre "Tasks" wireless erhalten. Die Erstellung dieser Tasks 
 
 Die Kameras werden über USB-Verbindungen am Hauptsystem angebracht, welches die zentrale Steuerungseinheit darstellt. Von diesem Hauptsystem aus erfolgt auch die Steuerung der Module. Dies ermöglicht eine koordinierte und effiziente Verwaltung des gesamten Kamera-Setups.
 
+### Subsysteme und Verwaltung
+
+Die Durchführung der einzelnen Prozesse, sowohl für die Kameras als auch für die Module, kann von Subsystemen übernommen werden. Diese Subsysteme sind als Docker-Container konzipiert, die die Bilder auf einer gemeinsamen Partition speichern.
+
+Über einen Webserver soll konfiguriert werden können, wie die Prozesse ablaufen und welche Hardware verwendet wird. Der Webserver ermöglicht auch den Zugriff auf die gespeicherten Daten. Diese Verwaltungslösung erlaubt es, Kameras mit unterschiedlichen Anforderungen zu integrieren. Langfristig soll das System auch für andere Messwerkzeuge nutzbar sein.
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systemarchitektur</title>
+    <style>
+        .container {
+            display: flex;
+            align-items: center;
+        }
+        .text {
+            flex: 1;
+            padding-right: 10px;
+        }
+        .image {
+            flex: 1;
+            padding-left: 10px;
+        }
+        img {
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text">
+            <p>Über einen Webserver soll konfiguriert werden können, wie die Prozesse ablaufen und welche Hardware verwendet wird. Der Webserver ermöglicht auch den Zugriff auf die gespeicherten Daten. Diese Verwaltungslösung erlaubt es, Kameras mit unterschiedlichen Anforderungen zu integrieren. Langfristig soll das System auch für andere Messwerkzeuge nutzbar sein.</p>
+        </div>
+        <div class="image">
+            <img src="https://github.com/Nr44suessauer/I-Scan/blob/main/docs/diagram/Architecture_Diagram/SystemArchitecture%20V2.0%20%20Bluetooth.png?raw=true" alt="Aufbau und Teile">
+        </div>
+    </div>
+</body>
+
