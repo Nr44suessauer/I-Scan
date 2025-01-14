@@ -1,5 +1,5 @@
 docs/paper
 # docs/datasheet
-docs/diagram/API_sequence_Diagram
-docs/diagram/Architecture_Diagram
+# docs/diagram/API_sequence_Diagram
+# docs/diagram/Architecture_Diagram
 implementation/PositionUnit/build
