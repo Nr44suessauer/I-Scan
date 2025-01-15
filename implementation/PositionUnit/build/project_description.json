@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "PositionUnit",
-    "project_version":    "ca4fa11-dirty",
+    "project_version":    "bffcf2a-dirty",
     "project_path":       "C:/Users/marcn/Desktop/Projekte/I-Scan/I-Scan/implementation/PositionUnit",
     "idf_path":           "C:/Users/marcn/esp/v5.3.2/esp-idf",
     "build_dir":          "C:/Users/marcn/Desktop/Projekte/I-Scan/I-Scan/implementation/PositionUnit/build",
