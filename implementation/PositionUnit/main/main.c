@@ -16,7 +16,6 @@
 #include "include/buttons.h"
 #include "include/i2c.h"
 
-uint16_t counter;               // testcounter for things
 
 
 void init_sys()         // @brief Initializes separate functions for the software, including: I²C,Uart etc.
@@ -33,53 +32,47 @@ void init_sys()         // @brief Initializes separate functions for the softwar
 
 void test_function()
 {
-    poll_GIPO(); // polls GPIO Pins (Inputs)
-    //i2c_scanner(); // Scans for I²C devices
-       counter = 0;    // Servo-Counter
+    // Poll GPIO Pins (Inputs)
+    poll_GIPO();
 
-    // for (size_t i = 0; i < 18; i++)
-    // {
-    //     led_strip_set_color(COLOR_PURPLE);
-    //     vTaskDelay(300 / portTICK_PERIOD_MS);
-    //     led_strip_set_color(COLOR_GREEN);
-    //     vTaskDelay(300 / portTICK_PERIOD_MS);
-    //     led_strip_set_color(COLOR_BLUE);
-    //     vTaskDelay(300 / portTICK_PERIOD_MS);
+    // Test LED strip colors
+    for (int i = 0; i < 3; i++) 
+    {
+        led_strip_set_color(COLOR_PURPLE);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
+        led_strip_set_color(COLOR_GREEN);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
+        led_strip_set_color(COLOR_BLUE);
+        vTaskDelay(300 / portTICK_PERIOD_MS);
+    }
 
-    //     move_motor(1000, 1);
+    // Test motor movement
+    for (int i = 0; i < 5; i++) 
+    {
+        move_motor(100, 1);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
 
-    //     set_servo_angle(counter);
+    // Test servo angles
+    for (int i = 0; i < 180; i++) 
+    {
+        set_servo_angle(i);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
 
-    //     counter += 10;
+    i2c_scanner();
+    printf("Value: %d\n",  distance_read());
 
-    //     if (counter > 180)  
-    //     {
-    //         counter = 0;
-    //     }
-    // }
 }
 
 
 void app_main(void)
 {
-
-
     init_sys();
 
     while (1) 
     {
-        //i2c_master_check_slave(); // Check if I²C is connected
-        //test_function(); 
-        //i2c_scanner();
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-
-       
-        printf("Value: %d\n",  distance_read());
-
-    
-    
+        test_function(); 
     }
 }
 
