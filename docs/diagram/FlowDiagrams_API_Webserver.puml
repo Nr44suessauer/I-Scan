@@ -5,7 +5,6 @@ partition "Externes System" {
     :Send POST/PUT JSON;
 }
 
-
 partition "I-San Webserver" {
 if (Save input data) then (error)
     stop
@@ -15,7 +14,7 @@ while (Check IP address PositionUnits)
     :check status of device;
 endwhile (no more IP addresses (in data))
 
-while (Check IP address Lightingmoduls)
+while (Check IP address LightingUnits)
     :check status of device;
 endwhile (no more IP addresses (in data))
 
@@ -31,7 +30,6 @@ if (posetive results available?) then (Yes)
 else (error)
     :Show error in config/status;
 end
-
 
 @enduml
 }
