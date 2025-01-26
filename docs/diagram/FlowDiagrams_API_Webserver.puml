@@ -1,7 +1,12 @@
 @startuml device Config
-start
-:Send POST/PUT JSON;
 
+partition "Externes System" {
+    start
+    :Send POST/PUT JSON;
+}
+
+
+partition "I-San Webserver" {
 if (Save input data) then (error)
     stop
 else (success)
@@ -27,7 +32,11 @@ else (error)
     :Show error in config/status;
 end
 
+
 @enduml
+}
+
+
 
 
 @startuml Config lighting
