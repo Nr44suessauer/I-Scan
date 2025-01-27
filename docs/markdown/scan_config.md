@@ -7,6 +7,7 @@
 ```json
 {
     "MeasurementUnitInUse": ["Top", "Mid", "Bot"],
+    "MeasurementUnitSize" : ["15","15","15"],
     "DistanceToObject": "100cm",
     "HeightOfObject": "50cm",
     "NumberOfPictures": 30,
