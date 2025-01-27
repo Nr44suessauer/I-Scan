@@ -1,6 +1,6 @@
 @startuml device Config
 
-partition "Externes System" {
+partition "Extern system" {
     start
     :Send POST/PUT JSON;
 }
@@ -24,11 +24,11 @@ while (Check COM Port)
 
 endwhile (no more com ports (in data))
 if (posetive results available?) then (Yes)
-    :Store results in config/status;
+    :Store results in Device_config/status;
     end
 
 else (error)
-    :Show error in config/status;
+    :Store error in Device_config/status;
 end
 
 @enduml
@@ -37,29 +37,30 @@ end
 
 
 
-@startuml Config lighting
-start
+@startuml Scan config
 
-:Überprüfe Bedingung;
-if (Bedingung erfüllt?) then (Ja)
-    :Aktion A;
-else (Nein)
-    :Aktion B;
+partition "Extern system" {
+    start
+    :Send POST/PUT JSON;
+}
+
+
+partition "I-San Webserver" {
+    if (Save input data) then (error)
+    stop
+else (success)
 endif
 
-:Weiterer Schritt;
-while (Wiederhole Bedingung?)
-    :Aktion in Schleife;
-endwhile (Fertig)
+:calculation resolution;
 
-fork
-    :Parallel 1;
-fork again
-    :Parallel 2;
-end fork
+:calculation picturescope;
 
-stop
+:save config in Scan_Config/Status;
+
+end 
 @enduml
+}
+
 
 
 @startuml Config Scan
