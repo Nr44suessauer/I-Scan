@@ -29,51 +29,72 @@ Substituting the values
 \Delta Z_{\text{max}} = (\text{Z}_{\text{Endstop Unit}} \times \text{Unit Height} + \text{Maximum Height I-Scan}) - (\text{Z}_{\text{Endstop Mid}} \times \text{Unit Height} + \text{Z}_{\text{Endstop Top}} \times \text{Unit Height})
 ```
 
-So the maximum Delta Z for Unit Bot is 180 cm.
+So the maximum Delta Z for Unit Bot is 165 cm.
+>note: This formula is only for three same size units.
 
 ---
 
-### Transition to Integral Representation
 
-To represent the height changes of units using integrals, we start with the equation and replace the discrete measurements with continuous functions:
+### Integral Representation and Height Calculation
 
-1. **Define Continuous Functions:**
-   - \( f_{\text{unit}}(z) \)
-   - \( f_{\text{mid}}(z) \)
-   - \( f_{\text{top}}(z) \)
+#### 1. **Discrete vs. Continuous Representation**
+The discrete representation is based on fixed unit sizes (e.g., 15 cm per unit), while the continuous representation uses integrals to model units of varying sizes.
 
-2. **Integrate Over the Range:**
-   - \(\int_{a}^{b} f_{\text{unit}}(z) \, dz\)
+
+
+#### 2. **Integral Representation**
+The heights of the units are represented using continuous functions:
+
+1. **Definition of Continuous Functions:**
+   - \( f_{\text{bot}}(z) \): Height contribution of the bottom unit.
+   - \( f_{\text{mid}}(z) \): Height contribution of the middle unit.
+   - \( f_{\text{top}}(z) \): Height contribution of the top unit.
+
+2. **Integration Over the Range:**
+   - \(\int_{a}^{b} f_{\text{bot}}(z) \, dz\)
    - \(\int_{a}^{b} f_{\text{mid}}(z) \, dz\)
    - \(\int_{a}^{b} f_{\text{top}}(z) \, dz\)
 
-3. **Calculate the Difference:**
+3. **Calculation of Maximum Height Difference:**
    \[
-   \Delta Z_{\text{max}} = \left( \int_{a}^{b} f_{\text{unit}}(z) \, dz + \text{Maximum Height I-Scan} \right) - \left( \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right)
+   \Delta Z_{\text{max}} = \left( \text{Maximum Height I-Scan} \right) - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right)
    \]
 
-This approach provides a continuous representation of the height changes.
-> Note: This formula is only intended for the case of 3 modules.
-
+This approach provides a continuous representation of the height changes of each unit.
 
 ---
 
-**Calculate resolution | for 30 Pictures over a Distance of 170 cm**
+### 3. **Upper Max / Lower Max Table**
+The table below shows the dependency of the maximum and minimum heights of each unit based on the positions of the other units. The reference is taken from the bottom of the module.
 
-If 30 pictures are taken over a distance of 170 cm, the distance between each picture can be calculated.
-The distance \(\Delta Z_{\text{scan}}\) is the distance we previously sent.
+| Unit | Upper Border (Maximum)                                                                 | Lower Border (Initial Position)                                                   | Condition Upper Border       | Condition Lower Border       |
+|------|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|------------------------------|------------------------------|
+| **Bot** | \( \text{Max } Z_{\text{bot}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{bot}} = \text{Initial Height I-Scan} \)                     | mid & top = max              | -                            |
+| **Mid** | \( \text{Max } Z_{\text{mid}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{mid}} = \text{Initial Height I-Scan} + \int_{a}^{b} f_{\text{bot}}(z) \, dz \) | top = max                    | bot = min                    |
+| **Top** | \( \text{Max } Z_{\text{top}} = \text{Maximum Height I-Scan} - \int_{a}^{b} f_{\text{top}}(z) \, dz \) | \( \text{Min } Z_{\text{top}} = \text{Initial Height I-Scan} + \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz \right) \) | -                            | mid & bot = min              |
 
-```math
-\text{Distance between MeasurementPoints} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Pictures}}
-```
+### **Table Description:**
+- **Upper Border (Maximum):**  
+  The maximum height of each unit is calculated by subtracting the heights of the units above it from the maximum height of the I-Scan device.
+  
+- **Lower Border (Initial Position):**  
+  The minimum height of each unit is calculated by adding the heights of the units below it to the initial height of the I-Scan device.
 
-Substituting the values:
+- **Conditions:**  
+  - **"mid & top = max":** The middle and top units are at their maximum heights.
+  - **"bot = min":** The bottom unit is at its minimum height.
+  - **"top = max":** The top unit is at its maximum height.
+  - **"mid & bot = min":** The middle and bottom units are at their minimum heights.
 
-```math
-\text{Distance between MeasurementPoints} = \frac{170 \text{ cm}}{30} \approx 5.67 \text{ cm}
-```
+---
 
-So, the distance between each picture is approximately 5.67 cm.
+### 4. **Resolution Calculation**
+For 30 pictures taken over a distance of 170 cm, the distance between measurement points is calculated as follows:
 
+\[
+\text{Distance Between Measurement Points} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Pictures}} = \frac{170 \text{ cm}}{30} \approx 5.67 \text{ cm}
+\]
 
+The distance between each picture is approximately **5.67 cm**.
 
+---

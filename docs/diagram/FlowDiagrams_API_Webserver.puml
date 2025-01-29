@@ -44,7 +44,6 @@ partition "Extern system" {
     :Send POST/PUT JSON;
 }
 
-
 partition "I-San Webserver" {
     if (Save input data) then (error)
     stop
