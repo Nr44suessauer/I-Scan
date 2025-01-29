@@ -12,7 +12,7 @@ The parameters for configuring the scan are defined, explained, and put into con
 2. [Maximum Delta Z](#maximum-delta-z)
    - [Integral Representation and Height Calculation](#integral-representation)
    - [Upper Max / Lower Max Table](#upper-max-lower-max)
-3. [Resolution Calculation](#4-resolution-calculation)
+3. [Resolution Calculation](#resolution-calculation)
 
 ---
 
@@ -42,9 +42,7 @@ The units are labeled (Bot = 0, Mid = 1, Top = 2) and is the variable Z Endstop 
 
 Substituting the values:
 
-\[
-\Delta Z_{\text{max}} = (\text{Z}_{\text{Endstop Unit}} \times \text{Unit Height} + \text{Maximum Height I-Scan}) - (\text{Z}_{\text{Endstop Mid}} \times \text{Unit Height} + \text{Z}_{\text{Endstop Top}} \times \text{Unit Height})
-\]
+\[ \Delta Z_{\text{max}} = (\text{Z}_{\text{Endstop Unit}} \times \text{Unit Height} + \text{Maximum Height I-Scan}) - (\text{Z}_{\text{Endstop Mid}} \times \text{Unit Height} + \text{Z}_{\text{Endstop Top}} \times \text{Unit Height}) \]
 
 So the maximum Delta Z for Unit Bot is 165 cm.
 >note: This formula is only for three same size units.
@@ -72,9 +70,7 @@ The heights of the units are represented using continuous functions:
    - \(\int_{a}^{b} f_{\text{top}}(z) \, dz\)
 
 3. **Calculation of Maximum Height Difference:**
-   \[
-   \Delta Z_{\text{max}} = \left( \text{Maximum Height I-Scan} \right) - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right)
-   \]
+   \[ \Delta Z_{\text{max}} = \left( \text{Maximum Height I-Scan} \right) - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \]
 
 This approach provides a continuous representation of the height changes of each unit.
 
@@ -112,10 +108,15 @@ For 30 pictures taken over a distance of 150 cm, the distance between measuremen
 
 Here, &Delta; Z<sub>scan</sub> is the value `MaxDistanceZmove` from the JSON configuration provided earlier.
 
-\[
-\text{Distance Between Measurement Points} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Pictures}} = \frac{150 \text{ cm}}{30} = 5 \text{ cm}
-\]
+\[ \text{Distance Between Measurement Points} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Pictures}} = \frac{150 \text{ cm}}{30} = 5 \text{ cm} \]
 
 The distance between each picture is approximately **5 cm**.
 
+### **Condition for &Delta; Z<sub>scan</sub>**
+
+It is important to ensure that the value of &Delta; Z<sub>scan</sub> (the maximum distance the Z-axis can move during a scan) is less than or equal to &Delta; Z<sub>max</sub> (the maximum allowable height difference).
+
+\[ \Delta Z_{\text{scan}} \leq \Delta Z_{\text{max}} \]
+
 ---
+
