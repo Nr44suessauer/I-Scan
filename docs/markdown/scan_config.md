@@ -42,9 +42,9 @@ The units are labeled (Bot = 0, Mid = 1, Top = 2) and is the variable Z Endstop 
 
 Substituting the values:
 
-\[ \Delta Z_{\text{max}} = (\text{Z}_{\text{Endstop Unit}} \times \text{Unit Height} + \text{Maximum Height I-Scan}) - (\text{Z}_{\text{Endstop Mid}} \times \text{Unit Height} + \text{Z}_{\text{Endstop Top}} \times \text{Unit Height}) \]
+\[ \Delta Z_{\text{maxUnit}} = (\text{Z}_{\text{Endstop Unit}} \times \text{Unit Height} + \text{Maximum Height I-Scan}) - (\text{Z}_{\text{Endstop Mid}} \times \text{Unit Height} + \text{Z}_{\text{Endstop Top}} \times \text{Unit Height}) \]
 
-So the maximum Delta Z for Unit Bot is 165 cm.
+So the ΔZmax for Unit Bot is 165 cm.
 >note: This formula is only for three same size units.
 
 ---
