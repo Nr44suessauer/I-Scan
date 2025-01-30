@@ -98,11 +98,13 @@ This approach provides a continuous representation of the height changes of each
 ### <a id="upper-max-lower-max"></a>Upper Max / Lower Max Table
 
 The table below shows the dependency of the maximum and minimum heights of each unit based on the positions of the other units. The reference is taken from the bottom of the unit.
+
 | Unit  | Upper Border (Maximum) | Lower Border (Initial Position) | Condition Upper Border | Condition Lower Border |
 |-------|------------------------|---------------------------------|------------------------|------------------------|
-| **Bot** | \( \text{Max } Z_{\text{bot}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{bot}} = \text{Initial Height I-Scan} \) | mid & top = max | - |
-| **Mid** | \( \text{Max } Z_{\text{mid}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{mid}} = \text{Initial Height I-Scan} + \int_{a}^{b} f_{\text{bot}}(z) \, dz \) | top = max | bot = min |
-| **Top** | \( \text{Max } Z_{\text{top}} = \text{Maximum Height I-Scan} - \int_{a}^{b} f_{\text{top}}(z) \, dz \) | \( \text{Min } Z_{\text{top}} = \text{Initial Height I-Scan} + \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz \right) \) | - | mid & bot = min |
+| **Bot** | \( \text{Max } Z_{\text{bot}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{bot}} = \text{Initial Height I-Scan} \) | \( Z_{\text{mid}} \) & \( Z_{\text{top}} \) = \( Z_{\text{max}} \) | - |
+| **Mid** | \( \text{Max } Z_{\text{mid}} = \text{Maximum Height I-Scan} - \left( \int_{a}^{b} f_{\text{mid}}(z) \, dz + \int_{a}^{b} f_{\text{top}}(z) \, dz \right) \) | \( \text{Min } Z_{\text{mid}} = \text{Initial Height I-Scan} + \int_{a}^{b} f_{\text{bot}}(z) \, dz \) | \( Z_{\text{top}} \) = \( Z_{\text{max}} \) | \( Z_{\text{bot}} \) = \( Z_{\text{min}} \) |
+| **Top** | \( \text{Max } Z_{\text{top}} = \text{Maximum Height I-Scan} - \int_{a}^{b} f_{\text{top}}(z) \, dz \) | \( \text{Min } Z_{\text{top}} = \text{Initial Height I-Scan} + \left( \int_{a}^{b} f_{\text{bot}}(z) \, dz + \int_{a}^{b} f_{\text{mid}}(z) \, dz \right) \) | - | \( Z_{\text{mid}} \) & \( Z_{\text{bot}} \) = \( Z_{\text{min}} \) |
+
 
 <div style="display: flex; align-items: center; margin-top: 20px;">
    <p></p>
@@ -114,14 +116,16 @@ The table below shows the dependency of the maximum and minimum heights of each 
 
 - **Lower Border (Initial Position):**  
   The minimum height of each unit is calculated by adding the heights of the units below it to the initial height of the I-Scan device.
-- **Conditions:**  
-   - **"mid & top = max":** The middle and top units are at their maximum heights.
-   - **"bot = min":** The bottom unit is at its minimum height.
-   - **"top = max":** The top unit is at its maximum height.
-   - **"mid & bot = min":** The middle and bottom units are at their minimum heights.
+  
+- **Conditions:**
+- **\( Z_{\text{mid}} \) & \( Z_{\text{top}} \) = \( Z_{\text{max}} \):** The middle and top units are at their maximum heights.
+- **\( Z_{\text{bot}} \) = \( Z_{\text{min}} \):** The bottom unit is at its minimum height.
+- **\( Z_{\text{top}} \) = \( Z_{\text{max}} \):** The top unit is at its maximum height.
+- **\( Z_{\text{mid}} \) & \( Z_{\text{bot}} \) = \( Z_{\text{min}} \):** The middle and bottom units are at their minimum heights.
    
-   - **"Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>":** For upward movement, the condition is that the bottom unit is less than the middle unit, which is less than the top unit.
-   - **"Z<sub>bot</sub> > Z<sub>mid</sub> > Z<sub>top</sub>":** For downward movement, the condition is that the top unit is greater than the middle unit, which is greater than the bottom unit.
+### Movement condition
+- **"Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>":** For upward movement.
+- **"Z<sub>bot</sub> > Z<sub>mid</sub> > Z<sub>top</sub>":** For downward movement.
 
 ---
 
@@ -135,11 +139,11 @@ Here, &Delta; Z<sub>scan</sub> is the value `MaxDistanceZmove` from the JSON con
    <p></p>
 </div>
 
-\[ \text{Distance Between Measurement Points} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Pictures}} = \frac{150 \text{ cm}}{30} = 5 \text{ cm} \]
+\[ \text{Distance Between Measurement Points} = \frac{\Delta Z_{\text{scan}}}{\text{Number of Measurements}} = \frac{150 \text{ cm}}{30} = 5 \text{ cm} \]
 
 The distance between each picture is approximately **5 cm**.
 
-\[ \text{Resolution} = \text{Distance Between Measurement Points} \times \text{Number of Pictures} \]
+\[ \text{Resolution} = \text{Distance Between Measurement Points} \times \text{Number of Measurements} \]
 
 <div style="display: flex; align-items: center; margin-top: 20px;">
    <p></p>
