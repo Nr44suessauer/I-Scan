@@ -23,6 +23,7 @@
             <li><a href="#upper-max-lower-max">Upper Max / Lower Max Table</a></li>
          </ul>
       </li>
+      <li><a href="#module-offset">Module Offset</a></li>
       <li><a href="#resolution-calculation">Resolution Calculation</a></li>
    </ol>
    </div> 
@@ -124,8 +125,36 @@ The table below shows the dependency of the maximum and minimum heights of each 
 - **\( Z_{\text{mid}} \) & \( Z_{\text{bot}} \) = \( Z_{\text{min}} \):** The middle and bottom units are at their minimum heights.
    
 ### Movement condition
-- **"Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>":** For upward movement.
-- **"Z<sub>bot</sub> > Z<sub>mid</sub> > Z<sub>top</sub>":** For downward movement.
+- **Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>:** For upward movement.
+- **Z<sub>bot</sub> > Z<sub>mid</sub> > Z<sub>top</sub>:** For downward movement.
+
+---
+
+### <a id="module-offset"></a>Module Offset
+
+The module offset indicates the 2-dimensional offset from the reference point \( (X_{\text{unit}}, Y_{\text{unit}}) \). This value, along with the unit position, is required to determine the exact position of the modul. The offset can vary from module to module. It is assumed that measuring tools are mounted centrally on the units. If this is not the case, an additional offset vector must be considered.
+
+To determine the exact position \( P_{\text{unit}} \) of the measurement unit, the following formulas can be used:
+
+**For the 2D Case (X, Y Plane):**
+\[
+P_{\text{unit}} = \left( X_{\text{unit}} + \text{Offset}_{X}, Y_{\text{unit}} + \text{Offset}_{Y} \right)
+\]
+
+**For the 3D Case (X, Y, Z Space):**
+\[
+P_{\text{unit}} = \left( X_{\text{unit}} + \text{Offset}_{X}, Y_{\text{unit}} + \text{Offset}_{Y}, Z_{\text{unit}} + \text{Offset}_{Z} \right)
+\]
+
+### **Definitions:**
+- \( X_{\text{unit}}, Y_{\text{unit}}, Z_{\text{unit}} \) represent the original position of the measurement unit in 3D space.
+- \( \text{Offset}_{X} \) is the offset along the X-axis.
+- \( \text{Offset}_{Y} \) is the offset along the Y-axis.
+- \( \text{Offset}_{Z} \) is the offset along the Z-axis (if needed).
+
+**Note:** The \( \text{Offset}_{Z} \) is not required for the scanning process but is used later during the processing of measurements on the external system.
+
+By applying these formulas, the module's position can be precisely calculated and adjusted for varying mounting configurations.
 
 ---
 
@@ -157,6 +186,6 @@ It is important to ensure that the value of &Delta; Z<sub>scan</sub> (the maximu
 \Delta Z_{\text{scan}} \leq \Delta Z_{\text{max}} 
 \]
 
-### Offset of Modul
 
-"ModuleHeadOffsets": ["5cm", "7.5cm", "5cm", "7.5cm", "5cm", "7.5cm", "5cm", "7.5cm"],
+
+---
