@@ -24,10 +24,12 @@
          </ul>
       </li>
       <li><a href="#module-offset">Module Offset</a></li>
+      <li><a href="#calculation-of-measurement-angle">Calculation of Measurement Angle</a></li>
       <li><a href="#resolution-calculation">Resolution Calculation</a></li>
    </ol>
    </div> 
 </div>
+
 
 <div style="display: flex; align-items: center; margin-top: 50px;">
    <p></p>
@@ -158,8 +160,7 @@ By applying these formulas, the module's position can be precisely calculated an
 ---
 
 
-
-### Calculation of Measurement Angle
+### <a id="calculation-of-measurement-angle"></a>Calculation of Measurement Angle
 
 #### Right-Angled Triangles
 
@@ -167,7 +168,7 @@ In this chapter, we will show how to calculate the angle \( \alpha \) in a right
 - **Side A** is the \( Z_{\text{dist}} \).
 - **Side B** is the `DistanceToCenter` \( 150 \) cm (this value is in the JSON configuration). Side B refers to the standardized center of the machine.
 
-### Mathematical Derivation
+#### Mathematical Derivation
 
 In a right-angled triangle, the tangent of an angle can be defined.
 Since \( \alpha \) is the angle opposite to Side A, and Side B is the adjacent side, it follows:
@@ -181,7 +182,7 @@ To calculate \( \alpha \), the arctangent (\( \arctan \)) is used:
 \alpha = \arctan\left(\frac{Z_{\text{dist}}}{\text{DistanceToCenter}}\right) 
 \]
    
-- **Example with \( Z_{\text{dist}} = 150 \) cm and \( \text{DistanceToCenter} = 150 \) cm:**  
+- Example with \( Z_{\text{dist}} = 150 \) cm and \( \text{DistanceToCenter} = 150 \) cm:  
    \[ 
    \alpha = \arctan\left(\frac{150}{150}\right) = 45° 
    \]
@@ -190,7 +191,7 @@ Using this method, any value for \( Z_{\text{dist}} \) can be substituted to cal
 
 
 
-### Define Measurement Center
+#### Define Measurement Center
 
 The variable \( Z_{\text{dist}} \) can also be used to determine the measurement center. This ensures that larger objects remain centered during measurements. The calculation is as follows:
 
@@ -223,16 +224,6 @@ In summary, \( Z_{\text{dist}} \) is our relative distance to the center, and th
 
 
 ---
-
-
-
-
-
-
-
-
-
-
 
 
 
