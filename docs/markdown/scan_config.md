@@ -45,7 +45,7 @@
    "ModuleHeadOffsets": ["5cm", "7.5cm", "5cm", "7.5cm", "5cm", "7.5cm", "5cm", "7.5cm"],
    "NumberOfPictures": "30",
    "MaxDistanceZmove": "150cm",
-   "DistanceToObject": "100cm",
+   "DistanceToCenter": "150cm",
    "HeightOfObject": "50cm"
 }
 ```
@@ -124,9 +124,8 @@ The table below shows the dependency of the maximum and minimum heights of each 
 - **\( Z_{\text{top}} \) = \( Z_{\text{max}} \):** The top unit is at its maximum height.
 - **\( Z_{\text{mid}} \) & \( Z_{\text{bot}} \) = \( Z_{\text{min}} \):** The middle and bottom units are at their minimum heights.
    
-### Movement condition
-- **Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>:** For upward movement.
-- **Z<sub>bot</sub> > Z<sub>mid</sub> > Z<sub>top</sub>:** For downward movement.
+### General Movement condition
+- **Z<sub>bot</sub> < Z<sub>mid</sub> < Z<sub>top</sub>** 
 
 ---
 
@@ -157,6 +156,85 @@ P_{\text{unit}} = \left( X_{\text{unit}} + \text{Offset}_{X}, Y_{\text{unit}} + 
 By applying these formulas, the module's position can be precisely calculated and adjusted for varying mounting configurations.
 
 ---
+
+
+
+### Calculation of Measurement Angle
+
+#### Right-Angled Triangles
+
+In this chapter, we will show how to calculate the angle \( \alpha \) in a right-angled triangle when one side is variable. For our example:
+- **Side A** is the \( Z_{\text{dist}} \).
+- **Side B** is the `DistanceToCenter` \( 150 \) cm (this value is in the JSON configuration). Side B refers to the standardized center of the machine.
+
+### Mathematical Derivation
+
+In a right-angled triangle, the tangent of an angle can be defined.
+Since \( \alpha \) is the angle opposite to Side A, and Side B is the adjacent side, it follows:
+
+\[ 
+\tan(\alpha) = \frac{Z_{\text{dist}}}{\text{DistanceToOCenter}} 
+\]
+
+To calculate \( \alpha \), the arctangent (\( \arctan \)) is used:
+\[ 
+\alpha = \arctan\left(\frac{Z_{\text{dist}}}{\text{DistanceToCenter}}\right) 
+\]
+   
+- **Example with \( Z_{\text{dist}} = 150 \) cm and \( \text{DistanceToCenter} = 150 \) cm:**  
+   \[ 
+   \alpha = \arctan\left(\frac{150}{150}\right) = 45° 
+   \]
+
+Using this method, any value for \( Z_{\text{dist}} \) can be substituted to calculate the corresponding angle \( \alpha \) in a right-angled triangle.
+
+
+
+### Define Measurement Center
+
+The variable \( Z_{\text{dist}} \) can also be used to determine the measurement center. This ensures that larger objects remain centered during measurements. The calculation is as follows:
+
+\[ Z_{\text{dist}} = Z_{\text{center}} - Z_{\text{module}} \]
+
+Here, \( Z_{\text{module}} \) represents the height of the respective unit, \( Z_{\text{center}} \) is our defined center point.
+
+This formula helps in maintaining the central alignment of objects during the scanning process.
+
+#### Z<sub>module</sub> Calculation
+
+The height \( Z_{\text{module}} \) is calculated by adding the height of the unit \( Z_{\text{unit}} \) and its offset \( \text{Offset}_{Y} \):
+
+\[ Z_{\text{module}} = Z_{\text{unit}} + \text{Offset}_{Y} \]
+
+This ensures that the module's height is accurately determined by considering both the unit's height and its offset.
+
+### Summary
+
+In summary, \( Z_{\text{dist}} \) is our relative distance to the center, and the angle \( \alpha \) is calculated based on this distance. This ensures accurate and centered measurements during the scanning process.
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### <a id="resolution-calculation"></a>Resolution Calculation
 
