@@ -4,6 +4,9 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.patches import Arc
 import os
 
+# Variable zur Steuerung der Animation: 1 = an, 0 = aus
+animation_enabled = 1
+
 # Punkte definieren
 P = (0, 0)
 C = (150, 0)
@@ -11,10 +14,10 @@ M = (0, 150)
 newCenter = (150, 75)
 baseline = (0, 75)
 
-# Setup für Animation
+# Setup für Animation/Plot
 fig, ax = plt.subplots(figsize=(8, 8))
 
-# Statische Elemente (Dreiecke, Winkel, Beschriftungen)
+# Statische Elemente (Dreiecke, Linien, Beschriftungen)
 x_values1 = [P[0], M[0], C[0], P[0]]
 y_values1 = [P[1], M[1], C[1], P[1]]
 line1, = ax.plot(x_values1, y_values1, marker='o', color='blue', label='Regular Vision')
@@ -34,7 +37,7 @@ ax.annotate('Center\n (150, 0)', xy=C, xytext=(10, -20), textcoords='offset poin
 ax.annotate('New Center\n(150, 75)', xy=newCenter, xytext=(10, 10), textcoords='offset points', fontsize=12)
 ax.annotate('Our defined\nBaseLine\n(0, 75)', xy=baseline, xytext=(-60, 10), textcoords='offset points', fontsize=12)
 
-# Dynamische Elemente (Benis-Punkt und Verbindungslinie)
+# Dynamische Elemente (werden in der Animation aktualisiert)
 benis_point, = ax.plot([0], [0], 'o', markersize=10, color='purple', label='VisionLine to Center')
 benis_line, = ax.plot([0, 150], [0, 75], 'k--')
 
@@ -51,21 +54,26 @@ def update(frame):
     benis_line.set_data([0, 150], [y_pos, 75])
     return benis_point, benis_line
 
-# Animation erstellen
-ani = FuncAnimation(
-    fig,
-    update,
-    frames=range(0, 63),  # etwa 10 Sekunden bei 60ms pro Frame
-    interval=60,
-    blit=True
-)
-
 plt.xlabel('Distance to Center (cm)')
 plt.ylabel('Z-Distance (cm)')
 plt.legend(loc='upper right')
 
 folder = os.path.dirname(os.path.abspath(__file__))
 output_path = os.path.join(folder, "animation.gif")
-writer = PillowWriter(fps=15)  # fps kann je nach gewünschter Geschwindigkeit angepasst werden
-ani.save(output_path, writer=writer)
+
+if animation_enabled:
+    # Animation erstellen und speichern
+    ani = FuncAnimation(
+        fig,
+        update,
+        frames=range(0, 63),  # ca. 10 Sekunden bei 60ms pro Frame
+        interval=60,
+        blit=True
+    )
+    writer = PillowWriter(fps=15)  # 15 Frames pro Sekunde
+    ani.save(output_path, writer=writer)
+else:
+    # Ohne Animation wird der Anfangszustand angezeigt
+    update(0)
+
 plt.show()
