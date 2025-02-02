@@ -98,7 +98,7 @@ if animation_enabled:
         interval=200,
         blit=True
     )
-    writer = PillowWriter(fps=15)  # 15 Frames pro Sekunde
+    writer = PillowWriter(fps=3)  # 15 Frames pro Sekunde
     ani.save(output_path, writer=writer)
 else:
     # Bei deaktivierter Animation: Punkt "benis" auf (0,35)
