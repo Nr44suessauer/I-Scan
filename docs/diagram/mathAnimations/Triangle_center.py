@@ -5,7 +5,7 @@ import matplotlib.patches as patches
 import os
 
 # Flag to toggle the animation: 1 = Animation on, 0 = static image
-animate_flag = 1  # Change this value to 0 to disable the animation
+animate_flag = 0  # Change this value to 0 to disable the animation
 
 # Define points
 P = (0, 0)
@@ -87,7 +87,7 @@ if animate_flag:
         update,
         frames=range(0, 63),  # roughly 10 seconds at 200ms per frame
         interval=200,
-        blit=True
+        blit=False
     )
     
     folder = os.path.dirname(os.path.abspath(__file__))
