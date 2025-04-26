@@ -110,3 +110,17 @@ void setColorHSV(int h, int s, int v) {
   Serial.print(s); Serial.print(", ");
   Serial.println(v);
 }
+
+// New function for brightness control
+void setBrightness(int brightness) {
+  // Ensure brightness is valid (0-255)
+  brightness = constrain(brightness, 0, 255);
+  
+  // Set brightness
+  FastLED.setBrightness(brightness);
+  FastLED.show();
+  
+  // Debug output
+  Serial.print("Brightness set to: ");
+  Serial.println(brightness);
+}

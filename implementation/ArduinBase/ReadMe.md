@@ -39,6 +39,9 @@
 | GET | `http://192.168.178.77/hexcolor?hex=%23FFFF00` | Setzt die LED auf Gelb (benutzerdefinierte Farbe) |
 | GET | `http://192.168.178.77/hexcolor?hex=%23FF00FF` | Setzt die LED auf Magenta (benutzerdefinierte Farbe) |
 | GET | `http://192.168.178.77/hexcolor?hex=%2300FFFF` | Setzt die LED auf Cyan (benutzerdefinierte Farbe) |
+| GET | `http://192.168.178.77/setBrightness?value=50` | Setzt die LED-Helligkeit auf 50 (Bereich: 0-255) |
+| GET | `http://192.168.178.77/setBrightness?value=255` | Setzt die LED-Helligkeit auf Maximum (255) |
+| GET | `http://192.168.178.77/setBrightness?value=10` | Setzt die LED-Helligkeit auf niedrige Stufe (10) |
 
 ## Button-Status
 

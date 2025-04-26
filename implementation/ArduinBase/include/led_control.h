@@ -23,4 +23,7 @@ void setColorByIndex(int index);     // Sets color by predefined index
 void setColorRGB(int r, int g, int b); // Sets color with RGB values
 void setColorHSV(int h, int s, int v); // Sets color with HSV values
 
+// New function for brightness control
+void setBrightness(int brightness);  // Sets LED brightness (0-255)
+
 #endif // LED_CONTROL_H

@@ -11,6 +11,7 @@ void handleNotFound();
 void handleServoControl(); 
 void handleMotorControl(); 
 void handleGetButtonState(); // New function declaration for button status
+void handleBrightness(); // New function declaration for brightness control
 
 // WebServer configuration
 const uint16_t HTTP_PORT = 80;
@@ -56,6 +57,10 @@ const char* html = R"rawliteral(
     .status-on { background-color: #4CAF50; }
     .status-off { background-color: #f44336; }
     .status-text { font-weight: bold; font-size: 18px; display: inline-block; vertical-align: middle; }
+    
+    /* Brightness slider styling */
+    .brightness-container { margin: 15px 0; }
+    .brightness-value { font-weight: bold; font-size: 18px; display: inline-block; width: 40px; }
   </style>
 </head>
 <body>
@@ -110,6 +115,16 @@ const char* html = R"rawliteral(
     
     <!-- Color control -->
     <h2>RGB LED Control</h2>
+    
+    <!-- New: Brightness slider -->
+    <div class="input-container">
+      <h2>LED Brightness</h2>
+      <div class="brightness-container">
+        <input type="range" id="brightnessSlider" min="0" max="255" value="5" oninput="updateBrightnessValue(this.value)">
+        <span class="brightness-value" id="brightnessValue">5</span>
+      </div>
+      <button class="btn-submit" onclick="setBrightness()">Apply Brightness</button>
+    </div>
     
     <div class="input-container">
       <h2>Custom Color</h2>
@@ -223,6 +238,25 @@ const char* html = R"rawliteral(
         });
     }
     
+    // New functions for brightness control
+    function updateBrightnessValue(val) {
+      document.getElementById('brightnessValue').textContent = val;
+    }
+    
+    function setBrightness() {
+      const brightness = document.getElementById('brightnessSlider').value;
+      document.getElementById('status').innerHTML = 'Status: Setting brightness...';
+      
+      fetch('/setBrightness?value=' + brightness)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error setting brightness';
+        });
+    }
+    
     // Function to update displayed servo angle
     function updateServoValue(val) {
       document.getElementById('servoValue').textContent = val;
@@ -313,7 +347,8 @@ void setupWebServer() {
   server.on("/hexcolor", HTTP_GET, handleHexColorChange); 
   server.on("/setServo", HTTP_GET, handleServoControl);
   server.on("/setMotor", HTTP_GET, handleMotorControl);
-  server.on("/getButtonState", HTTP_GET, handleGetButtonState); // New handler for button status
+  server.on("/getButtonState", HTTP_GET, handleGetButtonState); // Button status handler
+  server.on("/setBrightness", HTTP_GET, handleBrightness); // New brightness handler
   server.onNotFound(handleNotFound);
 
   // Start web server
@@ -321,136 +356,127 @@ void setupWebServer() {
   Serial.println("HTTP server started on port " + String(HTTP_PORT));
 }
 
-// New handler for servo control
-void handleServoControl() {
-  if (server.hasArg("angle")) {
-    int angle = server.arg("angle").toInt();
-    // Constrain angle to valid range
-    angle = constrain(angle, 0, 180);
-    // Set servo to the specified angle
-    sweepServo(angle, 15);
-    
-    // Send success response
-    server.send(200, "text/plain", "Servo set to " + String(angle) + "°");
-  } else {
-    // Send error response if no angle was specified
-    server.send(400, "text/plain", "Missing 'angle' parameter");
-  }
-}
-
-// Add this function after handleServoControl():
-
-// Handler for motor control
-void handleMotorControl() {
-  if (server.hasArg("position")) {
-    int position = server.arg("position").toInt();
-    // Constrain position to a sensible range
-    position = constrain(position, -4096, 4096);
-    
-    // Move motor to the specified position
-    moveMotorToPosition(position);
-    
-    // Send success response
-    server.send(200, "text/plain", "Motor moved to position " + String(position));
-  } else if (server.hasArg("steps") && server.hasArg("direction")) {
-    int steps = server.arg("steps").toInt();
-    int direction = server.arg("direction").toInt();
-    int speed = 70; // Default speed on scale (0-100)
-    
-    // Optional: Read speed from request if available
-    if (server.hasArg("speed")) {
-      speed = server.arg("speed").toInt();
-    }
-    
-    // Constrain values to sensible ranges
-    steps = constrain(steps, 0, 4096);
-    direction = (direction > 0) ? 1 : -1;
-    speed = constrain(speed, 0, 100); // UI shows 0-100, but motor.cpp limits to 0-90
-    
-    // Special message for full rotations
-    String responseMessage;
-    if (steps == 4096) {
-      responseMessage = "Motor has completed " + String(direction > 0 ? "a" : "a reverse") + 
-                       " full rotation at speed " + String(speed) + "%";
-    } else {
-      responseMessage = "Motor moved " + String(steps) + " steps in direction " + 
-                       String(direction) + " at speed " + String(speed) + "%";
-    }
-    
-    // Move motor the specified steps with the specified speed
-    moveMotorWithSpeed(steps, direction, speed);
-    
-    // Send success response
-    server.send(200, "text/plain", responseMessage);
-  }
-}
-
+// Handle incoming client requests
 void handleWebServerRequests() {
   server.handleClient();
 }
 
-// Handler for root route
+// Handle root route
 void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-// Handler for changing LED color
+// Handle color change request with predefined colors
 void handleColorChange() {
   if (server.hasArg("index")) {
     int colorIndex = server.arg("index").toInt();
-    
-    // Ensure index is valid (0-6)
-    if (colorIndex >= 0 && colorIndex <= 6) {
-      setColorByIndex(colorIndex);
-      server.send(200, "text/plain", "Color successfully changed to index " + String(colorIndex));
-    } else {
-      server.send(400, "text/plain", "Invalid color index!");
-    }
+    setColorByIndex(colorIndex);
+    server.send(200, "text/plain", "Color changed to index " + String(colorIndex));
   } else {
-    server.send(400, "text/plain", "No color index provided!");
+    server.send(400, "text/plain", "Missing 'index' parameter");
   }
 }
 
-// Handler for hex color change
+// Handle hex color change request
 void handleHexColorChange() {
   if (server.hasArg("hex")) {
     String hexColor = server.arg("hex");
     
-    // Remove '#' if present
+    // Remove # if present
     if (hexColor.startsWith("#")) {
       hexColor = hexColor.substring(1);
     }
     
-    // Check if it's a valid hex color code (6 characters)
-    if (hexColor.length() == 6) {
-      // Convert hex string to RGB values
-      uint32_t rgb = strtol(hexColor.c_str(), NULL, 16);
-      uint8_t r = (rgb >> 16) & 0xFF;
-      uint8_t g = (rgb >> 8) & 0xFF;
-      uint8_t b = rgb & 0xFF;
-      
-      // Send RGB values to LED
-      setColorRGB(r, g, b);
-      server.send(200, "text/plain", "Color successfully changed to #" + hexColor);
-    } else {
-      server.send(400, "text/plain", "Invalid hex color code! Format: #RRGGBB");
-    }
+    // Parse hex values
+    uint32_t rgbColor = strtoul(hexColor.c_str(), NULL, 16);
+    int r = (rgbColor >> 16) & 0xFF;
+    int g = (rgbColor >> 8) & 0xFF;
+    int b = rgbColor & 0xFF;
+    
+    // Set color
+    setColorRGB(r, g, b);
+    
+    server.send(200, "text/plain", "Color changed to #" + hexColor);
   } else {
-    server.send(400, "text/plain", "No hex color provided!");
+    server.send(400, "text/plain", "Missing 'hex' parameter");
   }
 }
 
-// Handler for not found URLs
-void handleNotFound() {
-  server.send(404, "text/plain", "404: Not found");
+// Handle servo control request
+void handleServoControl() {
+  if (server.hasArg("angle")) {
+    int angle = server.arg("angle").toInt();
+    setServoAngle(angle);  // Function from servo_control.h
+    server.send(200, "text/plain", "Servo positioned to " + String(angle) + " degrees");
+  } else {
+    server.send(400, "text/plain", "Missing 'angle' parameter");
+  }
 }
 
-// Handler for button status
+// Handle motor control request
+void handleMotorControl() {
+  // For absolute position
+  if (server.hasArg("position")) {
+    int position = server.arg("position").toInt();
+    moveMotorToPosition(position);  // Korrigiert von setMotorPosition zu moveMotorToPosition
+    server.send(200, "text/plain", "Motor positioned to " + String(position));
+    return;
+  }
+  
+  // For stepping by number of steps
+  if (server.hasArg("steps") && server.hasArg("direction")) {
+    int steps = server.arg("steps").toInt();
+    int direction = server.arg("direction").toInt();
+    
+    // Optional speed parameter (default 100% if not specified)
+    int speed = 100;
+    if (server.hasArg("speed")) {
+      speed = server.arg("speed").toInt();
+    }
+    
+    // Move motor with speed - verwende moveMotorWithSpeed statt moveMotor
+    moveMotorWithSpeed(steps, direction, speed);
+    
+    server.send(200, "text/plain", "Motor moved " + String(steps) + 
+                " steps in direction " + String(direction) + 
+                " with speed " + String(speed) + "%");
+    return;
+  }
+  
+  // If no valid parameters
+  server.send(400, "text/plain", "Missing or invalid parameters");
+}
+
+// Handle button state request
 void handleGetButtonState() {
-  bool buttonPressed = getButtonState();
+  bool isButtonPressed = getButtonState();  // Function from button_control.h
   
   // Create JSON response
-  String jsonResponse = "{\"pressed\":" + String(buttonPressed ? "true" : "false") + "}";
+  String jsonResponse = "{\"pressed\":" + String(isButtonPressed ? "true" : "false") + "}";
   
   server.send(200, "application/json", jsonResponse);
+}
+
+// New handler for LED brightness control
+void handleBrightness() {
+  if (server.hasArg("value")) {
+    int brightness = server.arg("value").toInt();
+    
+    // Ensure brightness is valid (0-255)
+    brightness = constrain(brightness, 0, 255);
+    
+    // Set LED brightness using the function from led_control.h
+    setBrightness(brightness);
+    
+    // Send success response
+    server.send(200, "text/plain", "Brightness set to " + String(brightness));
+  } else {
+    // Send error response if no value was specified
+    server.send(400, "text/plain", "Missing 'value' parameter");
+  }
+}
+
+// Handle not found (404)
+void handleNotFound() {
+  server.send(404, "text/plain", "404: Not found");
 }

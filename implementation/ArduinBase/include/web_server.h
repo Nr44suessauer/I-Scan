@@ -17,5 +17,6 @@ void handleColorChange();
 void handleHexColorChange();
 void handleNotFound();
 void handleGetButtonState(); // New handler for button status
+void handleBrightness(); // Handler for LED brightness control
 
 #endif // WEB_SERVER_H
