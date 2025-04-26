@@ -11,10 +11,11 @@ extern WebServer server;
 void setupWebServer();
 void handleWebServerRequests();
 
-// Handler für verschiedene Routen
+// Handlers for various routes
 void handleRoot();
 void handleColorChange();
 void handleHexColorChange();
 void handleNotFound();
+void handleGetButtonState(); // New handler for button status
 
 #endif // WEB_SERVER_H

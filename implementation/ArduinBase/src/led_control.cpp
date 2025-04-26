@@ -1,9 +1,9 @@
 #include "led_control.h"
 
-// LED-Array erstellen
+// Create LED array
 CRGB leds[NUM_LEDS];
 
-// Verschiedene Farben definieren
+// Define various colors
 CRGB colorList[] = {
   CRGB::Red,
   CRGB::Green,
@@ -17,95 +17,95 @@ CRGB colorList[] = {
 int currentColorIndex = 0;
 unsigned long previousMillis = 0;
 
-// Bestehende Funktionen bleiben unverändert
+// Existing functions remain unchanged
 void setupLEDs() {
-  // FastLED initialisieren
+  // Initialize FastLED
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   
-  // Erste Farbe setzen
+  // Set first color
   leds[0] = colorList[currentColorIndex];
   FastLED.show();
   
-  Serial.println("RGB@IO38 gestartet");
+  Serial.println("RGB@IO38 started");
 }
 
 void updateLEDs() {
   unsigned long currentMillis = millis();
   
-  // Prüfen, ob es Zeit für einen Farbwechsel ist
+  // Check if it's time for a color change
   if (currentMillis - previousMillis >= DELAY_MS) {
     previousMillis = currentMillis;
     
-    // Nächste Farbe auswählen
+    // Select next color
     currentColorIndex = (currentColorIndex + 1) % (sizeof(colorList) / sizeof(colorList[0]));
     
-    // Farbe setzen
+    // Set color
     leds[0] = colorList[currentColorIndex];
     FastLED.show();
     
-    // Aktuelle Farbe ausgeben
-    Serial.print("Farbe gewechselt zu: ");
+    // Output current color
+    Serial.print("Color changed to: ");
     switch (currentColorIndex) {
-      case 0: Serial.println("Rot"); break;
-      case 1: Serial.println("Grün"); break;
-      case 2: Serial.println("Blau"); break;
-      case 3: Serial.println("Gelb"); break;
-      case 4: Serial.println("Lila"); break;
+      case 0: Serial.println("Red"); break;
+      case 1: Serial.println("Green"); break;
+      case 2: Serial.println("Blue"); break;
+      case 3: Serial.println("Yellow"); break;
+      case 4: Serial.println("Purple"); break;
       case 5: Serial.println("Orange"); break;
-      case 6: Serial.println("Weiß"); break;
+      case 6: Serial.println("White"); break;
     }
   }
 }
 
-// Neue Funktionen zur Farbsteuerung
+// New functions for color control
 
-// Farbe nach Index setzen (0=Rot, 1=Grün, usw.)
+// Set color by index (0=Red, 1=Green, etc.)
 void setColorByIndex(int index) {
-  // Sicherstellen, dass der Index gültig ist
+  // Ensure index is valid
   int maxIndex = sizeof(colorList) / sizeof(colorList[0]) - 1;
   index = constrain(index, 0, maxIndex);
   
-  // Farbe setzen
+  // Set color
   currentColorIndex = index;
   leds[0] = colorList[currentColorIndex];
   FastLED.show();
   
-  // Debugging-Ausgabe
-  Serial.print("Farbe manuell gesetzt auf: ");
+  // Debug output
+  Serial.print("Color manually set to: ");
   switch (currentColorIndex) {
-    case 0: Serial.println("Rot"); break;
-    case 1: Serial.println("Grün"); break;
-    case 2: Serial.println("Blau"); break;
-    case 3: Serial.println("Gelb"); break;
-    case 4: Serial.println("Lila"); break;
+    case 0: Serial.println("Red"); break;
+    case 1: Serial.println("Green"); break;
+    case 2: Serial.println("Blue"); break;
+    case 3: Serial.println("Yellow"); break;
+    case 4: Serial.println("Purple"); break;
     case 5: Serial.println("Orange"); break;
-    case 6: Serial.println("Weiß"); break;
-    default: Serial.println("Unbekannt");
+    case 6: Serial.println("White"); break;
+    default: Serial.println("Unknown");
   }
 }
 
-// Farbe mit RGB-Werten setzen (0-255 für jede Komponente)
+// Set color with RGB values (0-255 for each component)
 void setColorRGB(int r, int g, int b) {
-  // RGB-Werte setzen
+  // Set RGB values
   leds[0] = CRGB(r, g, b);
   FastLED.show();
   
-  // Debugging-Ausgabe
-  Serial.print("Farbe manuell gesetzt auf RGB: ");
+  // Debug output
+  Serial.print("Color manually set to RGB: ");
   Serial.print(r); Serial.print(", ");
   Serial.print(g); Serial.print(", ");
   Serial.println(b);
 }
 
-// Farbe mit HSV-Werten setzen (Farbton 0-255, Sättigung 0-255, Helligkeit 0-255)
+// Set color with HSV values (hue 0-255, saturation 0-255, brightness 0-255)
 void setColorHSV(int h, int s, int v) {
-  // HSV-Werte setzen
+  // Set HSV values
   leds[0] = CHSV(h, s, v);
   FastLED.show();
   
-  // Debugging-Ausgabe
-  Serial.print("Farbe manuell gesetzt auf HSV: ");
+  // Debug output
+  Serial.print("Color manually set to HSV: ");
   Serial.print(h); Serial.print(", ");
   Serial.print(s); Serial.print(", ");
   Serial.println(v);

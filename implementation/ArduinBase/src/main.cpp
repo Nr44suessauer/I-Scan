@@ -2,43 +2,44 @@
 #include "wifi_manager.h"
 #include "web_server.h"
 #include "led_control.h"
-#include "servo_control.h"  // Servo-Header einbinden
-#include "motor.h"          // Motor-Header einbinden
+#include "servo_control.h"  // Include servo header
+#include "motor.h"          // Include motor header
+#include "button_control.h" // Include button header
 
 void setup() {
   Serial.begin(9600);
   delay(1000);
   
-  Serial.println("I-Scan Controller gestartet");
+  Serial.println("I-Scan Controller started");
   
-  // LED-Setup
+  // LED setup
   setupLEDs();
   
-  // Servo-Setup
-  setupServo();  // Servo initialisieren
+  // Servo setup
+  setupServo();  // Initialize servo
   
-  // Motor-Setup
-  setupMotor();  // Stepper-Motor initialisieren
+  // Motor setup
+  setupMotor();  // Initialize stepper motor
   
-  // WiFi-Verbindung herstellen
+  // Button setup
+  setupButton(); // Initialize button
+  
+  // Establish WiFi connection
   setupWiFi();
   
-  // Webserver einrichten und starten
+  // Set up and start web server
   setupWebServer();
 
-  // Farbänderung nach WLAN-Verbindung
-  setColorByIndex(1);  // Grün für erfolgreiche WLAN-Verbindung
-  
- 
-
+  // Change color after WiFi connection
+  setColorByIndex(1);  // Green for successful WiFi connection
 }
 
 void loop() {
-  // Server-Anfragen bearbeiten
+  // Handle server requests
   handleWebServerRequests();
   
-  // WiFi-Verbindung überprüfen
+  // Check WiFi connection
   checkWiFiConnection();
   
-  delay(10); // kurze Pause für Stabilitätsverbesserung
+  delay(10); // Short pause for stability improvement
 }

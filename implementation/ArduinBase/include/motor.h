@@ -9,6 +9,9 @@
 #define MOTOR_PIN_3 21    // IN3
 #define MOTOR_PIN_4 47    // IN4
 
+// Button-Pin-Definition
+#define BUTTON_PIN 45     // Button Input Pin
+
 // Optimierte Werte für den 28BYJ-48 Motor - schnellere Geschwindigkeit
 #define STEP_DELAY_MS 1     // Reduziert auf 1ms für höhere Grundgeschwindigkeit
 #define STEPS_PER_REVOLUTION 4096  // Der 28BYJ-48 benötigt 4096 Schritte für eine volle Umdrehung
@@ -21,5 +24,9 @@ void setMotorPins(int step);
 void moveMotor(int steps, int direction);
 void moveMotorToPosition(int position);
 void moveMotorWithSpeed(int steps, int direction, int speed);
+
+// Button Funktionsprototypen
+void setupButton();
+bool getButtonState();
 
 #endif // MOTOR_H

@@ -1,26 +1,28 @@
 #include "web_server.h"
-#include "servo_control.h" // Füge diese Zeile zu den bestehenden Includes hinzu
-#include "motor.h" // Füge zu den bestehenden Includes hinzu:
+#include "servo_control.h" 
+#include "motor.h" 
+#include "button_control.h" // Include for button functionality
 
-// Funktionsdeklarationen
+// Function declarations
 void handleRoot();
 void handleColorChange();
 void handleHexColorChange();
 void handleNotFound();
-void handleServoControl(); // Füge diese Zeile zu den Funktionsdeklarationen am Anfang der Datei hinzu
-void handleMotorControl(); // Füge zur Funktionsdeklaration am Anfang der Datei hinzu:
+void handleServoControl(); 
+void handleMotorControl(); 
+void handleGetButtonState(); // New function declaration for button status
 
-// WebServer-Konfiguration
+// WebServer configuration
 const uint16_t HTTP_PORT = 80;
 WebServer server(HTTP_PORT);
 
-// HTML-Webseite mit Buttons zur LED-Steuerung
+// HTML webpage with buttons for LED control
 const char* html = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RGB LED Steuerung</title>
+  <title>RGB LED Control</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
     h1, h2 { color: #333; }
@@ -35,7 +37,7 @@ const char* html = R"rawliteral(
     .btn-orange { background-color: #FF9800; }
     .btn-white { background-color: #FFFFFF; color: black; border: 1px solid #ddd; }
     
-    /* Hex-Eingabe Styling */
+    /* Hex input styling */
     .input-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .input-container h2 { margin-top: 0; color: #444; }
     .color-preview { width: 50px; height: 50px; border-radius: 50%; margin: 10px auto; border: 1px solid #ddd; }
@@ -43,90 +45,147 @@ const char* html = R"rawliteral(
     .btn-submit { padding: 10px 15px; margin-left: 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
     .btn-submit:hover { background: #0b7dda; }
     
-    /* Servo Styling */
+    /* Servo styling */
     .slider-container { margin: 15px 0; }
     input[type="range"] { width: 80%; max-width: 400px; }
     .angle-display { font-weight: bold; font-size: 18px; margin: 10px 0; }
+    
+    /* Button status styling */
+    .button-status-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .status-indicator { width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+    .status-on { background-color: #4CAF50; }
+    .status-off { background-color: #f44336; }
+    .status-text { font-weight: bold; font-size: 18px; display: inline-block; vertical-align: middle; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>ESP32 I-Scan Steuerung</h1>
+    <h1>ESP32 PositionUnit Control</h1>
     
-    <!-- Servo-Steuerung -->
+    <!-- Button status -->
+    <div class="button-status-container">
+      <h2>Button Status (Pin 12)</h2>
+      <div>
+        <span id="buttonIndicator" class="status-indicator status-off"></span>
+        <span id="buttonStatus" class="status-text">Not pressed</span>
+      </div>
+      <button class="btn-submit" style="margin-top: 10px;" onclick="refreshButtonStatus()">Refresh Status</button>
+    </div>
+    
+    <!-- Servo control -->
     <div class="input-container">
-      <h2>Servo-Positionierung</h2>
+      <h2>Servo Positioning</h2>
       <div class="slider-container">
         <input type="range" id="servoSlider" min="0" max="180" value="90" oninput="updateServoValue(this.value)">
       </div>
-      <p class="angle-display">Winkel: <span id="servoValue">90</span>°</p>
-      <button class="btn-submit" onclick="setServoAngle()">Servo positionieren</button>
+      <p class="angle-display">Angle: <span id="servoValue">90</span>°</p>
+      <button class="btn-submit" onclick="setServoAngle()">Position Servo</button>
     </div>
 
-    <!-- Motor-Steuerung mit erweitertem Geschwindigkeitsregler -->
+    <!-- Motor control with extended speed control -->
     <div class="input-container">
-      <h2>Stepper-Motor Steuerung</h2>
+      <h2>Stepper Motor Control</h2>
       <div class="slider-container">
         <input type="range" id="motorSlider" min="-500" max="500" value="0" oninput="updateMotorValue(this.value)">
       </div>
       <p class="angle-display">Position: <span id="motorValue">0</span></p>
-      <button class="btn-submit" onclick="setMotorPosition()">Motor positionieren</button>
+      <button class="btn-submit" onclick="setMotorPosition()">Position Motor</button>
       
       <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-        <button class="btn-submit" onclick="moveMotorSteps(100, 1)">100 Schritte vorwärts</button>
-        <button class="btn-submit" onclick="moveMotorSteps(100, -1)">100 Schritte rückwärts</button>
-        <button class="btn-submit" onclick="moveFullRotation(1)">1 Umdrehung vorwärts</button>
-        <button class="btn-submit" onclick="moveFullRotation(-1)">1 Umdrehung rückwärts</button>
+        <button class="btn-submit" onclick="moveMotorSteps(100, 1)">100 steps forward</button>
+        <button class="btn-submit" onclick="moveMotorSteps(100, -1)">100 steps backward</button>
+        <button class="btn-submit" onclick="moveFullRotation(1)">1 rotation forward</button>
+        <button class="btn-submit" onclick="moveFullRotation(-1)">1 rotation backward</button>
       </div>
       
       <div style="margin-top: 15px;">
-        <label for="speedSlider">Geschwindigkeit:</label>
+        <label for="speedSlider">Speed:</label>
         <input type="range" id="speedSlider" min="0" max="100" value="70" oninput="updateSpeedValue(this.value)">
         <span id="speedValue">70</span>%
         <div style="margin-top: 5px; font-size: 12px;">
-          <span>0% (langsam) bis 100% (Maximalgeschwindigkeit)</span>
+          <span>0% (slow) to 100% (maximum speed)</span>
         </div>
       </div>
     </div>
     
-    <!-- Farbsteuerung -->
-    <h2>RGB LED Steuerung</h2>
+    <!-- Color control -->
+    <h2>RGB LED Control</h2>
     
     <div class="input-container">
-      <h2>Benutzerdefinierte Farbe</h2>
+      <h2>Custom Color</h2>
       <div id="colorPreview" class="color-preview"></div>
       <input type="text" id="hexInput" class="hex-input" placeholder="#FF0000" maxlength="7" value="#FF0000"/>
-      <button class="btn-submit" onclick="changeHexColor()">Anwenden</button>
+      <button class="btn-submit" onclick="changeHexColor()">Apply</button>
     </div>
     
-    <p>Oder wähle eine vordefinierte Farbe:</p>
+    <p>Or choose a predefined color:</p>
     <div class="btn-grid">
-      <button class="btn btn-red" onclick="changeColor(0)">Rot</button>
-      <button class="btn btn-green" onclick="changeColor(1)">Grün</button>
-      <button class="btn btn-blue" onclick="changeColor(2)">Blau</button>
-      <button class="btn btn-yellow" onclick="changeColor(3)">Gelb</button>
-      <button class="btn btn-purple" onclick="changeColor(4)">Lila</button>
+      <button class="btn btn-red" onclick="changeColor(0)">Red</button>
+      <button class="btn btn-green" onclick="changeColor(1)">Green</button>
+      <button class="btn btn-blue" onclick="changeColor(2)">Blue</button>
+      <button class="btn btn-yellow" onclick="changeColor(3)">Yellow</button>
+      <button class="btn btn-purple" onclick="changeColor(4)">Purple</button>
       <button class="btn btn-orange" onclick="changeColor(5)">Orange</button>
-      <button class="btn btn-white" onclick="changeColor(6)">Weiß</button>
+      <button class="btn btn-white" onclick="changeColor(6)">White</button>
     </div>
-    <p id="status">Status: Bereit</p>
+    <p id="status">Status: Ready</p>
   </div>
   
   <script>
-    // Update color preview when page loads
+    // Button status variables
+    let buttonPollingActive = true;
+    let lastButtonState = false;
+    
+    // Query button status on page load
     document.addEventListener('DOMContentLoaded', function() {
       updateColorPreview();
+      refreshButtonStatus();
     });
+
+    // Faster button status polling (every 200ms instead of 1 second)
+    setInterval(function() {
+      if (buttonPollingActive) {
+        refreshButtonStatus();
+      }
+    }, 200);
+    
+    // Fetch button status from server
+    function refreshButtonStatus() {
+      fetch('/getButtonState')
+        .then(response => response.json())
+        .then(data => {
+          const buttonIndicator = document.getElementById('buttonIndicator');
+          const buttonStatus = document.getElementById('buttonStatus');
+          
+          // Update only if the status has changed
+          if (data.pressed !== lastButtonState) {
+            // INVERTED: We show the opposite of the actual status
+            if (!data.pressed) {  // If button is NOT pressed (data.pressed = false)
+              buttonIndicator.className = 'status-indicator status-off';
+              buttonStatus.textContent = 'Not pressed';
+            } else {  // If button is pressed (data.pressed = true)
+              buttonIndicator.className = 'status-indicator status-on';
+              buttonStatus.textContent = 'Pressed';
+            }
+            lastButtonState = data.pressed;
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching button status:', error);
+          buttonPollingActive = false; // Stop polling on error
+          setTimeout(() => { buttonPollingActive = true; }, 5000); // Retry after 5 seconds
+        });
+    }
 
     // Update color preview when input changes
     document.getElementById('hexInput').addEventListener('input', function() {
       updateColorPreview();
     });
 
-    // Live-Vorschau der Farbe
+    // Live color preview
     function updateColorPreview() {
       var hexValue = document.getElementById('hexInput').value;
-      // Falls kein # vorhanden, hinzufügen
+      // Add # if not present
       if (hexValue.charAt(0) !== '#') {
         hexValue = '#' + hexValue;
         document.getElementById('hexInput').value = hexValue;
@@ -135,44 +194,44 @@ const char* html = R"rawliteral(
     }
 
     function changeColor(colorIndex) {
-      document.getElementById('status').innerHTML = 'Status: Farbe wird geändert...';
+      document.getElementById('status').innerHTML = 'Status: Changing color...';
       fetch('/color?index=' + colorIndex)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler beim Ändern der Farbe';
+          document.getElementById('status').innerHTML = 'Status: Error changing color';
         });
     }
     
     function changeHexColor() {
       var hexValue = document.getElementById('hexInput').value;
-      // Falls kein # vorhanden, hinzufügen
+      // Add # if not present
       if (hexValue.charAt(0) !== '#') {
         hexValue = '#' + hexValue;
       }
       
-      document.getElementById('status').innerHTML = 'Status: Farbe wird geändert...';
+      document.getElementById('status').innerHTML = 'Status: Changing color...';
       fetch('/hexcolor?hex=' + encodeURIComponent(hexValue))
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler beim Ändern der Farbe';
+          document.getElementById('status').innerHTML = 'Status: Error changing color';
         });
     }
     
-    // Funktion zum Aktualisieren des angezeigten Servo-Winkels
+    // Function to update displayed servo angle
     function updateServoValue(val) {
       document.getElementById('servoValue').textContent = val;
     }
     
-    // Funktion zum Setzen des Servo-Winkels
+    // Function to set servo angle
     function setServoAngle() {
       const angle = document.getElementById('servoSlider').value;
-      document.getElementById('status').innerHTML = 'Status: Servo wird positioniert...';
+      document.getElementById('status').innerHTML = 'Status: Positioning servo...';
       
       fetch('/setServo?angle=' + angle)
         .then(response => response.text())
@@ -180,19 +239,19 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler bei der Servo-Steuerung';
+          document.getElementById('status').innerHTML = 'Status: Error in servo control';
         });
     }
 
-    // Funktion zum Aktualisieren des angezeigten Motor-Werts
+    // Function to update displayed motor value
     function updateMotorValue(val) {
       document.getElementById('motorValue').textContent = val;
     }
     
-    // Funktion zum Setzen der Motor-Position
+    // Function to set motor position
     function setMotorPosition() {
       const position = document.getElementById('motorSlider').value;
-      document.getElementById('status').innerHTML = 'Status: Motor wird positioniert...';
+      document.getElementById('status').innerHTML = 'Status: Positioning motor...';
       
       fetch('/setMotor?position=' + position)
         .then(response => response.text())
@@ -200,15 +259,15 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+          document.getElementById('status').innerHTML = 'Status: Error in motor control';
         });
     }
     
-    // Funktion für eine komplette Umdrehung
+    // Function for a full rotation
     function moveFullRotation(direction) {
-      document.getElementById('status').innerHTML = 'Status: Motor führt schnelle vollständige Umdrehung durch...';
+      document.getElementById('status').innerHTML = 'Status: Motor is performing a fast full rotation...';
       
-      // Der 28BYJ-48 benötigt 4096 Schritte für eine volle Umdrehung
+      // The 28BYJ-48 requires 4096 steps for a full revolution
       const steps = 4096;
       const speed = parseInt(document.getElementById('speedSlider').value);
       
@@ -218,18 +277,18 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+          document.getElementById('status').innerHTML = 'Status: Error in motor control';
         });
     }
 
-    // Funktion zum Aktualisieren des angezeigten Geschwindigkeitswerts
+    // Function to update displayed speed value
     function updateSpeedValue(val) {
       document.getElementById('speedValue').textContent = val;
     }
 
-    // Funktion zum Bewegen des Motors um bestimmte Schritte mit Geschwindigkeit
+    // Function to move motor by specific steps with speed
     function moveMotorSteps(steps, direction) {
-      document.getElementById('status').innerHTML = 'Status: Motor bewegt sich...';
+      document.getElementById('status').innerHTML = 'Status: Motor is moving...';
       
       const speed = parseInt(document.getElementById('speedSlider').value);
       
@@ -239,7 +298,7 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+          document.getElementById('status').innerHTML = 'Status: Error in motor control';
         });
     }
   </script>
@@ -248,79 +307,80 @@ const char* html = R"rawliteral(
 )rawliteral";
 
 void setupWebServer() {
-  // Webserver-Routen einrichten
+  // Set up web server routes
   server.on("/", HTTP_GET, handleRoot);
   server.on("/color", HTTP_GET, handleColorChange);
   server.on("/hexcolor", HTTP_GET, handleHexColorChange); 
   server.on("/setServo", HTTP_GET, handleServoControl);
-  server.on("/setMotor", HTTP_GET, handleMotorControl); // Füge diesen Handler in setupWebServer() ein, vor server.begin():
+  server.on("/setMotor", HTTP_GET, handleMotorControl);
+  server.on("/getButtonState", HTTP_GET, handleGetButtonState); // New handler for button status
   server.onNotFound(handleNotFound);
 
-  // Webserver starten
+  // Start web server
   server.begin();
-  Serial.println("HTTP-Server gestartet auf Port " + String(HTTP_PORT));
+  Serial.println("HTTP server started on port " + String(HTTP_PORT));
 }
 
-// Neuer Handler für die Servo-Steuerung
+// New handler for servo control
 void handleServoControl() {
   if (server.hasArg("angle")) {
     int angle = server.arg("angle").toInt();
-    // Winkel auf gültigen Bereich beschränken
+    // Constrain angle to valid range
     angle = constrain(angle, 0, 180);
-    // Servo auf den angegebenen Winkel einstellen
+    // Set servo to the specified angle
     sweepServo(angle, 15);
     
-    // Erfolgsantwort senden
-    server.send(200, "text/plain", "Servo auf " + String(angle) + "° gesetzt");
+    // Send success response
+    server.send(200, "text/plain", "Servo set to " + String(angle) + "°");
   } else {
-    // Fehlerantwort, wenn kein Winkel angegeben wurde
-    server.send(400, "text/plain", "Parameter 'angle' fehlt");
+    // Send error response if no angle was specified
+    server.send(400, "text/plain", "Missing 'angle' parameter");
   }
 }
 
-// Füge diese Funktion nach handleServoControl() ein:
+// Add this function after handleServoControl():
 
-// Handler für die Motorsteuerung
+// Handler for motor control
 void handleMotorControl() {
   if (server.hasArg("position")) {
     int position = server.arg("position").toInt();
-    // Position auf einen sinnvollen Bereich beschränken
+    // Constrain position to a sensible range
     position = constrain(position, -4096, 4096);
     
-    // Motor zur angegebenen Position bewegen
+    // Move motor to the specified position
     moveMotorToPosition(position);
     
-    // Erfolgsantwort senden
-    server.send(200, "text/plain", "Motor auf Position " + String(position) + " bewegt");
+    // Send success response
+    server.send(200, "text/plain", "Motor moved to position " + String(position));
   } else if (server.hasArg("steps") && server.hasArg("direction")) {
     int steps = server.arg("steps").toInt();
     int direction = server.arg("direction").toInt();
-    int speed = 70; // Standardgeschwindigkeit auf Skala (0-100)
+    int speed = 70; // Default speed on scale (0-100)
     
-    // Optional: Geschwindigkeit aus Anfrage lesen, falls vorhanden
+    // Optional: Read speed from request if available
     if (server.hasArg("speed")) {
       speed = server.arg("speed").toInt();
     }
     
-    // Werte auf sinnvolle Bereiche beschränken
+    // Constrain values to sensible ranges
     steps = constrain(steps, 0, 4096);
     direction = (direction > 0) ? 1 : -1;
-    speed = constrain(speed, 0, 100); // UI zeigt 0-100, aber motor.cpp begrenzt auf 0-90
+    speed = constrain(speed, 0, 100); // UI shows 0-100, but motor.cpp limits to 0-90
     
-    // Spezielle Nachricht für vollständige Umdrehungen
+    // Special message for full rotations
     String responseMessage;
     if (steps == 4096) {
-      responseMessage = "Motor hat " + String(direction > 0 ? "eine" : "eine rückwärtige") + 
-                       " vollständige Umdrehung mit Geschwindigkeit " + String(speed) + "% durchgeführt";
+      responseMessage = "Motor has completed " + String(direction > 0 ? "a" : "a reverse") + 
+                       " full rotation at speed " + String(speed) + "%";
     } else {
-      responseMessage = "Motor um " + String(steps) + " Schritte in Richtung " + 
-                       String(direction) + " mit Geschwindigkeit " + String(speed) + "% bewegt";
+      responseMessage = "Motor moved " + String(steps) + " steps in direction " + 
+                       String(direction) + " at speed " + String(speed) + "%";
     }
     
-    // Motor für die angegebenen Schritte mit angegebener Geschwindigkeit bewegen
+    // Move motor the specified steps with the specified speed
     moveMotorWithSpeed(steps, direction, speed);
     
-    // Erfolgsantwort senden
+    // Send success response
     server.send(200, "text/plain", responseMessage);
   }
 }
@@ -329,58 +389,68 @@ void handleWebServerRequests() {
   server.handleClient();
 }
 
-// Handler für die Root-Route
+// Handler for root route
 void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-// Handler zum Ändern der LED-Farbe
+// Handler for changing LED color
 void handleColorChange() {
   if (server.hasArg("index")) {
     int colorIndex = server.arg("index").toInt();
     
-    // Sicherstellen, dass der Index gültig ist (0-6)
+    // Ensure index is valid (0-6)
     if (colorIndex >= 0 && colorIndex <= 6) {
       setColorByIndex(colorIndex);
-      server.send(200, "text/plain", "Farbe erfolgreich geändert auf Index " + String(colorIndex));
+      server.send(200, "text/plain", "Color successfully changed to index " + String(colorIndex));
     } else {
-      server.send(400, "text/plain", "Ungültiger Farbindex!");
+      server.send(400, "text/plain", "Invalid color index!");
     }
   } else {
-    server.send(400, "text/plain", "Kein Farbindex angegeben!");
+    server.send(400, "text/plain", "No color index provided!");
   }
 }
 
-// Handler für Hex-Farbwechsel
+// Handler for hex color change
 void handleHexColorChange() {
   if (server.hasArg("hex")) {
     String hexColor = server.arg("hex");
     
-    // '#' entfernen falls vorhanden
+    // Remove '#' if present
     if (hexColor.startsWith("#")) {
       hexColor = hexColor.substring(1);
     }
     
-    // Überprüfen, ob es ein gültiger Hex-Farbcode ist (6 Zeichen)
+    // Check if it's a valid hex color code (6 characters)
     if (hexColor.length() == 6) {
-      // Hex-String in RGB-Werte umwandeln
+      // Convert hex string to RGB values
       uint32_t rgb = strtol(hexColor.c_str(), NULL, 16);
       uint8_t r = (rgb >> 16) & 0xFF;
       uint8_t g = (rgb >> 8) & 0xFF;
       uint8_t b = rgb & 0xFF;
       
-      // RGB-Werte an die LED senden
+      // Send RGB values to LED
       setColorRGB(r, g, b);
-      server.send(200, "text/plain", "Farbe erfolgreich geändert auf #" + hexColor);
+      server.send(200, "text/plain", "Color successfully changed to #" + hexColor);
     } else {
-      server.send(400, "text/plain", "Ungültiger Hex-Farbcode! Format: #RRGGBB");
+      server.send(400, "text/plain", "Invalid hex color code! Format: #RRGGBB");
     }
   } else {
-    server.send(400, "text/plain", "Keine Hex-Farbe angegeben!");
+    server.send(400, "text/plain", "No hex color provided!");
   }
 }
 
-// Handler für nicht gefundene URLs
+// Handler for not found URLs
 void handleNotFound() {
-  server.send(404, "text/plain", "404: Seite nicht gefunden");
+  server.send(404, "text/plain", "404: Not found");
+}
+
+// Handler for button status
+void handleGetButtonState() {
+  bool buttonPressed = getButtonState();
+  
+  // Create JSON response
+  String jsonResponse = "{\"pressed\":" + String(buttonPressed ? "true" : "false") + "}";
+  
+  server.send(200, "application/json", jsonResponse);
 }

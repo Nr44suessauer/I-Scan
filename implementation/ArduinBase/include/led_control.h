@@ -4,23 +4,23 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-// Definition für die LED-Ansteuerung
-#define LED_PIN     38      // Datenpin für die RGB-LED
-#define NUM_LEDS    1       // Anzahl der LEDs (hier nur eine)
-#define LED_TYPE    WS2812B // Typ der LED
-#define COLOR_ORDER GRB     // Farbfolge (typisch für WS2812B)
-#define BRIGHTNESS  5      // Helligkeit (0-255)
+// Definition for LED control
+#define LED_PIN     38      // Data pin for the RGB LED
+#define NUM_LEDS    1       // Number of LEDs (only one here)
+#define LED_TYPE    WS2812B // LED type
+#define COLOR_ORDER GRB     // Color order (typical for WS2812B)
+#define BRIGHTNESS  5       // Brightness (0-255)
 
-// Farbwechselgeschwindigkeit
-#define DELAY_MS    1000    // Zeit zwischen Farbwechseln in Millisekunden
+// Color change speed
+#define DELAY_MS    1000    // Time between color changes in milliseconds
 
-// Funktionsdeklarationen
+// Function declarations
 void setupLEDs();
 void updateLEDs();
 
-// Neue Funktionen zur manuellen Farbsteuerung
-void setColorByIndex(int index);     // Setzt Farbe nach vordefiniertem Index
-void setColorRGB(int r, int g, int b); // Setzt Farbe mit RGB-Werten
-void setColorHSV(int h, int s, int v); // Setzt Farbe mit HSV-Werten
+// New functions for manual color control
+void setColorByIndex(int index);     // Sets color by predefined index
+void setColorRGB(int r, int g, int b); // Sets color with RGB values
+void setColorHSV(int h, int s, int v); // Sets color with HSV values
 
 #endif // LED_CONTROL_H
