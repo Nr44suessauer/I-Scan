@@ -1,5 +1,6 @@
 #include "web_server.h"
 #include "servo_control.h" // Füge diese Zeile zu den bestehenden Includes hinzu
+#include "motor.h" // Füge zu den bestehenden Includes hinzu:
 
 // Funktionsdeklarationen
 void handleRoot();
@@ -7,6 +8,7 @@ void handleColorChange();
 void handleHexColorChange();
 void handleNotFound();
 void handleServoControl(); // Füge diese Zeile zu den Funktionsdeklarationen am Anfang der Datei hinzu
+void handleMotorControl(); // Füge zur Funktionsdeklaration am Anfang der Datei hinzu:
 
 // WebServer-Konfiguration
 const uint16_t HTTP_PORT = 80;
@@ -59,6 +61,21 @@ const char* html = R"rawliteral(
       </div>
       <p class="angle-display">Winkel: <span id="servoValue">90</span>°</p>
       <button class="btn-submit" onclick="setServoAngle()">Servo positionieren</button>
+    </div>
+
+    <!-- Motor-Steuerung -->
+    <div class="input-container">
+      <h2>Stepper-Motor Steuerung</h2>
+      <div class="slider-container">
+        <input type="range" id="motorSlider" min="-500" max="500" value="0" oninput="updateMotorValue(this.value)">
+      </div>
+      <p class="angle-display">Position: <span id="motorValue">0</span></p>
+      <button class="btn-submit" onclick="setMotorPosition()">Motor positionieren</button>
+      
+      <div style="margin-top: 15px;">
+        <button class="btn-submit" onclick="moveMotorSteps(100, 1)">100 Schritte vorwärts</button>
+        <button class="btn-submit" onclick="moveMotorSteps(100, -1)">100 Schritte rückwärts</button>
+      </div>
     </div>
     
     <!-- Farbsteuerung -->
@@ -155,6 +172,43 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: Fehler bei der Servo-Steuerung';
         });
     }
+
+    // Funktion zum Aktualisieren des angezeigten Motor-Werts
+    function updateMotorValue(val) {
+      document.getElementById('motorValue').textContent = val;
+    }
+    
+    // Funktion zum Setzen der Motor-Position
+    function setMotorPosition() {
+      const position = document.getElementById('motorSlider').value;
+      document.getElementById('status').innerHTML = 'Status: Motor wird positioniert...';
+      
+      fetch('/setMotor?position=' + position)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+        });
+    }
+    
+    // Funktion zum Bewegen des Motors um bestimmte Schritte
+    function moveMotorSteps(steps, direction) {
+      document.getElementById('status').innerHTML = 'Status: Motor bewegt sich...';
+      
+      fetch('/setMotor?steps=' + steps + '&direction=' + direction)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          // Aktualisiere den Slider nach der Bewegung (nur bei absoluter Positionierung)
+          // document.getElementById('motorSlider').value = parseInt(document.getElementById('motorValue').textContent) + (steps * direction);
+          // document.getElementById('motorValue').textContent = document.getElementById('motorSlider').value;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+        });
+    }
   </script>
 </body>
 </html>
@@ -166,6 +220,7 @@ void setupWebServer() {
   server.on("/color", HTTP_GET, handleColorChange);
   server.on("/hexcolor", HTTP_GET, handleHexColorChange); 
   server.on("/setServo", HTTP_GET, handleServoControl);
+  server.on("/setMotor", HTTP_GET, handleMotorControl); // Füge diesen Handler in setupWebServer() ein, vor server.begin():
   server.onNotFound(handleNotFound);
 
   // Webserver starten
@@ -187,6 +242,39 @@ void handleServoControl() {
   } else {
     // Fehlerantwort, wenn kein Winkel angegeben wurde
     server.send(400, "text/plain", "Parameter 'angle' fehlt");
+  }
+}
+
+// Füge diese Funktion nach handleServoControl() ein:
+
+// Handler für die Motorsteuerung
+void handleMotorControl() {
+  if (server.hasArg("position")) {
+    int position = server.arg("position").toInt();
+    // Position auf einen sinnvollen Bereich beschränken (z.B. -1000 bis 1000)
+    position = constrain(position, -1000, 1000);
+    
+    // Motor zur angegebenen Position bewegen
+    moveMotorToPosition(position);
+    
+    // Erfolgsantwort senden
+    server.send(200, "text/plain", "Motor auf Position " + String(position) + " bewegt");
+  } else if (server.hasArg("steps") && server.hasArg("direction")) {
+    int steps = server.arg("steps").toInt();
+    int direction = server.arg("direction").toInt();
+    
+    // Werte auf sinnvolle Bereiche beschränken
+    steps = constrain(steps, 0, 1000);
+    direction = (direction > 0) ? 1 : -1;
+    
+    // Motor für die angegebenen Schritte bewegen
+    moveMotor(steps, direction);
+    
+    // Erfolgsantwort senden
+    server.send(200, "text/plain", "Motor um " + String(steps) + " Schritte in Richtung " + String(direction) + " bewegt");
+  } else {
+    // Fehlerantwort, wenn benötigte Parameter fehlen
+    server.send(400, "text/plain", "Parameter 'position' oder 'steps'+'direction' fehlen");
   }
 }
 

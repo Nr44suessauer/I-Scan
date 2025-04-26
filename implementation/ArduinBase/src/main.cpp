@@ -3,18 +3,22 @@
 #include "web_server.h"
 #include "led_control.h"
 #include "servo_control.h"  // Servo-Header einbinden
+#include "motor.h"          // Motor-Header einbinden
 
 void setup() {
   Serial.begin(9600);
   delay(1000);
   
-  Serial.println("RGB LED Controller mit WebServer gestartet");
+  Serial.println("I-Scan Controller gestartet");
   
   // LED-Setup
   setupLEDs();
   
   // Servo-Setup
   setupServo();  // Servo initialisieren
+  
+  // Motor-Setup
+  setupMotor();  // Stepper-Motor initialisieren
   
   // WiFi-Verbindung herstellen
   setupWiFi();
@@ -25,11 +29,17 @@ void setup() {
   // Farbänderung nach WLAN-Verbindung
   setColorByIndex(1);  // Grün für erfolgreiche WLAN-Verbindung
   
-  // Servo-Test - bewegt den Servo von der aktuellen Position (standardmäßig 90°) zu 45° und dann zu 135°
+  // Servo-Test
   delay(1000);
-  sweepServo(45, 20);  // Zu 45° bewegen mit einer Geschwindigkeit von 20ms pro Grad
+  sweepServo(45, 20);
   delay(1000);
-  sweepServo(135, 20);  // Zu 135° bewegen
+  sweepServo(135, 20);
+  
+  // Motor-Test
+  delay(1000);
+  moveMotor(100, 1);  // 100 Schritte vorwärts
+  delay(1000);
+  moveMotor(100, -1); // 100 Schritte rückwärts
 }
 
 void loop() {
