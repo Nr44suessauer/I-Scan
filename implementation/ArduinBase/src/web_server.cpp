@@ -1,10 +1,12 @@
 #include "web_server.h"
+#include "servo_control.h" // Füge diese Zeile zu den bestehenden Includes hinzu
 
 // Funktionsdeklarationen
 void handleRoot();
 void handleColorChange();
 void handleHexColorChange();
 void handleNotFound();
+void handleServoControl(); // Füge diese Zeile zu den Funktionsdeklarationen am Anfang der Datei hinzu
 
 // WebServer-Konfiguration
 const uint16_t HTTP_PORT = 80;
@@ -19,7 +21,7 @@ const char* html = R"rawliteral(
   <title>RGB LED Steuerung</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
-    h1 { color: #333; }
+    h1, h2 { color: #333; }
     .container { max-width: 600px; margin: 0 auto; }
     .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
     .btn { display: block; width: 100%; padding: 20px 0; border: none; border-radius: 5px; color: white; font-size: 16px; cursor: pointer; }
@@ -32,23 +34,41 @@ const char* html = R"rawliteral(
     .btn-white { background-color: #FFFFFF; color: black; border: 1px solid #ddd; }
     
     /* Hex-Eingabe Styling */
-    .hex-input-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .hex-input-container h2 { margin-top: 0; color: #444; }
+    .input-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .input-container h2 { margin-top: 0; color: #444; }
     .color-preview { width: 50px; height: 50px; border-radius: 50%; margin: 10px auto; border: 1px solid #ddd; }
     .hex-input { padding: 10px; font-size: 16px; width: 140px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
-    .hex-btn { padding: 10px 15px; margin-left: 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .hex-btn:hover { background: #0b7dda; }
+    .btn-submit { padding: 10px 15px; margin-left: 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-submit:hover { background: #0b7dda; }
+    
+    /* Servo Styling */
+    .slider-container { margin: 15px 0; }
+    input[type="range"] { width: 80%; max-width: 400px; }
+    .angle-display { font-weight: bold; font-size: 18px; margin: 10px 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>RGB LED Steuerung</h1>
+    <h1>ESP32 I-Scan Steuerung</h1>
     
-    <div class="hex-input-container">
+    <!-- Servo-Steuerung -->
+    <div class="input-container">
+      <h2>Servo-Positionierung</h2>
+      <div class="slider-container">
+        <input type="range" id="servoSlider" min="0" max="180" value="90" oninput="updateServoValue(this.value)">
+      </div>
+      <p class="angle-display">Winkel: <span id="servoValue">90</span>°</p>
+      <button class="btn-submit" onclick="setServoAngle()">Servo positionieren</button>
+    </div>
+    
+    <!-- Farbsteuerung -->
+    <h2>RGB LED Steuerung</h2>
+    
+    <div class="input-container">
       <h2>Benutzerdefinierte Farbe</h2>
       <div id="colorPreview" class="color-preview"></div>
       <input type="text" id="hexInput" class="hex-input" placeholder="#FF0000" maxlength="7" value="#FF0000"/>
-      <button class="hex-btn" onclick="changeHexColor()">Anwenden</button>
+      <button class="btn-submit" onclick="changeHexColor()">Anwenden</button>
     </div>
     
     <p>Oder wähle eine vordefinierte Farbe:</p>
@@ -115,6 +135,26 @@ const char* html = R"rawliteral(
           document.getElementById('status').innerHTML = 'Status: Fehler beim Ändern der Farbe';
         });
     }
+    
+    // Funktion zum Aktualisieren des angezeigten Servo-Winkels
+    function updateServoValue(val) {
+      document.getElementById('servoValue').textContent = val;
+    }
+    
+    // Funktion zum Setzen des Servo-Winkels
+    function setServoAngle() {
+      const angle = document.getElementById('servoSlider').value;
+      document.getElementById('status').innerHTML = 'Status: Servo wird positioniert...';
+      
+      fetch('/setServo?angle=' + angle)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Fehler bei der Servo-Steuerung';
+        });
+    }
   </script>
 </body>
 </html>
@@ -125,11 +165,29 @@ void setupWebServer() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/color", HTTP_GET, handleColorChange);
   server.on("/hexcolor", HTTP_GET, handleHexColorChange); 
+  server.on("/setServo", HTTP_GET, handleServoControl);
   server.onNotFound(handleNotFound);
-  
+
   // Webserver starten
   server.begin();
   Serial.println("HTTP-Server gestartet auf Port " + String(HTTP_PORT));
+}
+
+// Neuer Handler für die Servo-Steuerung
+void handleServoControl() {
+  if (server.hasArg("angle")) {
+    int angle = server.arg("angle").toInt();
+    // Winkel auf gültigen Bereich beschränken
+    angle = constrain(angle, 0, 180);
+    // Servo auf den angegebenen Winkel einstellen
+    sweepServo(angle, 15);
+    
+    // Erfolgsantwort senden
+    server.send(200, "text/plain", "Servo auf " + String(angle) + "° gesetzt");
+  } else {
+    // Fehlerantwort, wenn kein Winkel angegeben wurde
+    server.send(400, "text/plain", "Parameter 'angle' fehlt");
+  }
 }
 
 void handleWebServerRequests() {
