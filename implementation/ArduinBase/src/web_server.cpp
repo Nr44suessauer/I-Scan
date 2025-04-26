@@ -63,7 +63,7 @@ const char* html = R"rawliteral(
       <button class="btn-submit" onclick="setServoAngle()">Servo positionieren</button>
     </div>
 
-    <!-- Motor-Steuerung -->
+    <!-- Motor-Steuerung mit erweitertem Geschwindigkeitsregler -->
     <div class="input-container">
       <h2>Stepper-Motor Steuerung</h2>
       <div class="slider-container">
@@ -72,9 +72,20 @@ const char* html = R"rawliteral(
       <p class="angle-display">Position: <span id="motorValue">0</span></p>
       <button class="btn-submit" onclick="setMotorPosition()">Motor positionieren</button>
       
-      <div style="margin-top: 15px;">
+      <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
         <button class="btn-submit" onclick="moveMotorSteps(100, 1)">100 Schritte vorwärts</button>
         <button class="btn-submit" onclick="moveMotorSteps(100, -1)">100 Schritte rückwärts</button>
+        <button class="btn-submit" onclick="moveFullRotation(1)">1 Umdrehung vorwärts</button>
+        <button class="btn-submit" onclick="moveFullRotation(-1)">1 Umdrehung rückwärts</button>
+      </div>
+      
+      <div style="margin-top: 15px;">
+        <label for="speedSlider">Geschwindigkeit:</label>
+        <input type="range" id="speedSlider" min="0" max="100" value="70" oninput="updateSpeedValue(this.value)">
+        <span id="speedValue">70</span>%
+        <div style="margin-top: 5px; font-size: 12px;">
+          <span>0% (langsam) bis 100% (Maximalgeschwindigkeit)</span>
+        </div>
       </div>
     </div>
     
@@ -193,17 +204,39 @@ const char* html = R"rawliteral(
         });
     }
     
-    // Funktion zum Bewegen des Motors um bestimmte Schritte
-    function moveMotorSteps(steps, direction) {
-      document.getElementById('status').innerHTML = 'Status: Motor bewegt sich...';
+    // Funktion für eine komplette Umdrehung
+    function moveFullRotation(direction) {
+      document.getElementById('status').innerHTML = 'Status: Motor führt schnelle vollständige Umdrehung durch...';
       
-      fetch('/setMotor?steps=' + steps + '&direction=' + direction)
+      // Der 28BYJ-48 benötigt 4096 Schritte für eine volle Umdrehung
+      const steps = 4096;
+      const speed = parseInt(document.getElementById('speedSlider').value);
+      
+      fetch('/setMotor?steps=' + steps + '&direction=' + direction + '&speed=' + speed)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
-          // Aktualisiere den Slider nach der Bewegung (nur bei absoluter Positionierung)
-          // document.getElementById('motorSlider').value = parseInt(document.getElementById('motorValue').textContent) + (steps * direction);
-          // document.getElementById('motorValue').textContent = document.getElementById('motorSlider').value;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
+        });
+    }
+
+    // Funktion zum Aktualisieren des angezeigten Geschwindigkeitswerts
+    function updateSpeedValue(val) {
+      document.getElementById('speedValue').textContent = val;
+    }
+
+    // Funktion zum Bewegen des Motors um bestimmte Schritte mit Geschwindigkeit
+    function moveMotorSteps(steps, direction) {
+      document.getElementById('status').innerHTML = 'Status: Motor bewegt sich...';
+      
+      const speed = parseInt(document.getElementById('speedSlider').value);
+      
+      fetch('/setMotor?steps=' + steps + '&direction=' + direction + '&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
           document.getElementById('status').innerHTML = 'Status: Fehler bei der Motor-Steuerung';
@@ -251,8 +284,8 @@ void handleServoControl() {
 void handleMotorControl() {
   if (server.hasArg("position")) {
     int position = server.arg("position").toInt();
-    // Position auf einen sinnvollen Bereich beschränken (z.B. -1000 bis 1000)
-    position = constrain(position, -1000, 1000);
+    // Position auf einen sinnvollen Bereich beschränken
+    position = constrain(position, -4096, 4096);
     
     // Motor zur angegebenen Position bewegen
     moveMotorToPosition(position);
@@ -262,19 +295,33 @@ void handleMotorControl() {
   } else if (server.hasArg("steps") && server.hasArg("direction")) {
     int steps = server.arg("steps").toInt();
     int direction = server.arg("direction").toInt();
+    int speed = 70; // Standardgeschwindigkeit auf Skala (0-100)
+    
+    // Optional: Geschwindigkeit aus Anfrage lesen, falls vorhanden
+    if (server.hasArg("speed")) {
+      speed = server.arg("speed").toInt();
+    }
     
     // Werte auf sinnvolle Bereiche beschränken
-    steps = constrain(steps, 0, 1000);
+    steps = constrain(steps, 0, 4096);
     direction = (direction > 0) ? 1 : -1;
+    speed = constrain(speed, 0, 100); // UI zeigt 0-100, aber motor.cpp begrenzt auf 0-90
     
-    // Motor für die angegebenen Schritte bewegen
-    moveMotor(steps, direction);
+    // Spezielle Nachricht für vollständige Umdrehungen
+    String responseMessage;
+    if (steps == 4096) {
+      responseMessage = "Motor hat " + String(direction > 0 ? "eine" : "eine rückwärtige") + 
+                       " vollständige Umdrehung mit Geschwindigkeit " + String(speed) + "% durchgeführt";
+    } else {
+      responseMessage = "Motor um " + String(steps) + " Schritte in Richtung " + 
+                       String(direction) + " mit Geschwindigkeit " + String(speed) + "% bewegt";
+    }
+    
+    // Motor für die angegebenen Schritte mit angegebener Geschwindigkeit bewegen
+    moveMotorWithSpeed(steps, direction, speed);
     
     // Erfolgsantwort senden
-    server.send(200, "text/plain", "Motor um " + String(steps) + " Schritte in Richtung " + String(direction) + " bewegt");
-  } else {
-    // Fehlerantwort, wenn benötigte Parameter fehlen
-    server.send(400, "text/plain", "Parameter 'position' oder 'steps'+'direction' fehlen");
+    server.send(200, "text/plain", responseMessage);
   }
 }
 

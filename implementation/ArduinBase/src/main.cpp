@@ -29,17 +29,8 @@ void setup() {
   // Farbänderung nach WLAN-Verbindung
   setColorByIndex(1);  // Grün für erfolgreiche WLAN-Verbindung
   
-  // Servo-Test
-  delay(1000);
-  sweepServo(45, 20);
-  delay(1000);
-  sweepServo(135, 20);
-  
-  // Motor-Test
-  delay(1000);
-  moveMotor(100, 1);  // 100 Schritte vorwärts
-  delay(1000);
-  moveMotor(100, -1); // 100 Schritte rückwärts
+ 
+
 }
 
 void loop() {
