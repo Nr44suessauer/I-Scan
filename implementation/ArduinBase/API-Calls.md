@@ -1,56 +1,37 @@
-# I-Scan API-Befehle für Postman
+# PositionUnit API Commands
 
-## Servo-Steuerung
+## Servo Control
 
-| HTTP-Methode | URL | Beschreibung |
+| HTTP Method | URL | Description |
 |-------------|-----|-------------|
-| GET | `http://192.168.178.77/setServo?angle=90` | Positioniert den Servo auf 90 Grad |
-| GET | `http://192.168.178.77/setServo?angle=0` | Positioniert den Servo auf 0 Grad (Minimum) |
-| GET | `http://192.168.178.77/setServo?angle=180` | Positioniert den Servo auf 180 Grad (Maximum) |
+| GET | `http://192.168.178.77/setServo?angle=0` | Positions the servo at 0 degrees (minimum) |
+| GET | `http://192.168.178.77/setServo?angle=180` | Positions the servo at 180 degrees (maximum) |
 
-## Stepper-Motor-Steuerung
+## Stepper Motor Control
 
-| HTTP-Methode | URL | Beschreibung |
+| HTTP Method | URL | Description |
 |-------------|-----|-------------|
-| GET | `http://192.168.178.77/setMotor?position=250` | Bewegt den Motor zur absoluten Position 250 |
-| GET | `http://192.168.178.77/setMotor?position=0` | Bewegt den Motor zurück zur Nullposition |
-| GET | `http://192.168.178.77/setMotor?position=-500` | Bewegt den Motor zur absoluten Position -500 |
-| GET | `http://192.168.178.77/setMotor?steps=100&direction=1` | Bewegt den Motor 100 Schritte vorwärts |
-| GET | `http://192.168.178.77/setMotor?steps=100&direction=-1` | Bewegt den Motor 100 Schritte rückwärts |
-| GET | `http://192.168.178.77/setMotor?steps=4096&direction=1` | Bewegt den Motor eine vollständige Umdrehung vorwärts |
-| GET | `http://192.168.178.77/setMotor?steps=4096&direction=-1` | Bewegt den Motor eine vollständige Umdrehung rückwärts |
-| GET | `http://192.168.178.77/setMotor?steps=100&direction=1&speed=50` | Bewegt den Motor 100 Schritte vorwärts mit 50% Geschwindigkeit |
-| GET | `http://192.168.178.77/setMotor?steps=100&direction=-1&speed=75` | Bewegt den Motor 100 Schritte rückwärts mit 75% Geschwindigkeit |
+| GET | `http://192.168.178.77/setMotor?position=250` | Moves the motor to absolute position 250 |
+| GET | `http://192.168.178.77/setMotor?position=0` | Moves the motor back to the zero position |
+| GET | `http://192.168.178.77/setMotor?steps=4096&direction=1` | Moves the motor one full rotation forward |
+| GET | `http://192.168.178.77/setMotor?steps=100&direction=-1&speed=75` | Moves the motor 100 steps backward at 75% speed |
 
-## RGB-LED-Steuerung
+## RGB LED Control
 
-| HTTP-Methode | URL | Beschreibung |
+| HTTP Method | URL | Description |
 |-------------|-----|-------------|
-| GET | `http://192.168.178.77/color?index=0` | Setzt die LED auf Rot (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=1` | Setzt die LED auf Grün (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=2` | Setzt die LED auf Blau (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=3` | Setzt die LED auf Gelb (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=4` | Setzt die LED auf Lila (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=5` | Setzt die LED auf Orange (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/color?index=6` | Setzt die LED auf Weiß (voreingestellte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%23FF0000` | Setzt die LED auf Rot (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%2300FF00` | Setzt die LED auf Grün (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%230000FF` | Setzt die LED auf Blau (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%23FFFF00` | Setzt die LED auf Gelb (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%23FF00FF` | Setzt die LED auf Magenta (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/hexcolor?hex=%2300FFFF` | Setzt die LED auf Cyan (benutzerdefinierte Farbe) |
-| GET | `http://192.168.178.77/setBrightness?value=50` | Setzt die LED-Helligkeit auf 50 (Bereich: 0-255) |
-| GET | `http://192.168.178.77/setBrightness?value=255` | Setzt die LED-Helligkeit auf Maximum (255) |
-| GET | `http://192.168.178.77/setBrightness?value=10` | Setzt die LED-Helligkeit auf niedrige Stufe (10) |
+| GET | `http://192.168.178.77/color?index=0` | Sets the LED to red (preset color) |
+| GET | `http://192.168.178.77/hexcolor?hex=%2300FFFF` | Sets the LED to cyan (custom color) |
+| GET | `http://192.168.178.77/setBrightness?value=255` | Sets the LED brightness to maximum (255) |
 
-## Button-Status
+## Button Status
 
-| HTTP-Methode | URL | Beschreibung |
+| HTTP Method | URL | Description |
 |-------------|-----|-------------|
-| GET | `http://192.168.178.77/getButtonState` | Ruft den aktuellen Status des Buttons ab (gedrückt oder nicht) |
+| GET | `http://192.168.178.77/getButtonState` | Retrieves the current status of the button (pressed or not) |
 
-## Sonstiges
+## Miscellaneous
 
-| HTTP-Methode | URL | Beschreibung |
+| HTTP Method | URL | Description |
 |-------------|-----|-------------|
-| GET | `http://192.168.178.77/` | Ruft die Hauptseite der Weboberfläche ab |
+| GET | `http://192.168.178.77/` | Retrieves the main page of the web interface |
