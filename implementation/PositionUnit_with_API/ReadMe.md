@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project controls various hardware components (stepper motor, servo, RGB LED, button) using an ESP32-S3 controller. Control is possible both locally and via a network (Wi-Fi), including a web server and API interfaces. Development is done with PlatformIO and the Arduino framework.
+This project controls various hardware components (stepper motor, servo, RGB LED, button) using an ESP32-S3 controller. Control is possible both locally and via a network (Wi-Fi), including a web server and API interfaces. Development is done with PlatformIO.
 
 ---
 
