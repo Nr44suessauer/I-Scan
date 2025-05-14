@@ -13,6 +13,8 @@ import time
 import json
 import re
 import math
+import csv
+from tkinter import filedialog, messagebox
 
 # Constants for default values and calculations
 PI = 3.141592653589793
@@ -340,7 +342,7 @@ class OperationQueue:
         for idx, op in enumerate(self.operations):
             self.queue_list.insert(tk.END, f"{idx+1}. {op['description']}")
     
-    def execute_all(self, base_url, widgets, position_var, servo_angle_var, last_distance_value):
+    def execute_all(self, base_url, widgets, position_var, servo_angle_var, last_distance_value, run_in_thread=True):
         """
         Execute all operations in the queue sequentially
         
@@ -350,6 +352,7 @@ class OperationQueue:
             position_var: The DoubleVar tracking the current position
             servo_angle_var: The IntVar tracking the current servo angle
             last_distance_value: The StringVar for the last distance value
+            run_in_thread (bool): Ob die Ausführung in einem Thread erfolgen soll (Standard: True)
         """
         if not self.operations:
             self.logger.log("Queue is empty. Nothing to execute.")
@@ -429,8 +432,10 @@ class OperationQueue:
             
             self.logger.log("Queue execution completed!")
         
-        # Run in a separate thread to keep UI responsive
-        threading.Thread(target=run_queue).start()
+        if run_in_thread:
+            threading.Thread(target=run_queue).start()
+        else:
+            run_queue()
     
     def _execute_home_function(self, base_url, widgets, position_var, last_distance_value):
         """
@@ -562,32 +567,24 @@ class DeviceControl:
     
     def servo_cmd(self):
         """
-        Execute servo command directly
-        Reads the angle from the input field and sends the command to the API
+        Execute servo command directly für alle ausgewählten IPs
         """
         try:
             angle = int(self.widgets['servo_angle'].get())
-            base_url = self.base_url_var.get()
-            
-            # Execute API call
-            ApiClient.set_servo_angle(angle, base_url)
-            
-            # Log output for servo
-            self.logger.log(f"Servo: Angle {angle}°")
-            
-            # Update servo angle in GUI
-            self.servo_angle_var.set(angle)
-            self.widgets['update_position_label']()
+            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+            for ip in ips:
+                ApiClient.set_servo_angle(angle, ip)
+                self.logger.log(f"[IP: {ip}] Servo: Angle {angle}°")
+                self.servo_angle_var.set(angle)
+                self.widgets['update_position_label']()
         except Exception as e:
             self.logger.log(f"Error: {e}")
-    
+
     def stepper_cmd(self):
         """
-        Execute stepper motor command directly
-        Reads parameters from input fields and sends the command to the API
+        Execute stepper motor command directly für alle ausgewählten IPs
         """
         try:
-            # Get diameter and other parameters from fields
             d = float(self.widgets['diameter_entry'].get())
             circumference = PI * d  # mm
             length_cm = float(self.widgets['stepper_length_cm'].get())
@@ -595,178 +592,135 @@ class DeviceControl:
             steps = int((length_mm / circumference) * 4096)
             direction = int(self.widgets['stepper_dir'].get()) if self.widgets['stepper_dir'].get() else 1
             speed = int(self.widgets['stepper_speed'].get()) if self.widgets['stepper_speed'].get() else None
-            base_url = self.base_url_var.get()
-            
-            # Execute API call
             dir_text = "up" if direction == 1 else "down"
-            ApiClient.move_stepper(steps, direction, speed, base_url)
-            
-            # Calculate new position
-            pos_cm = self.position.get() + (length_cm if direction == 1 else -length_cm)
-            
-            # Use log format that the parser will recognize
-            self.logger.log(f"Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}, Position: {pos_cm:.2f} cm")
+            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+            for ip in ips:
+                ApiClient.move_stepper(steps, direction, speed, ip)
+                pos_cm = self.position.get() + (length_cm if direction == 1 else -length_cm)
+                self.logger.log(f"[IP: {ip}] Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}, Position: {pos_cm:.2f} cm")
         except Exception as e:
             self.logger.log(f"Error: {e}")
-    
+
     def led_cmd(self):
         """
-        Set LED color directly
-        Reads the color from the input field and sends the command to the API
+        Set LED color direkt für alle ausgewählten IPs
         """
         try:
             color_hex = self.widgets['led_color'].get()
             if not color_hex.startswith("#"):
                 color_hex = "#" + color_hex
-            base_url = self.base_url_var.get()
-            
-            # Execute API call
-            ApiClient.set_led_color(color_hex, base_url)
-            
-            # Log output for LED color
-            self.logger.log(f"LED: Color {color_hex}")
+            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+            for ip in ips:
+                ApiClient.set_led_color(color_hex, ip)
+                self.logger.log(f"[IP: {ip}] LED: Color {color_hex}")
         except Exception as e:
             self.logger.log(f"Error: {e}")
-    
+
     def bright_cmd(self):
         """
-        Set LED brightness directly
-        Reads the brightness from the input field and sends the command to the API
+        Set LED brightness direkt für alle ausgewählten IPs
         """
         try:
             val = int(self.widgets['led_bright'].get())
-            base_url = self.base_url_var.get()
-            
-            # Execute API call
-            ApiClient.set_led_brightness(val, base_url)
-            
-            # Log output for LED brightness
-            self.logger.log(f"LED: Brightness {val}%")
+            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+            for ip in ips:
+                ApiClient.set_led_brightness(val, ip)
+                self.logger.log(f"[IP: {ip}] LED: Brightness {val}%")
         except Exception as e:
             self.logger.log(f"Error: {e}")
-    
+
     def button_cmd(self):
         """
-        Query button state directly
-        Sends a request to the API to get the current button state
+        Query button state direkt für alle ausgewählten IPs
         """
-        base_url = self.base_url_var.get()
-        response = ApiClient.get_button_state(base_url)
-        self.logger.log(f"Button status: {response}")
-    
-    def home_func(self):
-        """
-        Execute the home function
-        This function checks the button state first, then moves the 
-        stepper motor down until the button is pressed,
-        then moves up slightly and resets the position to zero.
-        It should be executed in a separate thread to keep the UI responsive.
-        """
+        ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+        for ip in ips:
+            response = ApiClient.get_button_state(ip)
+            self.logger.log(f"[IP: {ip}] Button status: {response}")
+
+    def _home_logic_for_ip(self, ip):
         try:
             d = float(self.widgets['diameter_entry'].get())
-            base_url = self.base_url_var.get()
-            self.logger.log('Starting Home function...')
-            
+            self.logger.log(f"[IP: {ip}] Starting Home function...")
             # Erste Überprüfung des Button-Status
             self.logger.log("Checking initial button state...")
-            btn_response = ApiClient.get_button_state(base_url, nocache=True)
+            btn_response = ApiClient.get_button_state(ip, nocache=True)
             button_pressed = ApiClient.is_button_pressed(btn_response)
-            
             if button_pressed:
                 self.logger.log("Button is already pressed. Waiting for release...")
-                
-                # Warten bis der Button nicht mehr gedrückt ist
                 reset_attempts = 0
                 max_reset_attempts = 10
-                
                 while reset_attempts < max_reset_attempts:
                     reset_attempts += 1
-                    time.sleep(1)  # Warte 1 Sekunde
-                    
-                    btn_response = ApiClient.get_button_state(base_url, nocache=True)
+                    time.sleep(1)
+                    btn_response = ApiClient.get_button_state(ip, nocache=True)
                     button_still_pressed = ApiClient.is_button_pressed(btn_response)
-                    
                     if button_still_pressed:
                         self.logger.log(f"Button still pressed, waiting for release (attempt {reset_attempts})...")
                     else:
                         self.logger.log(f"Button released, proceeding with home function.")
                         break
-                
                 if reset_attempts >= max_reset_attempts:
                     self.logger.log("Warning: Button still pressed after maximum attempts. Please check hardware.")
-                    return  # Abbruch der Home-Funktion, wenn Button weiterhin gedrückt ist
+                    return
             else:
                 self.logger.log("Button is not pressed. Proceeding with home function.")
-            
-            # Eine Sekunde warten bevor mit der Home-Funktion fortgefahren wird
             time.sleep(1)
-            
-            # Initial 100 steps nach unten
             speed = int(self.widgets['stepper_speed'].get())
             params = {"steps": 100, "direction": -1, "speed": speed}
-            ApiClient.make_request("setMotor", params, base_url)
+            ApiClient.make_request("setMotor", params, ip)
             pos_cm = self.position.get() - (100 / 4096 * PI * d / 10)
             distance_cm = (100 / 4096 * PI * d / 10)
-            self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
-            
-            # Schleife bis Button gedrückt wird
-            max_attempts = 100  # Maximale Anzahl von Versuchen
+            self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
+            max_attempts = 100
             attempt = 0
             button_pressed = False
-            
             while not button_pressed and attempt < max_attempts:
                 attempt += 1
-                
-                # Neue Button-Abfrage mit unique Parameter um Cache zu vermeiden
-                btn_response = ApiClient.get_button_state(base_url, nocache=True)
-                
-                # Nur bei wichtigen Ereignissen loggen
+                btn_response = ApiClient.get_button_state(ip, nocache=True)
                 if attempt % 5 == 0:
-                    self.logger.log(f"Button check attempt {attempt}: Response: {btn_response}")
-                
-                # Button-Status prüfen
+                    self.logger.log(f"[IP: {ip}] Button check attempt {attempt}: Response: {btn_response}")
                 button_pressed = ApiClient.is_button_pressed(btn_response)
-                
                 if button_pressed:
-                    # Button gedrückt, 100 Schritte nach oben und fertig
-                    self.logger.log(f"Button press detected on attempt {attempt}, moving up and completing home")
+                    self.logger.log(f"[IP: {ip}] Button press detected on attempt {attempt}, moving up and completing home")
                     params = {"steps": 100, "direction": 1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, base_url)
+                    ApiClient.make_request("setMotor", params, ip)
                     pos_cm = self.position.get() + (100 / 4096 * PI * d / 10)
                     distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
-                    break  # Diese Zeile war bereits vorhanden und korrekt
+                    self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
+                    break
                 else:
-                    # Button nicht gedrückt, weitere 100 Schritte nach unten
                     params = {"steps": 100, "direction": -1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, base_url)
+                    ApiClient.make_request("setMotor", params, ip)
                     pos_cm = self.position.get() - (100 / 4096 * PI * d / 10)
                     distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
-                    
-                    # Verzögerung nach jedem Schritt
+                    self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
                     time.sleep(0.5)
-                    
-                    # Sofort neue Button-Abfrage machen, bevor wir weitere Schritte nach unten fahren
-                    btn_response = ApiClient.get_button_state(base_url, nocache=True)
+                    btn_response = ApiClient.get_button_state(ip, nocache=True)
                     if ApiClient.is_button_pressed(btn_response):
-                        self.logger.log(f"Button press detected after move, proceeding to completion")
-                        # Button gedrückt, 100 Schritte nach oben und fertig
+                        self.logger.log(f"[IP: {ip}] Button press detected after move, proceeding to completion")
                         params = {"steps": 100, "direction": 1, "speed": speed}
-                        ApiClient.make_request("setMotor", params, base_url)
+                        ApiClient.make_request("setMotor", params, ip)
                         pos_cm = self.position.get() + (100 / 4096 * PI * d / 10)
                         distance_cm = (100 / 4096 * PI * d / 10)
-                        self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
+                        self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
                         break
-            
-            # Warnung wenn Button nie gedrückt wurde
             if not button_pressed:
-                self.logger.log("Warning: Maximum attempts reached in home function without detecting button press.")
-            
-            # Position auf 0 setzen
+                self.logger.log(f"[IP: {ip}] Warning: Maximum attempts reached in home function without detecting button press.")
             self.position.set(0)
             self.widgets['update_position_label']()
-            self.logger.log("Home function completed, position set to 0.")
+            self.logger.log(f"[IP: {ip}] Home function completed, position set to 0.")
+        except Exception as e:
+            self.logger.log(f"[IP: {ip}] Error: {e}")
+
+    def home_func(self):
+        """
+        Execute the home function für alle ausgewählten IPs
+        """
+        try:
+            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
+            for ip in ips:
+                self._home_logic_for_ip(ip)
         except Exception as e:
             self.logger.log(f"Error: {e}")
 
@@ -788,6 +742,7 @@ class ControlApp:
         self.servo_angle_var = tk.IntVar(value=0)
         self.base_url_var = tk.StringVar(value=DEFAULT_BASE_URL)
         self.last_distance_value = tk.StringVar(value=DEFAULT_DISTANCE)
+        self.repeat_queue = tk.BooleanVar(value=False)  # Repeat-Flag
         
         # Create GUI elements
         self.create_widgets()
@@ -832,6 +787,7 @@ class ControlApp:
         """Create all GUI elements in the application window"""
         # URL input field
         self.create_url_frame()
+        self.create_ip_selection_frame()  # NEU: IP-Auswahl-Frame
         
         # Gear diameter at top
         self.create_diameter_frame()
@@ -874,6 +830,38 @@ class ControlApp:
         base_url_entry = tk.Entry(url_frame, textvariable=self.base_url_var, width=30)
         base_url_entry.pack(side=tk.LEFT, padx=5)
     
+    def create_ip_selection_frame(self):
+        """
+        Erzeugt ein Frame zur Auswahl und Eingabe von bis zu 4 IP-Adressen.
+        Jede IP kann per Checkbox aktiviert werden.
+        """
+        ip_frame = tk.LabelFrame(self.root, text="API IP-Auswahl (Mehrfach möglich)")
+        ip_frame.pack(fill="x", padx=10, pady=(2,2))
+        self.ip_vars = []  # Liste von BooleanVars für Checkboxen
+        self.ip_entries = []  # Liste von Entry-Feldern für IPs
+        default_ips = [DEFAULT_BASE_URL, "http://192.168.178.78", "http://192.168.178.79", "http://192.168.178.80"]
+        for i in range(4):
+            var = tk.BooleanVar(value=(i==0))  # Erste IP standardmäßig aktiv
+            entry = tk.Entry(ip_frame, width=18)
+            entry.insert(0, default_ips[i] if i < len(default_ips) else "")
+            cb = tk.Checkbutton(ip_frame, variable=var)
+            cb.pack(side=tk.LEFT)
+            entry.pack(side=tk.LEFT, padx=(0,10))
+            self.ip_vars.append(var)
+            self.ip_entries.append(entry)
+
+    def get_selected_ips(self):
+        """
+        Gibt eine Liste der aktuell ausgewählten IP-Adressen zurück.
+        """
+        ips = []
+        for var, entry in zip(self.ip_vars, self.ip_entries):
+            if var.get():
+                ip = entry.get().strip()
+                if ip:
+                    ips.append(ip)
+        return ips
+
     def create_diameter_frame(self):
         """
         Create the diameter input field frame
@@ -1052,6 +1040,14 @@ class ControlApp:
         
         self.queue_remove_btn = tk.Button(queue_buttons_frame, text="Remove Selected")
         self.queue_remove_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.repeat_check = tk.Checkbutton(queue_buttons_frame, text="Repeat Queue", variable=self.repeat_queue)
+        self.repeat_check.pack(side=tk.LEFT, padx=5)
+
+        self.queue_export_btn = tk.Button(queue_buttons_frame, text="Export Queue (CSV)", bg="#b0c4de", fg="black")
+        self.queue_export_btn.pack(side=tk.LEFT, padx=5)
+        self.queue_import_btn = tk.Button(queue_buttons_frame, text="Import Queue (CSV)", bg="#b0c4de", fg="black")
+        self.queue_import_btn.pack(side=tk.LEFT, padx=5)
     
     def assign_callbacks(self):
         """
@@ -1088,6 +1084,8 @@ class ControlApp:
         self.queue_exec_btn.config(command=self.execute_queue)
         self.queue_clear_btn.config(command=self.operation_queue.clear)
         self.queue_remove_btn.config(command=lambda: self.remove_selected_operation(self.queue_list.curselection()))
+        self.queue_export_btn.config(command=self.export_queue_to_csv)
+        self.queue_import_btn.config(command=self.import_queue_from_csv)
     
     def update_position_label(self):
         """
@@ -1181,15 +1179,27 @@ class ControlApp:
     def execute_queue(self):
         """
         Execute all operations in the queue
-        Starts the queue execution process
+        Starts the queue execution process für alle ausgewählten IPs, synchronisiert mit Repeat
         """
-        self.operation_queue.execute_all(
-            self.base_url_var.get(),
-            self.widgets,
-            self.position,
-            self.servo_angle_var,
-            self.last_distance_value
-        )
+        def run_queue_with_repeat():
+            while True:
+                selected_ips = self.get_selected_ips()
+                if not selected_ips:
+                    self.logger.log("Keine IP-Adresse ausgewählt!")
+                    break
+                for ip in selected_ips:
+                    self.logger.log(f"Starte Queue für {ip} ...")
+                    self.operation_queue.execute_all(
+                        ip,
+                        self.widgets,
+                        self.position,
+                        self.servo_angle_var,
+                        self.last_distance_value,
+                        run_in_thread=False  # WICHTIG: synchron ausführen!
+                    )
+                if not self.repeat_queue.get():
+                    break
+        threading.Thread(target=run_queue_with_repeat).start()
     
     def remove_selected_operation(self, selection):
         """
@@ -1205,6 +1215,43 @@ class ControlApp:
         idx = selection[0]
         self.operation_queue.remove(idx)
     
+    def export_queue_to_csv(self):
+        """
+        Exportiert die aktuelle Queue als CSV-Datei.
+        """
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["type", "params", "description"])
+                for op in self.operation_queue.operations:
+                    writer.writerow([op['type'], json.dumps(op['params']), op['description']])
+            messagebox.showinfo("Export erfolgreich", f"Queue wurde als CSV gespeichert: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Export", str(e))
+
+    def import_queue_from_csv(self):
+        """
+        Importiert eine Queue aus einer CSV-Datei.
+        """
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.operation_queue.clear()
+                for row in reader:
+                    op_type = row['type']
+                    params = json.loads(row['params'])
+                    description = row['description']
+                    self.operation_queue.add(op_type, params, description)
+            messagebox.showinfo("Import erfolgreich", f"Queue wurde aus CSV geladen: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Import", str(e))
+
     def run(self):
         """
         Start the main event loop of the application
