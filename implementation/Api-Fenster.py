@@ -6,7 +6,7 @@ like servo motors, stepper motors, LED lights, and buttons via a REST API.
 """
 
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, Label
 import threading
 import requests
 import time
@@ -15,16 +15,148 @@ import re
 import math
 import csv
 from tkinter import filedialog, messagebox
+import cv2
+import numpy as np
+import os
+from datetime import datetime
 
 # Constants for default values and calculations
 PI = 3.141592653589793
-DEFAULT_BASE_URL = "http://192.168.178.77"
+DEFAULT_BASE_URL = "http://192.168.137.232"
 DEFAULT_DIAMETER = "28"
 DEFAULT_SPEED = "80"
 DEFAULT_DISTANCE = "3.0"
 DEFAULT_DIRECTION = "1"
 DEFAULT_LED_COLOR = "#B00B69"
 DEFAULT_LED_BRIGHTNESS = "69"
+
+class WebcamHelper:
+    """
+    Klasse zur Steuerung einer Webcam über OpenCV
+    Bietet Methoden zum Anzeigen des Kamera-Streams und Aufnehmen von Bildern
+    """
+    
+    def __init__(self, device_index=0, frame_size=(320, 240)):
+        """
+        Initialisiert die Webcam mit dem angegebenen Geräteindex und Framegröße
+        
+        Args:
+            device_index (int): Index der zu verwendenden Kamera (Standard: 0)
+            frame_size (tuple): Größe des angezeigten Frames (Breite, Höhe)
+        """
+        self.device_index = device_index
+        self.frame_size = frame_size
+        self.cap = None
+        self.running = False
+        self.current_frame = None
+        self.thread = None
+        self.bild_zaehler = 0
+    
+    def starten(self):
+        """Kamera starten und initialisieren"""
+        self.cap = cv2.VideoCapture(self.device_index)
+        if not self.cap.isOpened():
+            return False
+        self.running = True
+        return True
+    
+    def stoppen(self):
+        """Kamera-Stream stoppen und Ressourcen freigeben"""
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=1.0)
+        if self.cap:
+            self.cap.release()
+        self.cap = None
+    
+    def frame_lesen(self):
+        """Einzelnes Frame von der Kamera lesen"""
+        if self.cap and self.cap.isOpened():
+            ret, frame = self.cap.read()
+            if ret:
+                return frame
+        return None
+    
+    def stream_loop(self, panel, fps=30):
+        """
+        Haupt-Loop für den Kamera-Stream
+        
+        Args:
+            panel: Das Label-Widget zur Anzeige des Streams
+            fps (int): Gewünschte Bildrate für den Stream
+        """
+        delay = max(1, int(1000 / fps))
+        
+        while self.running:
+            frame = self.frame_lesen()
+            if frame is not None:
+                # Bild auf die gewünschte Größe skalieren
+                frame = cv2.resize(frame, self.frame_size)
+                
+                # Bild für Tkinter konvertieren (BGR -> RGB)
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                # Foto speichern im aktuellen Frame
+                self.current_frame = frame.copy()
+                
+                # In ein Format umwandeln, das Tkinter anzeigen kann
+                img = tk.PhotoImage(data=cv2.imencode('.png', rgb_frame)[1].tobytes())
+                
+                # Bild im Panel anzeigen
+                panel.configure(image=img)
+                panel.image = img  # Referenz halten!
+            
+            # Pause für FPS-Begrenzung
+            time.sleep(delay / 1000.0)
+    
+    def stream_starten(self, panel):
+        """
+        Kamerastream in einem separaten Thread starten
+        
+        Args:
+            panel: Das Label-Widget zur Anzeige des Streams
+        """
+        if self.starten():
+            self.thread = threading.Thread(target=self.stream_loop, args=(panel,))
+            self.thread.daemon = True
+            self.thread.start()
+            return True
+        return False
+    
+    def foto_aufnehmen(self, ordner=None):
+        """
+        Foto aufnehmen und speichern
+        
+        Args:
+            ordner (str, optional): Ordner zum Speichern des Fotos
+            
+        Returns:
+            str: Pfad zum gespeicherten Foto oder None bei Fehler
+        """
+        if self.current_frame is None:
+            return None
+            
+        # Zeitstempel für eindeutige Dateinamen
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Basispfad bestimmen
+        if ordner is None:
+            # Verwende aktuelles Verzeichnis, falls nicht angegeben
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            ordner = os.path.join(base_path, "fotos")
+        
+        # Ordner erstellen, falls nicht vorhanden
+        os.makedirs(ordner, exist_ok=True)
+        
+        # Dateinamen generieren
+        dateiname = f"kamera_{timestamp}_{self.bild_zaehler}.jpg"
+        dateipfad = os.path.join(ordner, dateiname)
+        
+        # Bild speichern
+        cv2.imwrite(dateipfad, self.current_frame)
+        self.bild_zaehler += 1
+        
+        return dateipfad
 
 class ApiClient:
     """
@@ -564,25 +696,24 @@ class DeviceControl:
         self.widgets = widgets
         self.position = position_var
         self.servo_angle_var = servo_angle_var
-    
+        
     def servo_cmd(self):
         """
-        Execute servo command directly für alle ausgewählten IPs
+        Execute servo command directly
         """
         try:
             angle = int(self.widgets['servo_angle'].get())
-            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-            for ip in ips:
-                ApiClient.set_servo_angle(angle, ip)
-                self.logger.log(f"[IP: {ip}] Servo: Angle {angle}°")
-                self.servo_angle_var.set(angle)
-                self.widgets['update_position_label']()
+            base_url = self.base_url_var.get()
+            ApiClient.set_servo_angle(angle, base_url)
+            self.logger.log(f"Servo: Angle {angle}°")
+            self.servo_angle_var.set(angle)
+            self.widgets['update_position_label']()
         except Exception as e:
             self.logger.log(f"Error: {e}")
-
+            
     def stepper_cmd(self):
         """
-        Execute stepper motor command directly für alle ausgewählten IPs
+        Execute stepper motor command directly
         """
         try:
             d = float(self.widgets['diameter_entry'].get())
@@ -593,58 +724,49 @@ class DeviceControl:
             direction = int(self.widgets['stepper_dir'].get()) if self.widgets['stepper_dir'].get() else 1
             speed = int(self.widgets['stepper_speed'].get()) if self.widgets['stepper_speed'].get() else None
             dir_text = "up" if direction == 1 else "down"
-            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-            for ip in ips:
-                ApiClient.move_stepper(steps, direction, speed, ip)
-                pos_cm = self.position.get() + (length_cm if direction == 1 else -length_cm)
-                self.logger.log(f"[IP: {ip}] Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}, Position: {pos_cm:.2f} cm")
+            base_url = self.base_url_var.get()
+            
+            ApiClient.move_stepper(steps, direction, speed, base_url)
+            pos_cm = self.position.get() + (length_cm if direction == 1 else -length_cm)
+            self.logger.log(f"Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}, Position: {pos_cm:.2f} cm")
         except Exception as e:
-            self.logger.log(f"Error: {e}")
-
-    def led_cmd(self):
+            self.logger.log(f"Error: {e}")    def led_cmd(self):
         """
-        Set LED color direkt für alle ausgewählten IPs
+        Set LED color direkt
         """
         try:
             color_hex = self.widgets['led_color'].get()
             if not color_hex.startswith("#"):
                 color_hex = "#" + color_hex
-            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-            for ip in ips:
-                ApiClient.set_led_color(color_hex, ip)
-                self.logger.log(f"[IP: {ip}] LED: Color {color_hex}")
+            base_url = self.base_url_var.get()
+            
+            ApiClient.set_led_color(color_hex, base_url)
+            self.logger.log(f"LED: Color {color_hex}")
         except Exception as e:
-            self.logger.log(f"Error: {e}")
-
-    def bright_cmd(self):
+            self.logger.log(f"Error: {e}")    def bright_cmd(self):
         """
-        Set LED brightness direkt für alle ausgewählten IPs
+        Set LED brightness direkt
         """
         try:
             val = int(self.widgets['led_bright'].get())
-            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-            for ip in ips:
-                ApiClient.set_led_brightness(val, ip)
-                self.logger.log(f"[IP: {ip}] LED: Brightness {val}%")
+            base_url = self.base_url_var.get()
+            
+            ApiClient.set_led_brightness(val, base_url)
+            self.logger.log(f"LED: Brightness {val}%")
         except Exception as e:
-            self.logger.log(f"Error: {e}")
-
-    def button_cmd(self):
+            self.logger.log(f"Error: {e}")    def button_cmd(self):
         """
-        Query button state direkt für alle ausgewählten IPs
+        Query button state direkt
         """
-        ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-        for ip in ips:
-            response = ApiClient.get_button_state(ip)
-            self.logger.log(f"[IP: {ip}] Button status: {response}")
-
-    def _home_logic_for_ip(self, ip):
+        base_url = self.base_url_var.get()
+        response = ApiClient.get_button_state(base_url)
+        self.logger.log(f"Button status: {response}")    def _home_logic_for_ip(self, base_url):
         try:
             d = float(self.widgets['diameter_entry'].get())
-            self.logger.log(f"[IP: {ip}] Starting Home function...")
+            self.logger.log("Starting Home function...")
             # Erste Überprüfung des Button-Status
             self.logger.log("Checking initial button state...")
-            btn_response = ApiClient.get_button_state(ip, nocache=True)
+            btn_response = ApiClient.get_button_state(base_url, nocache=True)
             button_pressed = ApiClient.is_button_pressed(btn_response)
             if button_pressed:
                 self.logger.log("Button is already pressed. Waiting for release...")
@@ -653,12 +775,12 @@ class DeviceControl:
                 while reset_attempts < max_reset_attempts:
                     reset_attempts += 1
                     time.sleep(1)
-                    btn_response = ApiClient.get_button_state(ip, nocache=True)
+                    btn_response = ApiClient.get_button_state(base_url, nocache=True)
                     button_still_pressed = ApiClient.is_button_pressed(btn_response)
                     if button_still_pressed:
                         self.logger.log(f"Button still pressed, waiting for release (attempt {reset_attempts})...")
                     else:
-                        self.logger.log(f"Button released, proceeding with home function.")
+                        self.logger.log("Button released, proceeding with home function.")
                         break
                 if reset_attempts >= max_reset_attempts:
                     self.logger.log("Warning: Button still pressed after maximum attempts. Please check hardware.")
@@ -668,59 +790,56 @@ class DeviceControl:
             time.sleep(1)
             speed = int(self.widgets['stepper_speed'].get())
             params = {"steps": 100, "direction": -1, "speed": speed}
-            ApiClient.make_request("setMotor", params, ip)
+            ApiClient.make_request("setMotor", params, base_url)
             pos_cm = self.position.get() - (100 / 4096 * PI * d / 10)
             distance_cm = (100 / 4096 * PI * d / 10)
-            self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
+            self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
             max_attempts = 100
             attempt = 0
             button_pressed = False
             while not button_pressed and attempt < max_attempts:
                 attempt += 1
-                btn_response = ApiClient.get_button_state(ip, nocache=True)
+                btn_response = ApiClient.get_button_state(base_url, nocache=True)
                 if attempt % 5 == 0:
-                    self.logger.log(f"[IP: {ip}] Button check attempt {attempt}: Response: {btn_response}")
+                    self.logger.log(f"Button check attempt {attempt}: Response: {btn_response}")
                 button_pressed = ApiClient.is_button_pressed(btn_response)
                 if button_pressed:
-                    self.logger.log(f"[IP: {ip}] Button press detected on attempt {attempt}, moving up and completing home")
+                    self.logger.log(f"Button press detected on attempt {attempt}, moving up and completing home")
                     params = {"steps": 100, "direction": 1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, ip)
+                    ApiClient.make_request("setMotor", params, base_url)
                     pos_cm = self.position.get() + (100 / 4096 * PI * d / 10)
                     distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
+                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
                     break
                 else:
                     params = {"steps": 100, "direction": -1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, ip)
+                    ApiClient.make_request("setMotor", params, base_url)
                     pos_cm = self.position.get() - (100 / 4096 * PI * d / 10)
                     distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
+                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction down, Position: {pos_cm:.2f} cm")
                     time.sleep(0.5)
-                    btn_response = ApiClient.get_button_state(ip, nocache=True)
+                    btn_response = ApiClient.get_button_state(base_url, nocache=True)
                     if ApiClient.is_button_pressed(btn_response):
-                        self.logger.log(f"[IP: {ip}] Button press detected after move, proceeding to completion")
+                        self.logger.log(f"Button press detected after move, proceeding to completion")
                         params = {"steps": 100, "direction": 1, "speed": speed}
-                        ApiClient.make_request("setMotor", params, ip)
+                        ApiClient.make_request("setMotor", params, base_url)
                         pos_cm = self.position.get() + (100 / 4096 * PI * d / 10)
                         distance_cm = (100 / 4096 * PI * d / 10)
-                        self.logger.log(f"[IP: {ip}] Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
+                        self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction up, Position: {pos_cm:.2f} cm")
                         break
             if not button_pressed:
-                self.logger.log(f"[IP: {ip}] Warning: Maximum attempts reached in home function without detecting button press.")
+                self.logger.log("Warning: Maximum attempts reached in home function without detecting button press.")
             self.position.set(0)
             self.widgets['update_position_label']()
-            self.logger.log(f"[IP: {ip}] Home function completed, position set to 0.")
+            self.logger.log("Home function completed, position set to 0.")
         except Exception as e:
-            self.logger.log(f"[IP: {ip}] Error: {e}")
-
-    def home_func(self):
+            self.logger.log(f"Error: {e}")def home_func(self):
         """
-        Execute the home function für alle ausgewählten IPs
+        Execute the home function
         """
         try:
-            ips = self.widgets['root'].get_selected_ips() if hasattr(self.widgets['root'], 'get_selected_ips') else [self.base_url_var.get()]
-            for ip in ips:
-                self._home_logic_for_ip(ip)
+            base_url = self.base_url_var.get()
+            self._home_logic_for_ip(base_url)
         except Exception as e:
             self.logger.log(f"Error: {e}")
 
@@ -743,6 +862,9 @@ class ControlApp:
         self.base_url_var = tk.StringVar(value=DEFAULT_BASE_URL)
         self.last_distance_value = tk.StringVar(value=DEFAULT_DISTANCE)
         self.repeat_queue = tk.BooleanVar(value=False)  # Repeat-Flag
+        
+        # Webcam Initialisieren
+        self.webcam = WebcamHelper(device_index=0, frame_size=(320, 240))
         
         # Create GUI elements
         self.create_widgets()
@@ -779,15 +901,12 @@ class ControlApp:
             self.position,
             self.servo_angle_var
         )
-        
-        # Assign callback functions
+          # Assign callback functions
         self.assign_callbacks()
-    
-    def create_widgets(self):
+      def create_widgets(self):
         """Create all GUI elements in the application window"""
         # URL input field
         self.create_url_frame()
-        self.create_ip_selection_frame()  # NEU: IP-Auswahl-Frame
         
         # Gear diameter at top
         self.create_diameter_frame()
@@ -797,6 +916,9 @@ class ControlApp:
         
         # Output window
         self.create_output_display()
+        
+        # Webcam-Anzeige
+        self.create_webcam_frame()
         
         # Servo control
         self.create_servo_frame()
@@ -829,40 +951,7 @@ class ControlApp:
         tk.Label(url_frame, text="API Address:").pack(side=tk.LEFT)
         base_url_entry = tk.Entry(url_frame, textvariable=self.base_url_var, width=30)
         base_url_entry.pack(side=tk.LEFT, padx=5)
-    
-    def create_ip_selection_frame(self):
-        """
-        Erzeugt ein Frame zur Auswahl und Eingabe von bis zu 4 IP-Adressen.
-        Jede IP kann per Checkbox aktiviert werden.
-        """
-        ip_frame = tk.LabelFrame(self.root, text="API IP-Auswahl (Mehrfach möglich)")
-        ip_frame.pack(fill="x", padx=10, pady=(2,2))
-        self.ip_vars = []  # Liste von BooleanVars für Checkboxen
-        self.ip_entries = []  # Liste von Entry-Feldern für IPs
-        default_ips = [DEFAULT_BASE_URL, "http://192.168.178.78", "http://192.168.178.79", "http://192.168.178.80"]
-        for i in range(4):
-            var = tk.BooleanVar(value=(i==0))  # Erste IP standardmäßig aktiv
-            entry = tk.Entry(ip_frame, width=18)
-            entry.insert(0, default_ips[i] if i < len(default_ips) else "")
-            cb = tk.Checkbutton(ip_frame, variable=var)
-            cb.pack(side=tk.LEFT)
-            entry.pack(side=tk.LEFT, padx=(0,10))
-            self.ip_vars.append(var)
-            self.ip_entries.append(entry)
-
-    def get_selected_ips(self):
-        """
-        Gibt eine Liste der aktuell ausgewählten IP-Adressen zurück.
-        """
-        ips = []
-        for var, entry in zip(self.ip_vars, self.ip_entries):
-            if var.get():
-                ip = entry.get().strip()
-                if ip:
-                    ips.append(ip)
-        return ips
-
-    def create_diameter_frame(self):
+      def create_diameter_frame(self):
         """
         Create the diameter input field frame
         Allows the user to specify the gear diameter in mm
@@ -899,6 +988,42 @@ class ControlApp:
         """
         self.output = scrolledtext.ScrolledText(self.root, width=80, height=16, state='disabled')
         self.output.pack(padx=10, pady=10)
+    
+    def create_webcam_frame(self):
+        """
+        Erstellt das Frame für die Webcam-Anzeige und die Steuerelemente
+        """
+        webcam_frame = tk.LabelFrame(self.root, text="Kamera")
+        webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
+        
+        # Frame für die Kameraanzeige
+        camera_view_frame = tk.Frame(webcam_frame)
+        camera_view_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Label für die Kameraanzeige
+        self.cam_label = tk.Label(camera_view_frame, text="Kein Kamerabild", 
+                          bg="black", fg="white", width=40, height=15)
+        self.cam_label.pack(fill="both", expand=True)
+        
+        # Frame für die Kamera-Buttons
+        camera_control_frame = tk.Frame(webcam_frame)
+        camera_control_frame.pack(fill="x", padx=5, pady=5)
+        
+        # Buttons für Kamerabedienung
+        self.btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten", 
+                                bg="#4CAF50", fg="white", width=15, 
+                                command=self.start_camera)
+        self.btn_start_camera.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_stop_camera = tk.Button(camera_control_frame, text="Kamera stoppen", 
+                               bg="#F44336", fg="white", width=15, 
+                               command=self.stop_camera)
+        self.btn_stop_camera.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen", 
+                              bg="#2196F3", fg="white", width=15, 
+                              command=self.take_photo)
+        self.btn_take_photo.pack(side=tk.LEFT, padx=2)
     
     def create_servo_frame(self):
         """
@@ -1252,22 +1377,539 @@ class ControlApp:
         except Exception as e:
             messagebox.showerror("Fehler beim Import", str(e))
 
-    def run(self):
+    def start_camera(self):
+        """Startet die Kameraansicht"""
+        success = self.webcam.stream_starten(self.cam_label)
+        if success:
+            self.logger.log("Kamera gestartet")
+        else:
+            self.logger.log("Fehler: Kamera konnte nicht gestartet werden")
+            messagebox.showerror("Kamera-Fehler", 
+                      "Die Kamera konnte nicht gestartet werden. Bitte Verbindung prüfen.")
+    
+    def stop_camera(self):
+        """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
+        self.webcam.stoppen()
+        self.cam_label.config(text="Kamera gestoppt", image="")
+        self.logger.log("Kamera gestoppt")
+    
+    def take_photo(self):
+        """Nimmt ein Foto auf und speichert es im Projektordner"""
+        if not self.webcam.running or self.webcam.current_frame is None:
+            self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
+            return
+            
+        foto_path = self.webcam.foto_aufnehmen()
+        if foto_path:
+            self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
+            messagebox.showinfo("Foto aufgenommen", f"Das Foto wurde gespeichert als:\n{foto_path}")
+        else:
+            self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
+            
+    def on_closing(self):
+        """Methode zum sauberen Schließen des Programms"""
+        if hasattr(self, 'webcam'):
+            self.webcam.stoppen()
+        self.root.destroy()
+
+    def assign_callbacks(self):
         """
-        Start the main event loop of the application
-        This method blocks until the application window is closed
+        Assign callback functions to all buttons in the UI
+        Links UI events to their corresponding actions
         """
-        self.root.mainloop()
+        # Servo callbacks
+        self.servo_exec_btn.config(command=self.device_control.servo_cmd)
+        self.servo_add_btn.config(command=self.add_servo_to_queue)
+        
+        # Stepper callbacks
+        self.stepper_exec_btn.config(command=self.device_control.stepper_cmd)
+        self.stepper_add_btn.config(command=self.add_stepper_to_queue)
+        
+        # LED callbacks
+        self.led_exec_btn.config(command=self.device_control.led_cmd)
+        # FEHLER KORRIGIERT: = hinzugefügt
+        self.led_add_btn.config(command=self.add_led_color_to_queue)
+        
+        # Brightness callbacks
+        self.bright_exec_btn.config(command=self.device_control.bright_cmd)
+        self.bright_add_btn.config(command=self.add_brightness_to_queue)
+        
+        # Button callbacks
+        self.button_exec_btn.config(command=self.device_control.button_cmd)
+        self.button_add_btn.config(command=self.add_button_to_queue)
+        
+        # Home callbacks - run in a separate thread to keep UI responsive
+        self.home_exec_btn.config(command=lambda: threading.Thread(target=self.device_control.home_func).start())
+        # FEHLER KORRIGIERT: = hinzugefügt
+        self.home_add_btn.config(command=self.add_home_to_queue)
+        
+        # Queue callbacks
+        self.queue_exec_btn.config(command=self.execute_queue)
+        self.queue_clear_btn.config(command=self.operation_queue.clear)
+        self.queue_remove_btn.config(command=lambda: self.remove_selected_operation(self.queue_list.curselection()))
+        self.queue_export_btn.config(command=self.export_queue_to_csv)
+        self.queue_import_btn.config(command=self.import_queue_from_csv)
+    
+    def update_position_label(self):
+        """
+        Update the position display label
+        Updates the position and servo angle labels with current values
+        """
+        self.position_label.config(text=f"{self.position.get():.2f}")
+        self.servo_angle_label.config(text=f"{self.servo_angle_var.get()}")
+        self.root.update_idletasks()
+    
+    def add_servo_to_queue(self):
+        """
+        Add a servo operation to the queue
+        Reads the servo angle from the input field and adds the operation
+        """
+        try:
+            angle = int(self.servo_angle.get())
+            description = f"Servo: Set angle to {angle}°"
+            self.operation_queue.add('servo', {'angle': angle}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_stepper_to_queue(self):
+        """
+        Add a stepper motor operation to the queue
+        Calculates steps from distance and adds the operation to the queue
+        """
+        try:
+            d = float(self.diameter_entry.get())
+            circumference = PI * d  # mm
+            length_cm = float(self.stepper_length_cm.get())
+            length_mm = length_cm * 10
+            steps = int((length_mm / circumference) * 4096)
+            direction = int(self.stepper_dir.get()) if self.stepper_dir.get() else 1
+            speed = int(self.stepper_speed.get()) if self.stepper_speed.get() else None
+            
+            dir_text = "up" if direction == 1 else "down"
+            
+            params = {"steps": steps, "direction": direction}
+            if speed is not None:
+                params["speed"] = speed
+                
+            description = f"Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}" + (f", Speed: {speed}" if speed else "")
+            self.operation_queue.add('stepper', params, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_led_color_to_queue(self):
+        """
+        Add a LED color operation to the queue
+        Reads the color from the input field and adds the operation
+        """
+        try:
+            color_hex = self.led_color.get()
+            if not color_hex.startswith("#"):
+                color_hex = "#" + color_hex
+                
+            description = f"LED: Set color to {color_hex}"
+            self.operation_queue.add('led_color', {'color': color_hex}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_brightness_to_queue(self):
+        """
+        Add a LED brightness operation to the queue
+        Reads the brightness from the input field and adds the operation
+        """
+        try:
+            val = int(self.led_bright.get())
+            description = f"LED: Set brightness to {val}%"
+            self.operation_queue.add('led_brightness', {'brightness': val}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_button_to_queue(self):
+        """
+        Add a button status query to the queue
+        Adds an operation to query the button status
+        """
+        description = "Button: Query button status"
+        self.operation_queue.add('button', {}, description)
+    
+    def add_home_to_queue(self):
+        """
+        Add a home function to the queue
+        Adds an operation to execute the home function
+        """
+        description = "Home: Execute home function"
+        self.operation_queue.add('home', {}, description)
+    
+    def execute_queue(self):
+        """
+        Execute all operations in the queue
+        Starts the queue execution process für alle ausgewählten IPs, synchronisiert mit Repeat
+        """
+        def run_queue_with_repeat():
+            while True:
+                selected_ips = self.get_selected_ips()
+                if not selected_ips:
+                    self.logger.log("Keine IP-Adresse ausgewählt!")
+                    break
+                for ip in selected_ips:
+                    self.logger.log(f"Starte Queue für {ip} ...")
+                    self.operation_queue.execute_all(
+                        ip,
+                        self.widgets,
+                        self.position,
+                        self.servo_angle_var,
+                        self.last_distance_value,
+                        run_in_thread=False  # WICHTIG: synchron ausführen!
+                    )
+                if not self.repeat_queue.get():
+                    break
+        threading.Thread(target=run_queue_with_repeat).start()
+    
+    def remove_selected_operation(self, selection):
+        """
+        Remove the selected operation from the queue
+        
+        Args:
+            selection: The selected item indices from the listbox
+        """
+        if not selection:
+            self.logger.log("No operation selected for removal")
+            return
+        
+        idx = selection[0]
+        self.operation_queue.remove(idx)
+    
+    def export_queue_to_csv(self):
+        """
+        Exportiert die aktuelle Queue als CSV-Datei.
+        """
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["type", "params", "description"])
+                for op in self.operation_queue.operations:
+                    writer.writerow([op['type'], json.dumps(op['params']), op['description']])
+            messagebox.showinfo("Export erfolgreich", f"Queue wurde als CSV gespeichert: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Export", str(e))
 
+    def import_queue_from_csv(self):
+        """
+        Importiert eine Queue aus einer CSV-Datei.
+        """
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.operation_queue.clear()
+                for row in reader:
+                    op_type = row['type']
+                    params = json.loads(row['params'])
+                    description = row['description']
+                    self.operation_queue.add(op_type, params, description)
+            messagebox.showinfo("Import erfolgreich", f"Queue wurde aus CSV geladen: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Import", str(e))
 
-def main():
+    def start_camera(self):
+        """Startet die Kameraansicht"""
+        success = self.webcam.stream_starten(self.cam_label)
+        if success:
+            self.logger.log("Kamera gestartet")
+        else:
+            self.logger.log("Fehler: Kamera konnte nicht gestartet werden")
+            messagebox.showerror("Kamera-Fehler", 
+                      "Die Kamera konnte nicht gestartet werden. Bitte Verbindung prüfen.")
+    
+    def stop_camera(self):
+        """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
+        self.webcam.stoppen()
+        self.cam_label.config(text="Kamera gestoppt", image="")
+        self.logger.log("Kamera gestoppt")
+    
+    def take_photo(self):
+        """Nimmt ein Foto auf und speichert es im Projektordner"""
+        if not self.webcam.running or self.webcam.current_frame is None:
+            self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
+            return
+            
+        foto_path = self.webcam.foto_aufnehmen()
+        if foto_path:
+            self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
+            messagebox.showinfo("Foto aufgenommen", f"Das Foto wurde gespeichert als:\n{foto_path}")
+        else:
+            self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
+            
+    def on_closing(self):
+        """Methode zum sauberen Schließen des Programms"""
+        if hasattr(self, 'webcam'):
+            self.webcam.stoppen()
+        self.root.destroy()
+
+    def assign_callbacks(self):
+        """
+        Assign callback functions to all buttons in the UI
+        Links UI events to their corresponding actions
+        """
+        # Servo callbacks
+        self.servo_exec_btn.config(command=self.device_control.servo_cmd)
+        self.servo_add_btn.config(command=self.add_servo_to_queue)
+        
+        # Stepper callbacks
+        self.stepper_exec_btn.config(command=self.device_control.stepper_cmd)
+        self.stepper_add_btn.config(command=self.add_stepper_to_queue)
+        
+        # LED callbacks
+        self.led_exec_btn.config(command=self.device_control.led_cmd)
+        # FEHLER KORRIGIERT: = hinzugefügt
+        self.led_add_btn.config(command=self.add_led_color_to_queue)
+        
+        # Brightness callbacks
+        self.bright_exec_btn.config(command=self.device_control.bright_cmd)
+        self.bright_add_btn.config(command=self.add_brightness_to_queue)
+        
+        # Button callbacks
+        self.button_exec_btn.config(command=self.device_control.button_cmd)
+        self.button_add_btn.config(command=self.add_button_to_queue)
+        
+        # Home callbacks - run in a separate thread to keep UI responsive
+        self.home_exec_btn.config(command=lambda: threading.Thread(target=self.device_control.home_func).start())
+        # FEHLER KORRIGIERT: = hinzugefügt
+        self.home_add_btn.config(command=self.add_home_to_queue)
+        
+        # Queue callbacks
+        self.queue_exec_btn.config(command=self.execute_queue)
+        self.queue_clear_btn.config(command=self.operation_queue.clear)
+        self.queue_remove_btn.config(command=lambda: self.remove_selected_operation(self.queue_list.curselection()))
+        self.queue_export_btn.config(command=self.export_queue_to_csv)
+        self.queue_import_btn.config(command=self.import_queue_from_csv)
+    
+    def update_position_label(self):
+        """
+        Update the position display label
+        Updates the position and servo angle labels with current values
+        """
+        self.position_label.config(text=f"{self.position.get():.2f}")
+        self.servo_angle_label.config(text=f"{self.servo_angle_var.get()}")
+        self.root.update_idletasks()
+    
+    def add_servo_to_queue(self):
+        """
+        Add a servo operation to the queue
+        Reads the servo angle from the input field and adds the operation
+        """
+        try:
+            angle = int(self.servo_angle.get())
+            description = f"Servo: Set angle to {angle}°"
+            self.operation_queue.add('servo', {'angle': angle}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_stepper_to_queue(self):
+        """
+        Add a stepper motor operation to the queue
+        Calculates steps from distance and adds the operation to the queue
+        """
+        try:
+            d = float(self.diameter_entry.get())
+            circumference = PI * d  # mm
+            length_cm = float(self.stepper_length_cm.get())
+            length_mm = length_cm * 10
+            steps = int((length_mm / circumference) * 4096)
+            direction = int(self.stepper_dir.get()) if self.stepper_dir.get() else 1
+            speed = int(self.stepper_speed.get()) if self.stepper_speed.get() else None
+            
+            dir_text = "up" if direction == 1 else "down"
+            
+            params = {"steps": steps, "direction": direction}
+            if speed is not None:
+                params["speed"] = speed
+                
+            description = f"Motor: {steps} Steps, {length_cm} cm, Direction {dir_text}" + (f", Speed: {speed}" if speed else "")
+            self.operation_queue.add('stepper', params, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_led_color_to_queue(self):
+        """
+        Add a LED color operation to the queue
+        Reads the color from the input field and adds the operation
+        """
+        try:
+            color_hex = self.led_color.get()
+            if not color_hex.startswith("#"):
+                color_hex = "#" + color_hex
+                
+            description = f"LED: Set color to {color_hex}"
+            self.operation_queue.add('led_color', {'color': color_hex}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_brightness_to_queue(self):
+        """
+        Add a LED brightness operation to the queue
+        Reads the brightness from the input field and adds the operation
+        """
+        try:
+            val = int(self.led_bright.get())
+            description = f"LED: Set brightness to {val}%"
+            self.operation_queue.add('led_brightness', {'brightness': val}, description)
+        except Exception as e:
+            self.logger.log(f"Error adding to queue: {e}")
+    
+    def add_button_to_queue(self):
+        """
+        Add a button status query to the queue
+        Adds an operation to query the button status
+        """
+        description = "Button: Query button status"
+        self.operation_queue.add('button', {}, description)
+    
+    def add_home_to_queue(self):
+        """
+        Add a home function to the queue
+        Adds an operation to execute the home function
+        """
+        description = "Home: Execute home function"
+        self.operation_queue.add('home', {}, description)
+    
+    def execute_queue(self):
+        """
+        Execute all operations in the queue
+        Starts the queue execution process für alle ausgewählten IPs, synchronisiert mit Repeat
+        """
+        def run_queue_with_repeat():
+            while True:
+                selected_ips = self.get_selected_ips()
+                if not selected_ips:
+                    self.logger.log("Keine IP-Adresse ausgewählt!")
+                    break
+                for ip in selected_ips:
+                    self.logger.log(f"Starte Queue für {ip} ...")PS C:\Users\Marc\Desktop\I-Scan> & C:/Users/Marc/AppData/Local/Programs/Python/Python313/python.exe c:/Users/Marc/Desktop/I-Scan/I-Scan/implementation/Api-Fenster.py
+  File "c:\Users\Marc\Desktop\I-Scan\I-Scan\implementation\Api-Fenster.py", 
+line 862
     """
-    Main function to start the application
-    Creates and runs the control application
-    """
-    app = ControlApp()
-    app.run()
+    ^^^
+IndentationError: expected an indented block after class definition on line 
+861
+PS C:\Users\Marc\Desktop\I-Scan> & C:/Users/Marc/AppData/Local/Programs/Python/Python313/python.exe c:/Users/Marc/Desktop/I-Scan/I-Scan/implementation/Api-Fenster.py
+  File "c:\Users\Marc\Desktop\I-Scan\I-Scan\implementation\Api-Fenster.py", 
+line 699
+    def servo_cmd(self):
+                        ^
+IndentationError: unindent does not match any outer indentation level       
+PS C:\Users\Marc\Desktop\I-Scan> & C:/Users/Marc/AppData/Local/Programs/Python/Python313/python.exe c:/Users/Marc/Desktop/I-Scan/I-Scan/implementation/Api-Fenster.py
+  File "c:\Users\Marc\Desktop\I-Scan\I-Scan\implementation\Api-Fenster.py", 
+line 699
+    def servo_cmd(self):
+                        ^
+IndentationError: unindent does not match any outer indentation level       
+PS C:\Users\Marc\Desktop\I-Scan>
+                    self.operation_queue.execute_all(
+                        ip,
+                        self.widgets,
+                        self.position,
+                        self.servo_angle_var,
+                        self.last_distance_value,
+                        run_in_thread=False  # WICHTIG: synchron ausführen!
+                    )
+                if not self.repeat_queue.get():
+                    break
+        threading.Thread(target=run_queue_with_repeat).start()
+    
+    def remove_selected_operation(self, selection):
+        """
+        Remove the selected operation from the queue
+        
+        Args:
+            selection: The selected item indices from the listbox
+        """
+        if not selection:
+            self.logger.log("No operation selected for removal")
+            return
+        
+        idx = selection[0]
+        self.operation_queue.remove(idx)
+    
+    def export_queue_to_csv(self):
+        """
+        Exportiert die aktuelle Queue als CSV-Datei.
+        """
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["type", "params", "description"])
+                for op in self.operation_queue.operations:
+                    writer.writerow([op['type'], json.dumps(op['params']), op['description']])
+            messagebox.showinfo("Export erfolgreich", f"Queue wurde als CSV gespeichert: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Export", str(e))
 
+    def import_queue_from_csv(self):
+        """
+        Importiert eine Queue aus einer CSV-Datei.
+        """
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+        try:
+            with open(file_path, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.operation_queue.clear()
+                for row in reader:
+                    op_type = row['type']
+                    params = json.loads(row['params'])
+                    description = row['description']
+                    self.operation_queue.add(op_type, params, description)
+            messagebox.showinfo("Import erfolgreich", f"Queue wurde aus CSV geladen: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler beim Import", str(e))
 
+    def start_camera(self):
+        """Startet die Kameraansicht"""
+        success = self.webcam.stream_starten(self.cam_label)
+        if success:
+            self.logger.log("Kamera gestartet")
+        else:
+            self.logger.log("Fehler: Kamera konnte nicht gestartet werden")
+            messagebox.showerror("Kamera-Fehler", 
+                      "Die Kamera konnte nicht gestartet werden. Bitte Verbindung prüfen.")
+    
+    def stop_camera(self):
+        """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
+        self.webcam.stoppen()
+        self.cam_label.config(text="Kamera gestoppt", image="")
+        self.logger.log("Kamera gestoppt")
+    
+    def take_photo(self):
+        """Nimmt ein Foto auf und speichert es im Projektordner"""
+        if not self.webcam.running or self.webcam.current_frame is None:
+            self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
+            return
+            
+        foto_path = self.webcam.foto_aufnehmen()
+        if foto_path:
+            self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
+            messagebox.showinfo("Foto aufgenommen", f"Das Foto wurde gespeichert als:\n{foto_path}")
+        else:
+            self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
+            
+    def on_closing(self):
+        """Methode zum sauberen Schließen des Programms"""
+        if hasattr(self, 'webcam'):
+            self.webcam.stoppen()
+        self.root.destroy()
+
+# Hauptausführungslogik
 if __name__ == "__main__":
-    main()
+    app = ControlApp()
+    # WM_DELETE_WINDOW-Protokoll hinzufügen, damit Ressourcen richtig freigegeben werden
+    app.root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    app.root.mainloop()
