@@ -97,66 +97,59 @@ class OperationQueue:
             for idx, op in enumerate(self.operations):
                 try:
                     self.logger.log(f"Führe aus {idx+1}/{len(self.operations)}: {op['description']}")
-                    
+
                     if op['type'] == 'servo':
                         angle = op['params']['angle']
                         ApiClient.set_servo_angle(angle, base_url)
                         self.logger.log(f"Servo: Winkel {angle}°")
-                        # Aktualisiere Servo-Winkel in der GUI im Hauptthread
                         servo_angle_var.set(angle)
                         widgets['root'].after(0, lambda: widgets['update_position_label']())
-                    
+
                     elif op['type'] == 'stepper':
                         steps = op['params']['steps']
                         direction = op['params']['direction']
                         speed = op['params'].get('speed')
-                        
-                        # Position ändern für Stepper-Bewegung berechnen
                         d = float(widgets['diameter_entry'].get())
                         circumference = PI * d  # mm
-                        
-                        # Distanz in cm berechnen
                         distance_cm = (steps / 4096) * (circumference / 10)
-                        
-                        # Gesamtdistanz mit Richtung aktualisieren
                         if direction == 1:
                             total_distance += distance_cm
                         else:
                             total_distance -= distance_cm
-                            
-                        # Das Distanzfeld aktualisieren
-                        widgets['root'].after(0, lambda: last_distance_value.set(last_distance_value.get()))
-                        
-                        # Neue Position berechnen
-                        dir_text = "aufwärts" if direction == 1 else "abwärts"
-                        pos_cm = position_var.get() + (distance_cm if direction == 1 else -distance_cm)
-                        
-                        # Die Bewegung ausführen
+                        # Motorbefehl wirklich ausführen:
                         ApiClient.move_stepper(steps, direction, speed, base_url)
-                        
-                        # Protokollnachricht für Stepper
-                        self.logger.log(f"Motor: {steps} Steps, {distance_cm:.2f} cm, Direction {dir_text}, Position: {pos_cm:.2f} cm")
-                    
+                        self.logger.log(f"Stepper: {steps} Schritte, Richtung {direction}, Geschwindigkeit: {speed}")
+
                     elif op['type'] == 'led_color':
                         color_hex = op['params']['color']
                         ApiClient.set_led_color(color_hex, base_url)
-                        self.logger.log(f"LED: Farbe {color_hex}")
-                    
+                        self.logger.log(f"LED: Farbe auf {color_hex} gesetzt")
+
                     elif op['type'] == 'led_brightness':
                         brightness = op['params']['brightness']
                         ApiClient.set_led_brightness(brightness, base_url)
-                        self.logger.log(f"LED: Helligkeit {brightness}%")
-                    
+                        self.logger.log(f"LED: Helligkeit auf {brightness}% gesetzt")
+
                     elif op['type'] == 'button':
                         response = ApiClient.get_button_state(base_url)
                         self.logger.log(f"Button-Status: {response}")
-                    
+
                     elif op['type'] == 'home':
                         self._execute_home_function(base_url, widgets, position_var, last_distance_value)
-                        
-                    # Kleine Verzögerung zwischen Operationen
+                        self.logger.log("Home-Funktion ausgeführt")
+
+                    elif op['type'] == 'photo':
+                        webcam_helper = widgets.get('webcam', None)
+                        if webcam_helper and webcam_helper.running and webcam_helper.current_frame is not None:
+                            foto_path = webcam_helper.foto_aufnehmen()
+                            if foto_path:
+                                self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
+                            else:
+                                self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
+                        else:
+                            self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
+
                     time.sleep(0.5)
-                    
                 except Exception as e:
                     self.logger.log(f"Fehler bei der Ausführung von Operation {idx+1}: {e}")
             

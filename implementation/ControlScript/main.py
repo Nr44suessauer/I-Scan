@@ -63,8 +63,7 @@ class ControlApp:
             self.servo_angle_var, 
             self.update_position_label
         )
-        
-        # Widget-Wörterbuch für den Zugriff auf GUI-Elemente
+          # Widget-Wörterbuch für den Zugriff auf GUI-Elemente
         self.widgets = {
             'root': self.root,
             'diameter_entry': self.diameter_entry,
@@ -74,7 +73,8 @@ class ControlApp:
             'stepper_speed': self.stepper_speed,
             'led_color': self.led_color,
             'led_bright': self.led_bright,
-            'update_position_label': self.update_position_label
+            'update_position_label': self.update_position_label,
+            'webcam': self.webcam
         }
         
         # Operationswarteschlange initialisieren
@@ -99,6 +99,9 @@ class ControlApp:
         """Erstellt alle GUI-Elemente im Anwendungsfenster"""
         # URL-Eingabefeld
         self.create_url_frame()
+        
+        # Kamera-Einstellungen
+        self.create_camera_settings_frame()  # Kamera-Einstellungen-Feld hinzufügen
         
         # Zahnraddurchmesser oben
         self.create_diameter_frame()
@@ -144,6 +147,19 @@ class ControlApp:
         base_url_entry = tk.Entry(url_frame, textvariable=self.base_url_var, width=30)
         base_url_entry.pack(side=tk.LEFT, padx=5)
     
+    def create_camera_settings_frame(self):
+        """
+        Erstellt einen Rahmen für Kamera-Einstellungen (z.B. COM-Port/Device Index)
+        """
+        camera_settings_frame = tk.Frame(self.root)
+        camera_settings_frame.pack(fill="x", padx=10, pady=(2,2))
+        tk.Label(camera_settings_frame, text="Kamera Device Index (z.B. 0, 1, 2):").pack(side=tk.LEFT)
+        self.camera_device_index_var = tk.StringVar(value="0")
+        self.camera_device_entry = tk.Entry(camera_settings_frame, width=5, textvariable=self.camera_device_index_var)
+        self.camera_device_entry.pack(side=tk.LEFT)
+        self.set_camera_device_btn = tk.Button(camera_settings_frame, text="Setzen", command=self.set_camera_device_index)
+        self.set_camera_device_btn.pack(side=tk.LEFT, padx=5)
+
     def create_diameter_frame(self):
         """
         Erstellt den Rahmen für das Durchmesser-Eingabefeld
@@ -180,7 +196,7 @@ class ControlApp:
         Zeigt Protokollnachrichten und Operationsergebnisse an
         """
         self.output = scrolledtext.ScrolledText(self.root, width=80, height=16, state='disabled')
-        self.output.pack(padx=10, pady=10)
+        self.output.pack(padx=10, pady=10, anchor='w')
     
     def create_webcam_frame(self):
         """
@@ -201,8 +217,7 @@ class ControlApp:
         # Rahmen für die Kamera-Schaltflächen
         camera_control_frame = tk.Frame(webcam_frame)
         camera_control_frame.pack(fill="x", padx=5, pady=5)
-        
-        # Schaltflächen für die Kamerabedienung
+          # Schaltflächen für die Kamerabedienung
         self.btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten", 
                                 bg="#4CAF50", fg="white", width=15)
         self.btn_start_camera.pack(side=tk.LEFT, padx=2)
@@ -214,6 +229,10 @@ class ControlApp:
         self.btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen", 
                               bg="#2196F3", fg="white", width=15)
         self.btn_take_photo.pack(side=tk.LEFT, padx=2)
+        
+        self.btn_add_photo_to_queue = tk.Button(camera_control_frame, text="+", 
+                                     bg="#b0c4de", fg="black", font=("Arial", 10, "bold"), width=3)
+        self.btn_add_photo_to_queue.pack(side=tk.LEFT, padx=2)
     
     def create_servo_frame(self):
         """
@@ -344,35 +363,40 @@ class ControlApp:
         
         queue_buttons_frame = tk.Frame(queue_frame)
         queue_buttons_frame.pack(side=tk.BOTTOM, fill="x", padx=5, pady=5)
-        
-        self.queue_exec_btn = tk.Button(queue_buttons_frame, text="Warteschlange ausführen", 
-                               bg="#77dd77", fg="black", font=("Arial", 10, "bold"))
-        self.queue_exec_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.queue_clear_btn = tk.Button(queue_buttons_frame, text="Warteschlange löschen",
-                                bg="#ff6961", fg="black")
-        self.queue_clear_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.queue_remove_btn = tk.Button(queue_buttons_frame, text="Ausgewählte entfernen")
-        self.queue_remove_btn.pack(side=tk.LEFT, padx=5)
-        
-        self.repeat_check = tk.Checkbutton(queue_buttons_frame, text="Warteschlange wiederholen", variable=self.repeat_queue)
-        self.repeat_check.pack(side=tk.LEFT, padx=5)
 
-        self.queue_export_btn = tk.Button(queue_buttons_frame, text="Warteschlange exportieren (CSV)", bg="#b0c4de", fg="black")
-        self.queue_export_btn.pack(side=tk.LEFT, padx=5)
-        self.queue_import_btn = tk.Button(queue_buttons_frame, text="Warteschlange importieren (CSV)", bg="#b0c4de", fg="black")
-        self.queue_import_btn.pack(side=tk.LEFT, padx=5)
+        # Buttons in mehreren kompakten Reihen anordnen (je 2 pro Reihe)
+        row1 = tk.Frame(queue_buttons_frame)
+        row1.pack(fill="x")
+        self.queue_exec_btn = tk.Button(row1, text="Warteschlange ausführen", 
+                               bg="#77dd77", fg="black", font=("Arial", 10, "bold"))
+        self.queue_exec_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        self.queue_clear_btn = tk.Button(row1, text="Warteschlange löschen",
+                                bg="#ff6961", fg="black")
+        self.queue_clear_btn.pack(side=tk.LEFT, padx=5, pady=2)
+
+        row2 = tk.Frame(queue_buttons_frame)
+        row2.pack(fill="x")
+        self.queue_remove_btn = tk.Button(row2, text="Ausgewählte entfernen")
+        self.queue_remove_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        self.repeat_check = tk.Checkbutton(row2, text="Warteschlange wiederholen", variable=self.repeat_queue)
+        self.repeat_check.pack(side=tk.LEFT, padx=5, pady=2)
+
+        row3 = tk.Frame(queue_buttons_frame)
+        row3.pack(fill="x")
+        self.queue_export_btn = tk.Button(row3, text="Warteschlange exportieren (CSV)", bg="#b0c4de", fg="black")
+        self.queue_export_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        self.queue_import_btn = tk.Button(row3, text="Warteschlange importieren (CSV)", bg="#b0c4de", fg="black")
+        self.queue_import_btn.pack(side=tk.LEFT, padx=5, pady=2)
     
     def assign_callbacks(self):
         """
         Weist allen Schaltflächen in der Benutzeroberfläche Callback-Funktionen zu
         Verknüpft UI-Ereignisse mit ihren entsprechenden Aktionen
-        """
-        # Kamera-Callbacks
+        """        # Kamera-Callbacks
         self.btn_start_camera.config(command=self.start_camera)
         self.btn_stop_camera.config(command=self.stop_camera)
         self.btn_take_photo.config(command=self.take_photo)
+        self.btn_add_photo_to_queue.config(command=self.add_photo_to_queue)
         
         # Servo-Callbacks
         self.servo_exec_btn.config(command=self.device_control.servo_cmd)
@@ -494,6 +518,14 @@ class ControlApp:
         description = "Home: Home-Funktion ausführen"
         self.operation_queue.add('home', {}, description)
     
+    def add_photo_to_queue(self):
+        """
+        Fügt eine Foto-Aufnahme-Operation zur Warteschlange hinzu
+        Fügt eine Operation zum Aufnehmen und Speichern eines Fotos hinzu
+        """
+        description = "Kamera: Foto aufnehmen und speichern"
+        self.operation_queue.add('photo', {}, description)
+    
     def execute_queue(self):
         """
         Führt alle Operationen in der Warteschlange aus
@@ -611,6 +643,19 @@ class ControlApp:
         else:
             self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
             
+    def set_camera_device_index(self):
+        """
+        Setzt den Kamera-Device-Index neu und initialisiert die Webcam neu
+        """
+        try:
+            idx = int(self.camera_device_index_var.get())
+            self.webcam.stoppen()
+            self.webcam = WebcamHelper(device_index=idx, frame_size=(320, 240))
+            self.widgets['webcam'] = self.webcam
+            self.logger.log(f"Kamera Device Index auf {idx} gesetzt. Kamera neu initialisiert.")
+        except Exception as e:
+            self.logger.log(f"Fehler beim Setzen des Kamera Device Index: {e}")
+    
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
         if hasattr(self, 'webcam'):

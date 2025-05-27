@@ -149,7 +149,7 @@ class WebcamHelper:
         os.makedirs(ordner, exist_ok=True)
         
         # Dateinamen generieren
-        dateiname = f"kamera_{timestamp}_{self.bild_zaehler}.jpg"
+        dateiname = f"kamera_{timestamp}_{self.bild_zaehler}.png"
         dateipfad = os.path.join(ordner, dateiname)
         
         # Bild speichern

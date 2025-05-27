@@ -8,6 +8,7 @@ import time
 import threading
 from datetime import datetime
 from PIL import Image, ImageTk
+import numpy as np
 
 
 class WebcamHelper:
@@ -122,38 +123,25 @@ class WebcamHelper:
             return True
         return False
     
-    def foto_aufnehmen(self, ordner=None):
+    def foto_aufnehmen(self, delay=0.2):
         """
-        Foto aufnehmen und speichern
+        Nimmt das aktuelle Kamerabild auf und speichert es als PNG-Datei im Ordner 'pictures'.
+        Führt nach der Aufnahme ein Delay aus.
+        Gibt den Pfad zur gespeicherten Datei zurück.
         
         Args:
-            ordner (str, optional): Ordner zum Speichern des Fotos
-            
-        Returns:
-            str: Pfad zum gespeicherten Foto oder None bei Fehler
+            delay (float): Pause nach der Aufnahme in Sekunden (Standard: 0.2)
         """
-        if self.current_frame is None:
-            return None
-            
-        # Zeitstempel für eindeutige Dateinamen
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Basispfad bestimmen
-        if ordner is None:
-            # Den Projekthauptordner ermitteln (zwei Ebenen über der aktuellen Datei)
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(os.path.dirname(current_dir))
-            ordner = os.path.join(project_root, "pictures")
-        
-        # Ordner erstellen, falls nicht vorhanden
-        os.makedirs(ordner, exist_ok=True)
-        
-        # Dateinamen generieren
-        dateiname = f"kamera_{timestamp}_{self.bild_zaehler}.jpg"
-        dateipfad = os.path.join(ordner, dateiname)
-        
-        # Bild speichern
-        cv2.imwrite(dateipfad, self.current_frame)
-        self.bild_zaehler += 1
-        
-        return dateipfad
+        # Kurzes Delay vor der Aufnahme, damit die Kamera ein neues Frame liefern kann
+        time.sleep(delay)
+        # Versuche, ein aktuelles Frame direkt von der Kamera zu lesen
+        frame = self.frame_lesen()
+        if frame is not None:
+            pictures_dir = os.path.join(os.getcwd(), "pictures")
+            os.makedirs(pictures_dir, exist_ok=True)
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"foto_{timestamp}.png"
+            filepath = os.path.join(pictures_dir, filename)
+            cv2.imwrite(filepath, frame)
+            return filepath
+        return None
