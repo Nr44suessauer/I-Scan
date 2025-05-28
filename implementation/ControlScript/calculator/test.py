@@ -63,7 +63,7 @@ def main():
         print("\nVisualization (not to scale):")
         print("              A")
         print("              *")
-        print(f"     a={a}cm |\\")
+        print(f"   a={a}cm |\\")
         print("              | \\")
         print("              |  \\")
         print("              |   \\")
