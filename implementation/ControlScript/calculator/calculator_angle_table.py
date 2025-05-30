@@ -31,6 +31,7 @@ Z_MODULE_Y = 0            # Y-Koordinate des Z-Moduls (Startposition)
 # Scan-Konfiguration
 DELTA_SCAN = 150          # Gesamtstrecke des Scans in cm
 NUMBER_OF_MEASUREMENTS = 10  # Anzahl der Messpunkte
+STEPPER_SPEED = 80        # Geschwindigkeit des Steppers
 
 def calculate_angle(current_y):
     """
@@ -285,10 +286,139 @@ def generate_presentation_view():
     except Exception as e:
         print(f"Hinweis: Die Grafik konnte nicht angezeigt werden ({e}).")
 
+def export_angle_table_to_csv(file_path=None):
+    """
+    Exportiert die berechneten Winkeldaten als CSV-Datei im Format für die I-Scan-Steuerung
+    
+    Args:
+        file_path (str): Pfad zur CSV-Datei. Wenn None, wird ein Dialog zur Dateiauswahl angezeigt.
+    
+    Returns:
+        bool: True, wenn der Export erfolgreich war, sonst False
+    """
+    import csv
+    import json
+    import tkinter as tk
+    from tkinter import filedialog
+    import os
+    
+    if NUMBER_OF_MEASUREMENTS <= 0:
+        print("Fehler: Anzahl der Messungen muss größer als 0 sein!")
+        return False
+    
+    # CSV workflows Ordner erstellen, falls nicht vorhanden
+    csv_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "CSV workflows")
+    if not os.path.exists(csv_folder):
+        os.makedirs(csv_folder)
+        print(f"Ordner erstellt: {csv_folder}")
+    
+    # Benutzer nach dem Speicherort fragen, falls nicht angegeben
+    if file_path is None:
+        root = tk.Tk()
+        root.withdraw()  # Verstecke das Hauptfenster
+        
+        # Standard-Dateipfad im CSV workflows Ordner
+        default_filename = f"winkeltabelle_{NEW_CENTER_X}x{NEW_CENTER_Y}_{NUMBER_OF_MEASUREMENTS}punkte.csv"
+        default_path = os.path.join(csv_folder, default_filename)
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV-Dateien", "*.csv")],
+            title="Winkel-Tabelle exportieren",
+            initialdir=csv_folder,
+            initialfile=default_filename
+        )
+        if not file_path:  # Benutzer hat abgebrochen
+            return False
+    
+    step_size = calculate_step_size()
+    
+    # Y-Positionen und Winkel berechnen
+    y_positions = [P_Y + step_size * i for i in range(NUMBER_OF_MEASUREMENTS)]
+    angles = [calculate_angle(y) for y in y_positions]
+    
+    # Schrittgröße in cm
+    step_distance = step_size  # cm
+    
+    # Durchmesser der Winde (in mm) - Standardwert von 28mm verwenden
+    d = 28.0  # mm
+    circumference = 3.141592653589793 * d  # mm
+    
+    # Umrechnung von cm in mm
+    step_mm = step_distance * 10
+    
+    # Schritte berechnen für den Stepper-Motor
+    steps = int((step_mm / circumference) * 4096)
+    
+    try:
+        with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["type", "params", "description"])
+            
+            # Home-Position anfahren (optional)
+            writer.writerow([
+                'home',
+                '{}',
+                'Home-Position anfahren'
+            ])
+            
+            for i, (y, angle) in enumerate(zip(y_positions, angles)):
+                # 1. Servo-Winkel einstellen
+                writer.writerow([
+                    'servo',
+                    json.dumps({"angle": int(angle)}),
+                    f"Servo: Winkel auf {int(angle)}° setzen"
+                ])
+                
+                # 2. Foto aufnehmen
+                writer.writerow([
+                    'photo',
+                    '{}',
+                    "Kamera: Foto aufnehmen und speichern"
+                ])
+                
+                # 3. Stepper bewegen (außer beim letzten Punkt)
+                if i < len(y_positions) - 1:
+                    direction = 1  # 1 = aufwärts, -1 = abwärts
+                    dir_text = "aufwärts" if direction == 1 else "abwärts"
+                    
+                    writer.writerow([
+                        'stepper',
+                        json.dumps({"steps": steps, "direction": direction, "speed": STEPPER_SPEED}),
+                        f"Stepper: {steps} Schritte, {step_distance:.1f} cm, Richtung {dir_text}, Geschwindigkeit: {STEPPER_SPEED}"
+                    ])
+        
+        print(f"CSV-Datei erfolgreich exportiert nach: {file_path}")
+        print(f"Enthält {NUMBER_OF_MEASUREMENTS} Messungen mit {NUMBER_OF_MEASUREMENTS-1} Bewegungen.")
+        return True
+        
+    except Exception as e:
+        print(f"Fehler beim Exportieren der CSV-Datei: {e}")
+        return False
+
 def main():
     """Hauptfunktion zur Ausführung des Programms"""
+    import sys
+    
+    # Kommandozeilenargumente prüfen
+    export_csv = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ['-e', '--export', 'export']:
+            export_csv = True
+    
     # Präsentationsansicht generieren und anzeigen
     generate_presentation_view()
+    
+    # CSV-Export
+    if export_csv:
+        # Direkter Export ohne Nachfrage
+        export_angle_table_to_csv()
+    else:
+        # CSV-Export Option anbieten
+        print("\nMöchten Sie die Winkeltabelle als CSV exportieren? (j/n)")
+        user_input = input()
+        if user_input.lower() in ['j', 'ja', 'y', 'yes']:
+            export_angle_table_to_csv()
 
 if __name__ == "__main__":
     # Erforderliche Bibliotheken prüfen
