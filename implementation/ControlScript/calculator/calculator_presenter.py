@@ -220,9 +220,7 @@ def generate_presentation_view():
     max_y = max(NEW_CENTER_Y, max(y_positions)) * 1.2
     min_x = min(0, Z_MODULE_X) - 10
     min_y = min(0, min(y_positions)) - 10
-    ax_2d.axis([min_x, max_x, min_y, max_y])
-    
-    # 3D-Visualisierung (unten rechts)
+    ax_2d.axis([min_x, max_x, min_y, max_y])        # 3D-Visualisierung (unten rechts)
     try:
         ax_3d = plt.subplot(gs[1, 1], projection='3d')
         
@@ -234,34 +232,42 @@ def generate_presentation_view():
         # Scanpfad
         ax_3d.plot(x_scan, y_positions, z_scan, color='blue', linewidth=2)
         
-        # Neues Zentrum
+        # Neues Zentrum (auf Z=0 Ebene)
         ax_3d.scatter([NEW_CENTER_X], [NEW_CENTER_Y], [0], color='red', s=100, label='Zentrum')
         
-        # Winkellinien mit Höhe
-        for i, (y, angle) in enumerate(zip(y_positions, angles)):
-            z_height = angle / 10
+        # Winkellinien - jetzt direkt zum neuen Zentrum (ohne Z-Höhe am Zentrum)
+        for i, (y, angle) in enumerate(zip(y_positions, angles)):            # Winkel wird nun als Punkt auf einer Geraden vom Z-Modul zum Zentrum dargestellt
+            # Der Punkt liegt auf der Verbindungslinie und repräsentiert den tatsächlichen Winkel in der Z-Höhe
             
-            # Linie von Scanpunkt zum Zentrum mit Höhe
-            ax_3d.plot([Z_MODULE_X, NEW_CENTER_X], [y, NEW_CENTER_Y], [0, z_height], 
-                      '--', color='green', alpha=0.7)
+            # Direkte Linie von Scanpunkt zum Zentrum auf der Z=0 Ebene als Referenz
+            ax_3d.plot([Z_MODULE_X, NEW_CENTER_X], [y, NEW_CENTER_Y], [0, 0], 
+                       ':', color='lightgray', linewidth=1, alpha=0.5)
             
-            # Punkt für Winkel in der Höhe
-            ax_3d.scatter([NEW_CENTER_X], [NEW_CENTER_Y], [z_height], 
-                         color='green', s=30, alpha=0.7)
+            # Winkel-Marker als vertikale Linie über Z-Modul-Position - jetzt mit tatsächlichem Winkel
+            z_height = angle  # Tatsächlicher Winkel in Grad
+            ax_3d.plot([Z_MODULE_X, Z_MODULE_X], [y, y], [0, z_height], 
+                       '-', color='green', linewidth=1.5, alpha=0.7)            # Linie vom Höhenpunkt zum Zentrum
+            ax_3d.plot([Z_MODULE_X, NEW_CENTER_X], [y, NEW_CENTER_Y], [z_height, 0], 
+                      '--', color='green', linewidth=1.5, alpha=0.7)
             
-            # Text für Winkel in 3D
-            ax_3d.text(NEW_CENTER_X+5, NEW_CENTER_Y, z_height, f"{angle:.1f}°", 
-                      color='darkgreen', size=8)
-        
-        # Achsen konfigurieren
+            # Punkt für Winkel in der Höhe über Z-Modul
+            ax_3d.scatter([Z_MODULE_X], [y], [z_height], 
+                         color='green', s=30, alpha=0.9)
+            
+            # Text für Winkel in 3D neben dem erhöhten Punkt
+            ax_3d.text(Z_MODULE_X+5, y, z_height, f"{angle:.1f}°", 
+                      color='darkgreen', size=9, fontweight='bold')        # Achsen konfigurieren
         ax_3d.set_title('3D-Darstellung der Winkelbeziehungen', fontsize=14, fontweight='bold')
         ax_3d.set_xlabel('X-Position (cm)')
         ax_3d.set_ylabel('Y-Position (cm)')
-        ax_3d.set_zlabel('Winkel (skaliert)')
+        ax_3d.set_zlabel('Winkel (°)') # Jetzt direkt der tatsächliche Winkel in Grad
         ax_3d.legend(loc='upper right')
         
-        # Ansichtswinkel
-        ax_3d.view_init(elev=30, azim=-60)
+        # Achsenlimits anpassen - wichtig für korrekte Proportionen
+        ax_3d.set_zlim(0, max(angles) * 1.1)  # Etwas Platz über dem höchsten Winkel
+        
+        # Ansichtswinkel anpassen für bessere Sicht der Geraden zum Zentrum
+        ax_3d.view_init(elev=15, azim=-45)
         
     except Exception as e:
         # Fallback
@@ -269,21 +275,15 @@ def generate_presentation_view():
         ax_3d.text(0.5, 0.5, f"3D-Darstellung nicht verfügbar:\n{e}", 
                   ha='center', va='center', fontsize=12)
         ax_3d.axis('off')
-    
-    # Titel über gesamtem Plot
+      # Titel über gesamtem Plot
     plt.suptitle('I-Scan Winkel-Visualisierung', fontsize=18, fontweight='bold', y=0.98)
     
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Anpassung für den Gesamttitel
     
-    # Bild speichern
-    visualization_path = 'scan_visualization_presenter.png'
-    plt.savefig(visualization_path, dpi=150)
-    print(f"\nKompakte Präsentationsansicht wurde gespeichert unter: {visualization_path}")
-    
     try:
         plt.show()
     except Exception as e:
-        print(f"Hinweis: Die Grafik konnte nicht angezeigt werden ({e}), wurde aber unter '{visualization_path}' gespeichert.")
+        print(f"Hinweis: Die Grafik konnte nicht angezeigt werden ({e}).")
 
 def main():
     """Hauptfunktion zur Ausführung des Programms"""
