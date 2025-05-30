@@ -18,7 +18,7 @@ M_Y = 150                 # Y-Koordinate des Endpunkts
 
 # Neues Zentrum (Ziel-Zentrum)
 NEW_CENTER_X = 150        # X-Koordinate des neuen Zentrums
-NEW_CENTER_Y = 25         # Y-Koordinate des neuen Zentrums
+NEW_CENTER_Y = 75         # Y-Koordinate des neuen Zentrums
 
 # Altes Zentrum (Ursprungs-Zentrum)
 OLD_CENTER_X = 150        # X-Koordinate des alten Zentrums
@@ -29,7 +29,7 @@ Z_MODULE_X = 0            # X-Koordinate des Z-Moduls (bleibt fest)
 Z_MODULE_Y = 0            # Y-Koordinate des Z-Moduls (Startposition)
 
 # Scan-Konfiguration
-DELTA_SCAN = 100          # Gesamtstrecke des Scans in cm
+DELTA_SCAN = 150          # Gesamtstrecke des Scans in cm
 NUMBER_OF_MEASUREMENTS = 10  # Anzahl der Messpunkte
 
 def calculate_angle(current_y):
