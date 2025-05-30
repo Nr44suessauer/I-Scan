@@ -108,27 +108,44 @@ def generate_results_table():
     measurements = [row[0] for row in table_data]  # Messungsnummern
     angles = [row[1] for row in table_data]        # Winkel
     y_positions = [P_Y + step_size * i for i in range(NUMBER_OF_MEASUREMENTS)]  # Y-Positionen
+      # Mehrere Grafiken erstellen
+    plt.figure(figsize=(18, 16))
     
-    # Mehrere Grafiken erstellen
-    plt.figure(figsize=(18, 15))
+    # Subplot 1: Tabelle mit Werten
+    plt.subplot(2, 3, 1)
+    plt.axis('off')  # Achsen ausblenden
     
-    # Subplot 1: Winkel vs. Messung - Liniendiagramm
-    plt.subplot(2, 2, 1)
+    # Tabellendaten für die grafische Darstellung vorbereiten
+    table_headers = ['Nr.', 'Winkel (°)', 'Y-Pos (cm)', 'Koordinaten']
+    table_rows = []
+    for i, (angle, y) in enumerate(zip(angles, y_positions)):
+        table_rows.append([i+1, f"{angle:.1f}°", f"{y:.1f}", f"({Z_MODULE_X}, {y:.1f})"])
+    
+    # Tabelle in das Diagramm einfügen
+    plt.table(cellText=table_rows,
+             colLabels=table_headers,
+             cellLoc='center',
+             loc='center',
+             bbox=[0, 0, 1, 1])
+    plt.title('Messwerte Tabelle', fontsize=14)
+    
+    # Subplot 2: Winkel vs. Messung - Liniendiagramm
+    plt.subplot(2, 3, 2)
     plt.plot(measurements, angles, 'o-', color='blue', linewidth=2, markersize=8)
     plt.title('Winkel pro Messung', fontsize=14)
     plt.xlabel('Messung Nr.', fontsize=12)
     plt.ylabel('Winkel (°)', fontsize=12)
     plt.grid(True)
-    
-    # Subplot 2: Winkel vs. Y-Position - Liniendiagramm
-    plt.subplot(2, 2, 2)
+      # Subplot 3: Winkel vs. Y-Position - Liniendiagramm
+    plt.subplot(2, 3, 3)
     plt.plot(y_positions, angles, 'o-', color='red', linewidth=2, markersize=8)
     plt.title('Winkel vs. Y-Position', fontsize=14)
     plt.xlabel('Y-Position (cm)', fontsize=12)
     plt.ylabel('Winkel (°)', fontsize=12)
     plt.grid(True)
-      # Subplot 3: Visuelle Darstellung des Scan-Pfades und Winkels (2D)
-    plt.subplot(2, 2, 3)
+    
+    # Subplot 4: Visuelle Darstellung des Scan-Pfades und Winkels (2D)
+    plt.subplot(2, 3, 4)
     
     # Z-Modul-Positionen darstellen
     for i, y in enumerate(y_positions):
@@ -192,12 +209,11 @@ def generate_results_table():
     min_x = min(0, Z_MODULE_X) - 10
     min_y = min(0, min(y_positions)) - 10
     plt.axis([min_x, max_x, min_y, max_y])
-    
-    # Subplot 4: 3D-Visualisierung der Scanpositionen und Winkel
+      # Subplot 5 & 6: 3D-Visualisierung der Scanpositionen und Winkel
     try:
         from mpl_toolkits.mplot3d import Axes3D
         
-        ax = plt.subplot(2, 2, 4, projection='3d')
+        ax = plt.subplot(2, 3, 5, projection='3d')
         
         # Z-Modul-Positionen (Scanpunkte)
         x_scan = [Z_MODULE_X] * len(y_positions)
@@ -232,13 +248,35 @@ def generate_results_table():
         
         # Ansichtswinkel einstellen
         ax.view_init(elev=30, azim=-60)
-        
-    except Exception as e:
+          except Exception as e:
         # Fallback, falls 3D-Plot nicht funktioniert
-        plt.subplot(2, 2, 4)
+        plt.subplot(2, 3, 5)
         plt.text(0.5, 0.5, f"3D-Darstellung nicht verfügbar:\n{e}", 
                 ha='center', va='center', fontsize=12, wrap=True)
         plt.axis('off')
+    
+    # Subplot 6: Konfigurations-Informationen
+    plt.subplot(2, 3, 6)
+    plt.axis('off')  # Achsen ausblenden
+    
+    # Text-Informationen zur Konfiguration
+    config_info = [
+        f"Konfiguration:",
+        f"",
+        f"Neues Zentrum: ({NEW_CENTER_X}, {NEW_CENTER_Y})",
+        f"Altes Zentrum: ({OLD_CENTER_X}, {OLD_CENTER_Y})",
+        f"Z-Modul Start: ({Z_MODULE_X}, {Z_MODULE_Y})",
+        f"Delta Scan: {DELTA_SCAN} cm",
+        f"Anzahl Messungen: {NUMBER_OF_MEASUREMENTS}",
+        f"Schrittgröße: {calculate_step_size():.1f} cm",
+        f"",
+        f"Winkelbereich: {min(angles):.1f}° - {max(angles):.1f}°"
+    ]
+    
+    plt.text(0.5, 0.5, "\n".join(config_info),
+            ha='center', va='center', fontsize=12,
+            bbox=dict(facecolor='lightgray', alpha=0.5, boxstyle='round,pad=1'))
+    plt.title('Konfigurations-Informationen', fontsize=14)
     
     plt.tight_layout()
       # Grafiken speichern
