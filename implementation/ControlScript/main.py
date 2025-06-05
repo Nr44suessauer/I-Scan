@@ -455,20 +455,19 @@ class ControlApp:
         Fügt eine Schrittmotor-Operation zur Warteschlange hinzu
         Berechnet Schritte aus der Distanz und fügt die Operation zur Warteschlange hinzu
         """
-        try:
+        try:            
             d = float(self.diameter_entry.get())
             circumference = PI * d  # mm
             length_cm = float(self.stepper_length_cm.get())
             length_mm = length_cm * 10
             steps = int((length_mm / circumference) * 4096)
             direction = int(self.stepper_dir.get()) if self.stepper_dir.get() else 1
-            speed = int(self.stepper_speed.get()) if self.stepper_speed.get() else None
+            speed = int(self.stepper_speed.get()) if self.stepper_speed.get() else int(DEFAULT_SPEED)
             
             dir_text = "aufwärts" if direction == 1 else "abwärts"
             
-            params = {"steps": steps, "direction": direction}
-            if speed is not None:
-                params["speed"] = speed
+            # Immer die Geschwindigkeit zum Parameter-Dictionary hinzufügen
+            params = {"steps": steps, "direction": direction, "speed": speed}
                 
             description = f"Stepper: {steps} Schritte, {length_cm} cm, Richtung {dir_text}" + (f", Geschwindigkeit: {speed}" if speed else "")
             self.operation_queue.add('stepper', params, description)
