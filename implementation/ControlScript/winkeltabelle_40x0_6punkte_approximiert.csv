@@ -1,0 +1,19 @@
+type,params,description
+home,{},Home-Position anfahren
+servo,"{""angle"": 90}",Servo: Winkel auf 90° setzen (Y=0.0cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=0.0cm, Winkel=90°"
+stepper,"{""steps"": 3880, ""direction"": 1, ""speed"": 80}","Stepper: 3880 Schritte, 8.3cm, Richtung aufwärts, Geschwindigkeit: 80"
+servo,"{""angle"": 78}",Servo: Winkel auf 78° setzen (Y=8.3cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=8.3cm, Winkel=78°"
+stepper,"{""steps"": 3880, ""direction"": 1, ""speed"": 80}","Stepper: 3880 Schritte, 8.3cm, Richtung aufwärts, Geschwindigkeit: 80"
+servo,"{""angle"": 67}",Servo: Winkel auf 67° setzen (Y=16.7cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=16.7cm, Winkel=67°"
+stepper,"{""steps"": 3880, ""direction"": 1, ""speed"": 80}","Stepper: 3880 Schritte, 8.3cm, Richtung aufwärts, Geschwindigkeit: 80"
+servo,"{""angle"": 58}",Servo: Winkel auf 58° setzen (Y=25.0cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=25.0cm, Winkel=58°"
+stepper,"{""steps"": 3880, ""direction"": 1, ""speed"": 80}","Stepper: 3880 Schritte, 8.3cm, Richtung aufwärts, Geschwindigkeit: 80"
+servo,"{""angle"": 50}",Servo: Winkel auf 50° setzen (Y=33.3cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=33.3cm, Winkel=50°"
+stepper,"{""steps"": 3880, ""direction"": 1, ""speed"": 80}","Stepper: 3880 Schritte, 8.3cm, Richtung aufwärts, Geschwindigkeit: 80"
+servo,"{""angle"": 43}",Servo: Winkel auf 43° setzen (Y=41.7cm)
+photo,{},"Kamera: Foto aufnehmen bei Y=41.7cm, Winkel=43°"

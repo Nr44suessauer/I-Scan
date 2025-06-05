@@ -14,6 +14,7 @@ class DeviceControl:
     Bietet Methoden zur Steuerung von Servomotoren, Schrittmotoren, LEDs und
     zur Abfrage von Button-Zuständen über die API.
     """
+    
     def __init__(self, logger, base_url_var, widgets, position_var, servo_angle_var):
         """
         Initialisiert den Gerätecontroller
@@ -29,7 +30,8 @@ class DeviceControl:
         self.base_url_var = base_url_var
         self.widgets = widgets
         self.position = position_var
-        self.servo_angle_var = servo_angle_var        
+        self.servo_angle_var = servo_angle_var
+        
         # Servo-Winkel-Rechner initialisieren
         # Standardwerte: Zielzentrum bei (150, 75), Z-Modul bei X=0
         self.servo_calculator = ServoAngleCalculator(

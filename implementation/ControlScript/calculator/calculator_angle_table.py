@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
+import sys
+import os
+
+# Servo-Winkel-Rechner importieren
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from servo_angle_calculator import ServoAngleCalculator
 
 # ===== KONFIGURATIONSVARIABLEN =====
 
@@ -32,6 +38,13 @@ Z_MODULE_Y = 0            # Y-Koordinate des Z-Moduls (Startposition)
 DELTA_SCAN = 150          # Gesamtstrecke des Scans in cm
 NUMBER_OF_MEASUREMENTS = 10  # Anzahl der Messpunkte
 STEPPER_SPEED = 80        # Geschwindigkeit des Steppers
+
+# Servo-Winkel-Rechner initialisieren
+servo_calculator = ServoAngleCalculator(
+    target_center_x=NEW_CENTER_X,
+    target_center_y=NEW_CENTER_Y,
+    z_module_x=Z_MODULE_X
+)
 
 def calculate_angle(current_y):
     """
@@ -83,12 +96,12 @@ def generate_presentation_view():
 
     # Messungen berechnen und erfassen
     table_data = []
-    
-    # Y-Positionen und Winkel berechnen
+      # Y-Positionen und Winkel berechnen
     y_positions = [P_Y + step_size * i for i in range(NUMBER_OF_MEASUREMENTS)]
     angles = [calculate_angle(y) for y in y_positions]
+    servo_angles = [servo_calculator.calculate_servo_angle_from_position(y) for y in y_positions]
     
-    for i, (y, angle) in enumerate(zip(y_positions, angles)):
+    for i, (y, angle, servo_angle) in enumerate(zip(y_positions, angles, servo_angles)):
         # Z-Modul Koordinaten formatieren (X bleibt fest, Y variiert)
         z_coords = f"({Z_MODULE_X}, {round(y, 1)})"
         
@@ -96,13 +109,13 @@ def generate_presentation_view():
         table_data.append([
             i + 1,                       # Messungsnummer
             round(angle, 1),             # Winkel (gerundet auf 1 Dezimalstelle)
+            servo_angle,                 # Servo-Winkel (ganzzahlig)
             round(y, 1),                 # Y-Position
             z_coords                      # Z-Modul Koordinaten
         ])
-    
-    # Tabelle ausgeben
+      # Tabelle ausgeben
     print(tabulate(table_data, 
-                  headers=['Messung Nr.', 'Winkel (°)', 'Y-Position (cm)', 'Z-Modul (Koordinaten)'],
+                  headers=['Messung Nr.', 'Winkel (°)', 'Servo (°)', 'Y-Position (cm)', 'Z-Modul (Koordinaten)'],
                   tablefmt='grid',
                   numalign='right'))
     
@@ -115,20 +128,19 @@ def generate_presentation_view():
     # Tabelle erstellen (oben links)
     ax_table = plt.subplot(gs[0, 0])
     ax_table.axis('off')
-    
-    # Tabellendaten formatieren
-    table_headers = ['Nr.', 'Winkel (°)', 'Y (cm)', 'Koordinaten']
+      # Tabellendaten formatieren
+    table_headers = ['Nr.', 'Winkel (°)', 'Servo (°)', 'Y (cm)', 'Koordinaten']
     table_rows = []
     for row in table_data:
-        table_rows.append([row[0], f"{row[1]}°", f"{row[2]}", row[3]])
+        table_rows.append([row[0], f"{row[1]}°", f"{row[2]}°", f"{row[3]}", row[4]])
     
     # Tabelle mit angepasstem Style
     table = plt.table(cellText=table_rows,
                      colLabels=table_headers,
                      cellLoc='center',
                      loc='center',
-                     cellColours=[['#f2f2f2']*4 for _ in range(len(table_rows))],
-                     colColours=['#e6e6e6']*4,
+                     cellColours=[['#f2f2f2']*5 for _ in range(len(table_rows))],
+                     colColours=['#e6e6e6']*5,
                      bbox=[0, 0, 1, 1])
     table.auto_set_font_size(False)
     table.set_fontsize(10)
@@ -139,8 +151,7 @@ def generate_presentation_view():
     # Konfigurationsbox (unten links)
     ax_config = plt.subplot(gs[1, 0])
     ax_config.axis('off')
-    
-    # Text-Informationen zur Konfiguration
+      # Text-Informationen zur Konfiguration
     config_info = [
         f"Konfiguration",
         f"─────────────────────",
@@ -151,7 +162,9 @@ def generate_presentation_view():
         f"Schrittgröße: {calculate_step_size():.1f} cm",
         f"─────────────────────",
         f"Winkelbereich:",
-        f"{min(angles):.1f}° - {max(angles):.1f}°"
+        f"{min(angles):.1f}° - {max(angles):.1f}°",
+        f"Servo-Bereich:",
+        f"{min(servo_angles)}° - {max(servo_angles)}°"
     ]
     
     # Formatierte Konfigurationsbox
@@ -326,8 +339,7 @@ def export_angle_table_to_csv(file_path=None):
             filetypes=[("CSV-Dateien", "*.csv")],
             title="Winkel-Tabelle exportieren",
             initialdir=csv_folder,
-            initialfile=default_filename
-        )
+            initialfile=default_filename        )
         if not file_path:  # Benutzer hat abgebrochen
             return False
     
@@ -336,6 +348,7 @@ def export_angle_table_to_csv(file_path=None):
     # Y-Positionen und Winkel berechnen
     y_positions = [P_Y + step_size * i for i in range(NUMBER_OF_MEASUREMENTS)]
     angles = [calculate_angle(y) for y in y_positions]
+    servo_angles = [servo_calculator.calculate_servo_angle_from_position(y) for y in y_positions]
     
     # Schrittgröße in cm
     step_distance = step_size  # cm
@@ -354,20 +367,19 @@ def export_angle_table_to_csv(file_path=None):
         with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["type", "params", "description"])
-            
-            # Home-Position anfahren (optional)
+              # Home-Position anfahren (optional)
             writer.writerow([
                 'home',
                 '{}',
                 'Home-Position anfahren'
             ])
             
-            for i, (y, angle) in enumerate(zip(y_positions, angles)):
-                # 1. Servo-Winkel einstellen
+            for i, (y, angle, servo_angle) in enumerate(zip(y_positions, angles, servo_angles)):
+                # 1. Servo-Winkel einstellen (verwende den berechneten Servo-Winkel)
                 writer.writerow([
                     'servo',
-                    json.dumps({"angle": int(angle)}),
-                    f"Servo: Winkel auf {int(angle)}° setzen"
+                    json.dumps({"angle": servo_angle}),
+                    f"Servo: Winkel auf {servo_angle}° setzen (Y={y:.1f}, Zielwinkel={angle:.1f}°)"
                 ])
                 
                 # 2. Foto aufnehmen

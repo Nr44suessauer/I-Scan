@@ -22,7 +22,7 @@ from webcam_helper import WebcamHelper
 
 # Konstanten für Standardwerte und Berechnungen
 PI = 3.141592653589793
-DEFAULT_BASE_URL = "http://192.168.137.232"
+DEFAULT_BASE_URL = "http://192.168.137.46"
 DEFAULT_DIAMETER = "28"
 DEFAULT_SPEED = "80"
 DEFAULT_DISTANCE = "3.0"
@@ -49,6 +49,7 @@ class ControlApp:
         self.base_url_var = tk.StringVar(value=DEFAULT_BASE_URL)
         self.last_distance_value = tk.StringVar(value=DEFAULT_DISTANCE)
         self.repeat_queue = tk.BooleanVar(value=False)  # Wiederholungsflag
+        self.global_delay = 0.5  # Globale Autofokus-Delay-Zeit
         
         # Webcam initialisieren
         self.webcam = WebcamHelper(device_index=0, frame_size=(320, 240))
@@ -62,8 +63,7 @@ class ControlApp:
             self.position, 
             self.servo_angle_var, 
             self.update_position_label
-        )
-          # Widget-Wörterbuch für den Zugriff auf GUI-Elemente
+        )          # Widget-Wörterbuch für den Zugriff auf GUI-Elemente
         self.widgets = {
             'root': self.root,
             'diameter_entry': self.diameter_entry,
@@ -74,7 +74,8 @@ class ControlApp:
             'led_color': self.led_color,
             'led_bright': self.led_bright,
             'update_position_label': self.update_position_label,
-            'webcam': self.webcam
+            'webcam': self.webcam,
+            'global_delay': self
         }
         
         # Operationswarteschlange initialisieren
@@ -159,7 +160,15 @@ class ControlApp:
         self.camera_device_entry.pack(side=tk.LEFT)
         self.set_camera_device_btn = tk.Button(camera_settings_frame, text="Setzen", command=self.set_camera_device_index)
         self.set_camera_device_btn.pack(side=tk.LEFT, padx=5)
-
+        
+        # Autofokus-Delay-Setting hinzufügen
+        tk.Label(camera_settings_frame, text="  Autofokus-Delay (s):").pack(side=tk.LEFT, padx=(20,0))
+        self.camera_delay_var = tk.StringVar(value="0.5")
+        self.camera_delay_entry = tk.Entry(camera_settings_frame, width=5, textvariable=self.camera_delay_var)
+        self.camera_delay_entry.pack(side=tk.LEFT)
+        self.set_delay_btn = tk.Button(camera_settings_frame, text="set", command=self.set_global_delay)
+        self.set_delay_btn.pack(side=tk.LEFT, padx=5)
+    
     def create_diameter_frame(self):
         """
         Erstellt den Rahmen für das Durchmesser-Eingabefeld
@@ -503,8 +512,7 @@ class ControlApp:
     
     def add_button_to_queue(self):
         """
-        Fügt eine Button-Status-Abfrage zur Warteschlange hinzu
-        Fügt eine Operation zum Abfragen des Button-Status hinzu
+        Fügt eine Button-Status-Abfrage zur Warteschlange hinzu        Fügt eine Operation zum Abfragen des Button-Status hinzu
         """
         description = "Button: Button-Status abfragen"
         self.operation_queue.add('button', {}, description)
@@ -521,9 +529,13 @@ class ControlApp:
         """
         Fügt eine Foto-Aufnahme-Operation zur Warteschlange hinzu
         Fügt eine Operation zum Aufnehmen und Speichern eines Fotos hinzu
+        Verwendet die global gesetzte Delay-Zeit
         """
-        description = "Kamera: Foto aufnehmen und speichern"
-        self.operation_queue.add('photo', {}, description)
+        # Globale Delay verwenden
+        delay = self.global_delay
+        
+        description = f"Kamera: Foto aufnehmen (Global Delay: {delay}s)"
+        self.operation_queue.add('photo', {'delay': delay}, description)
     
     def execute_queue(self):
         """
@@ -634,8 +646,16 @@ class ControlApp:
         if not self.webcam.running or self.webcam.current_frame is None:
             self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
             return
+        
+        # Delay aus dem Eingabefeld lesen
+        try:
+            delay = float(self.camera_delay_var.get())
+        except ValueError:
+            delay = 0.5  # Fallback-Wert
+            self.logger.log("Ungültiger Delay-Wert, verwende Standard-Delay von 0.5s")
             
-        foto_path = self.webcam.foto_aufnehmen()
+        self.logger.log(f"Foto wird aufgenommen mit {delay}s Autofokus-Delay...")
+        foto_path = self.webcam.foto_aufnehmen(delay=delay)
         if foto_path:
             self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
             messagebox.showinfo("Foto aufgenommen", f"Das Foto wurde gespeichert als:\n{foto_path}")
@@ -654,6 +674,21 @@ class ControlApp:
             self.logger.log(f"Kamera Device Index auf {idx} gesetzt. Kamera neu initialisiert.")
         except Exception as e:
             self.logger.log(f"Fehler beim Setzen des Kamera Device Index: {e}")
+    
+    def set_global_delay(self):
+        """
+        Setzt die globale Autofokus-Delay-Zeit aus dem Eingabefeld
+        """
+        try:
+            delay = float(self.camera_delay_var.get())
+            if delay < 0:
+                raise ValueError("Delay kann nicht negativ sein")
+            self.global_delay = delay
+            self.logger.log(f"Globale Autofokus-Delay-Zeit auf {delay}s gesetzt")
+            messagebox.showinfo("Delay gesetzt", f"Globale Autofokus-Delay-Zeit wurde auf {delay}s gesetzt")
+        except ValueError as e:
+            self.logger.log(f"Ungültiger Delay-Wert: {e}")
+            messagebox.showerror("Ungültiger Wert", f"Bitte geben Sie einen gültigen Delay-Wert ein.\nFehler: {e}")
     
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
