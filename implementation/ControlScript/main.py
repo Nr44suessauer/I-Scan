@@ -22,7 +22,7 @@ from webcam_helper import WebcamHelper
 
 # Konstanten für Standardwerte und Berechnungen
 PI = 3.141592653589793
-DEFAULT_BASE_URL = "http://192.168.137.46"
+DEFAULT_BASE_URL = "http://192.168.137.170"
 DEFAULT_DIAMETER = "28"
 DEFAULT_SPEED = "80"
 DEFAULT_DISTANCE = "3.0"

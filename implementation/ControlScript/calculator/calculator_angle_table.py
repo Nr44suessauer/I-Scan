@@ -35,8 +35,8 @@ Z_MODULE_X = 0            # X-Koordinate des Z-Moduls (bleibt fest)
 Z_MODULE_Y = 0            # Y-Koordinate des Z-Moduls (Startposition)
 
 # Scan-Konfiguration
-DELTA_SCAN = 150          # Gesamtstrecke des Scans in cm
-NUMBER_OF_MEASUREMENTS = 10  # Anzahl der Messpunkte
+DELTA_SCAN = 50          # Gesamtstrecke des Scans in cm
+NUMBER_OF_MEASUREMENTS = 20  # Anzahl der Messpunkte
 STEPPER_SPEED = 80        # Geschwindigkeit des Steppers
 
 # Servo-Winkel-Rechner initialisieren

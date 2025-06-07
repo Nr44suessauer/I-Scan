@@ -37,7 +37,7 @@ Z_MODULE_Y = 0            # Y-Koordinate des Z-Moduls (Startposition)
 
 # Scan-Konfiguration
 DELTA_SCAN = 50          # Gesamtstrecke des Scans in cm
-NUMBER_OF_MEASUREMENTS = 6  # Anzahl der Messpunkte
+NUMBER_OF_MEASUREMENTS = 20  # Anzahl der Messpunkte
 
 def calculate_angle(current_y):
     """
