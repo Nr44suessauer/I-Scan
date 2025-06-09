@@ -14,7 +14,7 @@ SERVO_ANGLE_MIN = 0       # Lower limit of servo angle in degrees
 SERVO_ANGLE_MAX = 90      # Upper limit of servo angle in degrees
 
 # Angle correction reference (geometric calculation)
-ANGLE_CORRECTION_REFERENCE = 80  # Reference angle for correction calculation in degrees
+ANGLE_CORRECTION_REFERENCE = 70  # Reference angle for correction calculation in degrees
 
 # Point P (start coordinates)
 P_X = 0                   # X-coordinate of start point
@@ -69,20 +69,46 @@ def calculate_angle(current_y):
 def calculate_approximated_angle(current_y):
     """
     Calculates the approximated angle based on the current Y position
-    with limitation to the configurable servo angle range
+    with limitation to the configurable servo angle range and mechanical correction
     """
     # Calculate original angle
     raw_angle = calculate_angle(current_y)
     
+    # Apply mechanical correction
+    # Correction = ANGLE_CORRECTION_REFERENCE - 90°
+    # Real angle = Theoretical angle + Correction
+    angle_correction = ANGLE_CORRECTION_REFERENCE - 90.0
+    corrected_angle = raw_angle + angle_correction
+    
     # Limit to configurable servo angle range
-    if raw_angle < SERVO_ANGLE_MIN:
+    if corrected_angle < SERVO_ANGLE_MIN:
         approximated_angle = SERVO_ANGLE_MIN
-    elif raw_angle > SERVO_ANGLE_MAX:
+    elif corrected_angle > SERVO_ANGLE_MAX:
         approximated_angle = SERVO_ANGLE_MAX
     else:
-        approximated_angle = raw_angle
+        approximated_angle = corrected_angle
     
     return approximated_angle
+
+def explain_angle_correction():
+    """
+    Explains the angle correction calculation and displays correction values
+    """
+    angle_correction = ANGLE_CORRECTION_REFERENCE - 90.0
+    print(f"\n=== Angle Correction Explanation ===")
+    print(f"Problem: Servo mechanical misalignment")
+    print(f"Reference: At theoretical 90°, servo is actually at {ANGLE_CORRECTION_REFERENCE}°")
+    print(f"")
+    print(f"Calculation:")
+    print(f"  Correction = {ANGLE_CORRECTION_REFERENCE}° - 90° = {angle_correction:+.1f}°")
+    print(f"  Real_Angle = Theoretical_Angle + ({angle_correction:+.1f}°)")
+    print(f"")
+    print(f"Examples:")
+    test_angles = [90, 75, 60, 45, 30, 15, 0]
+    for theoretical in test_angles:
+        real = theoretical + angle_correction
+        print(f"  Theoretical {theoretical:2.0f}° → Real {real:4.1f}°")
+    print("=" * 50)
 
 def calculate_step_size():
     """Calculates the step size for measurements"""
@@ -99,8 +125,7 @@ def generate_results_table():
         return None
 
     step_size = calculate_step_size()
-    
-    # Display configuration information
+      # Display configuration information
     print("\n=== Scan Calculator Configuration ===")
     print(f"Start coordinates (P): ({P_X}, {P_Y})")
     print(f"End coordinates (M): ({M_X}, {M_Y})")
@@ -111,6 +136,7 @@ def generate_results_table():
     print(f"Number of measurements: {NUMBER_OF_MEASUREMENTS}")
     print(f"Step size: {step_size:.2f} cm")
     print(f"Servo angle range: {SERVO_ANGLE_MIN}° - {SERVO_ANGLE_MAX}°")
+    print(f"Angle correction reference: {ANGLE_CORRECTION_REFERENCE}° (offset: {ANGLE_CORRECTION_REFERENCE - 90.0:+.1f}°)")
     print("=" * 50)
     
     # Calculate and record measurements
@@ -119,24 +145,24 @@ def generate_results_table():
     for i in range(NUMBER_OF_MEASUREMENTS):
         # Calculate current Y position
         current_y = P_Y + step_size * i
-        
-        # Calculate original and approximated angle for this position
-        original_angle = calculate_angle(current_y)
-        approximated_angle = calculate_approximated_angle(current_y)
+          # Calculate all angle values for this position
+        theoretical_angle = calculate_angle(current_y)
+        corrected_angle = calculate_approximated_angle(current_y)
         
         # Format Z-module coordinates (X remains fixed, Y varies)
         z_coords = f"({Z_MODULE_X}, {round(current_y, 1)})"
         
-        # Add data to table (with both angle values)
+        # Add data to table (showing theoretical vs corrected angle)
         table_data.append([
             i + 1,                              # Measurement number
-            round(original_angle, 1),           # Original angle
-            round(approximated_angle, 1),       # Approximated angle (0-90°)
+            round(theoretical_angle, 1),        # Theoretical angle
+            round(corrected_angle, 1),          # Corrected angle (with mechanical adjustment)
             z_coords                            # Z-module coordinates
         ])
-      # Output table
+    
+    # Output table
     print(tabulate(table_data, 
-                  headers=['Measurement No.', 'Original Angle (°)', 'Approx. Angle (°)', 'Z-Module (Coordinates)'],
+                  headers=['Measurement No.', 'Theoretical Angle (°)', 'Corrected Angle (°)', 'Z-Module (Coordinates)'],
                   tablefmt='grid',
                   numalign='right'))
       # Create CSV file for main.py import (with JSON format for params)
@@ -455,6 +481,12 @@ def generate_results_table():
 
 def main():
     """Main function to execute the program"""
+    print("=== Servo Angle Calculator with Visualization ===")
+    print("Calculating angles and generating visualization with mechanical correction...")
+    
+    # Explain angle correction system first
+    explain_angle_correction()
+    
     # Generate and display results table
     generate_results_table()
 
