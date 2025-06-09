@@ -39,7 +39,7 @@ SCANNER_MODULE_X = 0      # X-position of scanner (cm)
 SCANNER_MODULE_Y = 0      # Y-position of scanner (cm)
 SCAN_DISTANCE = 50       # Total scan distance (cm)
 NUMBER_OF_MEASUREMENTS = 4  # Number of measurement points
-ANGLE_CORRECTION_REFERENCE = 90  # Mechanical correction (degrees)
+ANGLE_CORRECTION_REFERENCE = 60  # Mechanical correction (degrees)
 
 def print_step_by_step_explanation():
     """
@@ -388,7 +388,7 @@ Calculation:
 • dy = |{point_data['y_pos']:.1f} - {TARGET_CENTER_Y}| = {point_data['dy']:.1f} cm
 • α = arctan({point_data['dy']:.1f}/{point_data['dx']}) = {point_data['alpha']:.2f}°
 • Servo = 90° - {point_data['alpha']:.2f}° = {point_data['theoretical']:.2f}°
-• Final = {point_data['theoretical']:.2f}° + (-20°) = {point_data['final']:.2f}°
+• Final = {point_data['theoretical']:.2f}° + ({ANGLE_CORRECTION_REFERENCE - 90}°) = {point_data['final']:.2f}°
 
 RESULT:
 • Final servo angle for point {point_number}: {point_data['final']:.2f}°
