@@ -14,7 +14,7 @@ Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 import matplotlib.pyplot as plt
 import os
 from config import OUTPUT_DIR, ensure_output_dir
-from config import ANGLE_CORRECTION_REFERENCE, TARGET_CENTER_X, TARGET_CENTER_Y
+from config import TARGET_CENTER_X, TARGET_CENTER_Y
 
 
 def create_trigonometry_formulas_visualization():
@@ -31,24 +31,24 @@ def create_trigonometry_formulas_visualization():
                  fontsize=12, fontweight='bold', pad=20, color='darkblue')
     ax.axis('off')
     ax.set_facecolor('#f8f9fa')
-    
-    # Formula text
+      # Formula text
     formula_text = f"""TRIGONOMETRY FUNDAMENTALS:
 
-• tan(α) = Opposite side ÷ Adjacent side
-• tan(α) = dy ÷ dx
-• α = arctan(dy ÷ dx)
+• tan(Servo°) = Adjacent side ÷ Opposite side
+• tan(Servo°) = dx ÷ dy
+• Servo° = arctan(dx ÷ dy)
 
-SERVO ANGLE:
-• Servo° = 90° - α
+GEOMETRIC ANGLE DEFINITION:
+• Angle = Angle between line (scanner to target) and Y-axis
 
-CORRECTION:
-• Final° = Servo° + Correction
-• Correction = {ANGLE_CORRECTION_REFERENCE - 90}°
+PURE TRIGONOMETRY:
+• α = arctan(dx ÷ dy) where:
+  - dx = horizontal distance
+  - dy = vertical distance
 
 MEASUREMENT SETUP:
-• dx = Target X - Scanner X
-• dy = |Scanner Y - Target Y|
+• dx = Target X - Scanner X (horizontal distance)
+• dy = |Scanner Y - Target Y| (vertical distance)
 • Scanner moves vertically along Y-axis
 • Target remains fixed at ({TARGET_CENTER_X}, {TARGET_CENTER_Y}) cm"""
     

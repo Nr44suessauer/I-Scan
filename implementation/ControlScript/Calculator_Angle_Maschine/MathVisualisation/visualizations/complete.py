@@ -18,7 +18,7 @@ import os
 from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y, 
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    SCAN_DISTANCE, ANGLE_CORRECTION_REFERENCE,
+    SCAN_DISTANCE, MIN_SERVO_ANGLE, MAX_SERVO_ANGLE,
     OUTPUT_DIR, ensure_output_dir
 )
 
@@ -132,47 +132,44 @@ def create_complete_visualization(angles_data):
                      fontsize=8, color='darkred', fontweight='bold',
                      bbox=dict(boxstyle="round,pad=0.2", facecolor="white", 
                               edgecolor='red', linewidth=1, alpha=0.95))
-        
-        # Point labeling compact
+          # Point labeling compact - show geometry and servo angles
         ax1.text(SCANNER_MODULE_X - 12, y_pos, 
-                 f'P{data["point"]}\nY={y_pos:.1f}\nS={data["final"]:.1f}°', 
+                 f'P{data["point"]}\nY={y_pos:.1f}\nGeo={data["exact_angle"]:.1f}°\nServo={data["interpolated_angle"]:.1f}°', 
                  ha='right', va='center', fontsize=7, fontweight='bold',
                  bbox=dict(boxstyle="round,pad=0.3", facecolor=color, 
                           edgecolor='black', linewidth=1, alpha=0.9))
     
     # Legend compact
     ax1.legend(fontsize=8, loc='upper right', frameon=True, 
-               fancybox=True, shadow=True, framealpha=0.9)
-
-    # === DIAGRAM 2: Angle progression ===
+               fancybox=True, shadow=True, framealpha=0.9)    # === DIAGRAM 2: Angle progression ===
     ax2 = plt.subplot2grid((5, 4), (0, 2), colspan=2, rowspan=1)
     ax2.set_title('Servo Angle Progression over Scan Position', 
                   fontsize=10, fontweight='bold', pad=15, color='darkblue')
     
     y_positions = [data['y_pos'] for data in angles_data]
-    final_angles = [data['final'] for data in angles_data]
-    theoretical_angles = [data['theoretical'] for data in angles_data]
+    exact_angles = [data['exact_angle'] for data in angles_data]
+    interpolated_angles = [data['interpolated_angle'] for data in angles_data]
     
-    # Lines with compact markers
-    line1 = ax2.plot(y_positions, theoretical_angles, 'o-', color='#2E86AB', 
+    # Lines with compact markers - show geometric vs servo angles
+    line1 = ax2.plot(y_positions, exact_angles, 'o-', color='#2E86AB', 
                      linewidth=3, markersize=7, markeredgewidth=2, 
-                     markeredgecolor='white', label='Theoretical Angles')
-    line2 = ax2.plot(y_positions, final_angles, 's-', color='#A23B72', 
+                     markeredgecolor='white', label='Geometric Angles')
+    line2 = ax2.plot(y_positions, interpolated_angles, 's-', color='#A23B72', 
                      linewidth=3, markersize=7, markeredgewidth=2, 
-                     markeredgecolor='white', label='Corrected Angles')
+                     markeredgecolor='white', label='Servo Angles')
     
     ax2.set_xlabel('Y-Position (cm)', fontsize=9, fontweight='bold')
-    ax2.set_ylabel('Servo Angle (°)', fontsize=9, fontweight='bold')
+    ax2.set_ylabel('Angle (°)', fontsize=9, fontweight='bold')
     ax2.grid(True, alpha=0.4, linestyle='--')
     ax2.legend(fontsize=8, frameon=True, fancybox=True, shadow=True)
     ax2.set_facecolor('#f8f9fa')
     
     # Show values at points with smaller font
-    for i, (y_pos, theo, final) in enumerate(zip(y_positions, theoretical_angles, final_angles)):
-        ax2.annotate(f'{theo:.1f}°', (y_pos, theo), textcoords="offset points", 
-                     xytext=(0,8), ha='center', fontsize=6, fontweight='bold')
-        ax2.annotate(f'{final:.1f}°', (y_pos, final), textcoords="offset points", 
-                     xytext=(0,-12), ha='center', fontsize=6, fontweight='bold')
+    for i, (y_pos, exact, interp) in enumerate(zip(y_positions, exact_angles, interpolated_angles)):
+        ax2.annotate(f'{exact:.1f}°', (y_pos, exact), textcoords="offset points", 
+                     xytext=(0,8), ha='center', fontsize=6, fontweight='bold', color='#2E86AB')
+        ax2.annotate(f'{interp:.1f}°', (y_pos, interp), textcoords="offset points", 
+                     xytext=(0,-12), ha='center', fontsize=6, fontweight='bold', color='#A23B72')
 
     # === DIAGRAM 3: Trigonometry explanation ===
     ax3 = plt.subplot2grid((5, 4), (1, 2), colspan=2, rowspan=2)
@@ -188,12 +185,14 @@ def create_complete_visualization(angles_data):
 • tan(α) = dy ÷ dx
 • α = arctan(dy ÷ dx)
 
-SERVO ANGLE:
-• Servo° = 90° - α
+SERVO ANGLE CALCULATION:
+• Exact angle = arctan(dx/dy) 
+• Interpolated angle = MIN_SERVO + progress × (MAX_SERVO - MIN_SERVO)
+• Range: {MIN_SERVO_ANGLE}° → {MAX_SERVO_ANGLE}°
 
-CORRECTION:
-• Final° = Servo° + Correction
-• Correction = {ANGLE_CORRECTION_REFERENCE - 90}°"""
+FINAL ANGLE:
+• Used angle = Interpolated angle (for smooth scanning)
+• No mechanical correction needed"""
     
     ax3.text(0.03, 0.97, formula_text, transform=ax3.transAxes, fontsize=10,
              verticalalignment='top', fontweight='bold', 
@@ -205,9 +204,7 @@ CORRECTION:
     ax4.set_title('Example Calculation for Point 2', fontsize=12, fontweight='bold', 
                   pad=20, color='darkblue')
     ax4.axis('off')
-    ax4.set_facecolor('#f8f9fa')
-
-    # Example calculation for point 2 enlarged
+    ax4.set_facecolor('#f8f9fa')    # Example calculation for point 2 enlarged
     example_data = angles_data[1]  # Point 2
     example_text = f"""STEP-BY-STEP CALCULATION:
 
@@ -218,9 +215,10 @@ Given:
 Calculation:
 • dx = {TARGET_CENTER_X} - 0 = {example_data['dx']} cm
 • dy = |{example_data['y_pos']:.1f} - 0| = {example_data['dy']:.1f} cm
-• α = arctan({example_data['dy']:.1f}/{example_data['dx']}) = {example_data['alpha']:.2f}°
-• Servo = 90° - {example_data['alpha']:.2f}° = {example_data['theoretical']:.2f}°
-• Final = {example_data['theoretical']:.2f}° + ({ANGLE_CORRECTION_REFERENCE - 90}°) = {example_data['final']:.2f}°"""
+• Exact angle = arctan({example_data['dx']}/{example_data['dy']:.1f}) = {example_data['exact_angle']:.2f}°
+• Progress = {example_data['progress']:.3f}
+• Interpolated = {MIN_SERVO_ANGLE}° + {example_data['progress']:.3f} × ({MAX_SERVO_ANGLE}° - {MIN_SERVO_ANGLE}°) = {example_data['interpolated_angle']:.2f}°
+• Final = {example_data['final']:.2f}° (interpolated value used)"""
     
     ax4.text(0.03, 0.97, example_text, transform=ax4.transAxes, fontsize=10,
              verticalalignment='top', fontweight='bold',
@@ -232,28 +230,27 @@ Calculation:
     ax5.set_title('Complete Calculation Table', fontsize=12, fontweight='bold', 
                   pad=20, color='darkblue')
     ax5.axis('off')
-    
-    # Prepare table data
+      # Prepare table data
     table_data = []
     headers = ['Point', 'Y-Position\n(cm)', 'dx\n(cm)', 'dy\n(cm)', 
-               'Angle α\n(°)', 'Theoretical\n(°)', 'Final\n(°)']
+               'Exact°', 'Interp°', 'Feasible', 'Final°']
     
     for data in angles_data:
+        feasible_symbol = '✓' if data['is_feasible'] else '✗'
         row = [
             f"P{data['point']}",
             f"{data['y_pos']:.1f}",
             f"{data['dx']:.0f}",
             f"{data['dy']:.1f}",
-            f"{data['alpha']:.2f}",
-            f"{data['theoretical']:.1f}",
+            f"{data['exact_angle']:.1f}",
+            f"{data['interpolated_angle']:.1f}",
+            feasible_symbol,
             f"{data['final']:.1f}"
         ]
-        table_data.append(row)
-
-    # Create table with compact design
+        table_data.append(row)    # Create table with compact design
     table = ax5.table(cellText=table_data, colLabels=headers,
                       cellLoc='center', loc='center',
-                      colWidths=[0.12, 0.15, 0.12, 0.12, 0.15, 0.15, 0.15])
+                      colWidths=[0.12, 0.15, 0.11, 0.11, 0.12, 0.12, 0.09, 0.12])
     
     table.auto_set_font_size(False)
     table.set_fontsize(10)

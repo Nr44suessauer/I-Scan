@@ -13,6 +13,7 @@ Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 import os
 from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y, 
@@ -60,29 +61,36 @@ def create_geometric_visualization(angles_data):
             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightblue", 
                      edgecolor='navy', linewidth=1.5, alpha=0.95))
     
-    # Measurement points
-    colors = ['#FF4444', '#FF8800', '#8844FF', '#AA4400']
-    marker_styles = ['o', 's', '^', 'D']
-    
+    # Measurement points with EXACT and INTERPOLATED angles
     for i, data in enumerate(angles_data):
-        color = colors[i % len(colors)]
-        marker = marker_styles[i % len(marker_styles)]
         y_pos = data['y_pos']
+          # Different colors for pure geometric calculations
+        point_color = 'green'
+        edge_color = 'darkgreen'
         
         # Measurement point
-        ax.plot(SCANNER_MODULE_X, y_pos, marker, color=color, markersize=12, 
-               markeredgewidth=2, markeredgecolor='black', zorder=8)
+        ax.plot(SCANNER_MODULE_X, y_pos, 'o', color=point_color, markersize=14, 
+                markeredgewidth=3, markeredgecolor=edge_color, zorder=15)
+          # Connection line to target using ONLY exact trigonometric angle
+        # (Physical servo uses interpolated angle, but visualization shows exact geometry)
+        line_length = 35
+          # EXAKTER trigonometrischer Winkel - zeigt echte geometrische Richtung
+        geometric_angle_rad = math.radians(data['angle'])
+        dx_exact = line_length * math.sin(geometric_angle_rad)
+        dy_exact = line_length * math.cos(geometric_angle_rad)
+        ax.plot([SCANNER_MODULE_X, SCANNER_MODULE_X + dx_exact], 
+                [y_pos, y_pos + dy_exact], 
+                '-', color='darkblue', linewidth=3, alpha=0.8,                label='Geometric Direction' if i == 0 else "")
         
-        # Sight lines to target
-        ax.plot([SCANNER_MODULE_X, TARGET_CENTER_X], [y_pos, TARGET_CENTER_Y], 
-                '--', color=color, linewidth=2, alpha=0.7, zorder=3)
-          # Point labels
-        ax.text(SCANNER_MODULE_X - 12, y_pos, 
-                f'P{data["point"]}\nY={y_pos:.1f}\nS={data["final"]:.1f}°', 
+        # Point labels with geometric angle information
+        label_text = f'P{data["point"]} Y={y_pos:.1f}cm\n' \
+                    f'Angle: {data["angle"]:.1f}°\n' \
+                    f'Distance: {data["hypotenuse"]:.1f}cm'
+        
+        ax.text(SCANNER_MODULE_X - 12, y_pos, label_text,
                 ha='right', va='center', fontsize=8, fontweight='bold',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor=color, 
-                         edgecolor='black', linewidth=1, alpha=0.9))
-    
+                bbox=dict(boxstyle="round,pad=0.3", facecolor=point_color,                         edgecolor=edge_color, linewidth=1, alpha=0.8))
+
     ax.legend(fontsize=10, loc='upper right', frameon=True, 
               fancybox=True, shadow=True, framealpha=0.9)
     

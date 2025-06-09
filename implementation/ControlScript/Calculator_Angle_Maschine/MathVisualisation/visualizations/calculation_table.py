@@ -28,12 +28,10 @@ def create_calculation_table_visualization(angles_data):
     ax = plt.subplot(1, 1, 1)
     ax.set_title('Summary of All Measurement Point Calculations', 
                  fontsize=12, fontweight='bold', pad=20, color='darkblue')
-    ax.axis('off')
-    
-    # Prepare table data
+    ax.axis('off')    # Prepare table data for pure geometric angles
     table_data = []
     headers = ['Point', 'Y-Position\n(cm)', 'dx\n(cm)', 'dy\n(cm)', 
-               'Angle α\n(°)', 'Theoretical\n(°)', 'Final\n(°)']
+               'Angle°\n(to Y-axis)', 'Distance\n(cm)']
     
     for data in angles_data:
         row = [
@@ -41,16 +39,14 @@ def create_calculation_table_visualization(angles_data):
             f"{data['y_pos']:.1f}",
             f"{data['dx']:.0f}",
             f"{data['dy']:.1f}",
-            f"{data['alpha']:.2f}",
-            f"{data['theoretical']:.1f}",
-            f"{data['final']:.1f}"
+            f"{data['angle']:.1f}",
+            f"{data['hypotenuse']:.1f}"
         ]
         table_data.append(row)
-    
-    # Create table
+      # Create table
     table = ax.table(cellText=table_data, colLabels=headers,
                      cellLoc='center', loc='center',
-                     colWidths=[0.12, 0.15, 0.12, 0.12, 0.15, 0.15, 0.15])
+                     colWidths=[0.12, 0.15, 0.12, 0.12, 0.20, 0.18, 0.11])
     
     table.auto_set_font_size(False)
     table.set_fontsize(11)

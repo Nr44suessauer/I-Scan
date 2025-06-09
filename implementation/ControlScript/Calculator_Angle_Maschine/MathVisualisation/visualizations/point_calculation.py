@@ -18,7 +18,7 @@ import os
 from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y, 
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    ANGLE_CORRECTION_REFERENCE, OUTPUT_DIR, ensure_output_dir
+    OUTPUT_DIR, ensure_output_dir
 )
 
 
@@ -64,18 +64,17 @@ def create_point_calculation_visualization(point_data, point_number):
     
     # Triangle visualization
     ax1.add_patch(patches.Circle((SCANNER_MODULE_X, point_data['y_pos']), 1.5, 
-                      facecolor='red', edgecolor='red', linewidth=2, alpha=0.9))
-    
-    # Connection line (triangle visualization)
+                      facecolor='red', edgecolor='red', linewidth=2, alpha=0.9))    # Connection line using geometric angle
     ax1.plot([SCANNER_MODULE_X, TARGET_CENTER_X], [point_data['y_pos'], TARGET_CENTER_Y], 
-             'r--', linewidth=3, alpha=0.8, label=f'Line to target')
+             'r--', linewidth=3, alpha=0.8, label=f'Geometric line to target')
     
-    # Distance annotations
+    # Distance annotations using geometric angle
     mid_x = (SCANNER_MODULE_X + TARGET_CENTER_X) / 2
     mid_y = (point_data['y_pos'] + TARGET_CENTER_Y) / 2
     distance = math.sqrt(point_data['dx']**2 + point_data['dy']**2)
-    ax1.text(mid_x, mid_y, f'{distance:.1f} cm', ha='center', va='bottom', 
-             fontsize=8, fontweight='bold', rotation=point_data['alpha'],
+    geometric_angle = point_data['angle']
+    ax1.text(mid_x, mid_y, f'{distance:.1f} cm\n(Angle: {geometric_angle:.1f}°)', ha='center', va='bottom', 
+             fontsize=8, fontweight='bold', rotation=geometric_angle,
              bbox=dict(boxstyle="round,pad=0.2", facecolor="white", 
                       edgecolor='red', linewidth=1, alpha=0.9))
     
@@ -115,22 +114,16 @@ def create_point_calculation_visualization(point_data, point_number):
 • dy = |{point_data['y_pos']:.1f} - {TARGET_CENTER_Y}| = {point_data['dy']:.1f} cm
 • Distance = √(dx² + dy²) = √({point_data['dx']}² + {point_data['dy']:.1f}²) = {math.sqrt(point_data['dx']**2 + point_data['dy']**2):.1f} cm
 
-🧮 TRIGONOMETRIC CALCULATION:
-• α = arctan(dy ÷ dx)
-• α = arctan({point_data['dy']:.1f} ÷ {point_data['dx']})
-• α = {point_data['alpha']:.2f}°
+🧮 TRIGONOMETRIC CALCULATION (Pure Geometry):
+• α = arctan(dx ÷ dy) [Angle to Y-axis]
+• α = arctan({point_data['dx']} ÷ {point_data['dy']:.1f})
+• α = {point_data['angle']:.2f}° (Pure geometric angle)
 
-⚙️ SERVO ANGLE CALCULATION:
-• Theoretical angle = 90° - α
-• Theoretical angle = 90° - {point_data['alpha']:.2f}°
-• Theoretical angle = {point_data['theoretical']:.2f}°
+📐 GEOMETRIC RESULT:
+• Distance to target = {math.sqrt(point_data['dx']**2 + point_data['dy']**2):.1f} cm
+• Angle relative to Y-axis = {point_data['angle']:.2f}°
 
-🔧 MECHANICAL CORRECTION:
-• Correction = {ANGLE_CORRECTION_REFERENCE} - 90 = {ANGLE_CORRECTION_REFERENCE - 90}°
-• Final servo angle = {point_data['theoretical']:.2f}° + {ANGLE_CORRECTION_REFERENCE - 90}°
-• Final servo angle = {point_data['final']:.2f}°
-
-✅ RESULT: {point_data['final']:.2f}° servo angle for Point {point_number}"""
+✅ RESULT: {point_data['angle']:.2f}° geometric angle for Point {point_number}"""
     
     ax2.text(0.05, 0.95, calculation_text, transform=ax2.transAxes, fontsize=10,            verticalalignment='top', fontweight='bold',
             bbox=dict(boxstyle="round,pad=0.6", facecolor="lightcyan", 

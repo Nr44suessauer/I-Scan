@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-CONFIGURATION MODULE FOR SERVO ANGLE CALCULATION
-================================================
+CONFIGURATION MODULE FOR GEOMETRIC ANGLE CALCULATION
+====================================================
 
-Contains all configuration constants used across the 3D scanner angle calculation system.
-These values are aligned with calculator_Angle_IScan.py for consistency.
+Contains all configuration constants used across the 3D scanner geometric angle calculation system.
+Pure geometric calculations without servo interpolation.
 
 Author: I-Scan Team
-Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
+Version: 3.0 (Pure geometry - no servo interpolation)
 """
 
 import matplotlib.pyplot as plt
@@ -34,11 +34,10 @@ def ensure_output_dir():
         print(f"📁 Created output directory: {OUTPUT_DIR}")
 
 # === 3D SCANNER CONFIGURATION ===
-# ALIGNED WITH calculator_Angle_IScan.py for consistency
-TARGET_CENTER_X = 50      # X-position of target object (cm) - matches NEW_CENTER_X
-TARGET_CENTER_Y = 20      # Y-position of target object (cm) - matches NEW_CENTER_Y
-SCANNER_MODULE_X = 0      # X-position of scanner (cm) - matches Z_MODULE_X
-SCANNER_MODULE_Y = 0      # Y-position of scanner (cm) - matches Z_MODULE_Y
-SCAN_DISTANCE = 70       # Total scan distance (cm) - matches DELTA_SCAN
-NUMBER_OF_MEASUREMENTS = 4  # Number of measurement points
-ANGLE_CORRECTION_REFERENCE = 70  # Mechanical correction (degrees) - matches main calculator
+# Pure geometric configuration
+TARGET_CENTER_X = 50      # X-position of target object (cm)
+TARGET_CENTER_Y = 25      # Y-position of target object (cm)
+SCANNER_MODULE_X = 0      # X-position of scanner (cm)
+SCANNER_MODULE_Y = 0      # Y-position of scanner (cm)
+SCAN_DISTANCE = 50        # Total scan distance (cm)
+NUMBER_OF_MEASUREMENTS = 6  # Number of measurement points
