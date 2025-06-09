@@ -1,222 +1,35 @@
-# I-Scan 3D-Scanner - Einfache Anleitung für Studenten
-
-## Was ist I-Scan?
-
-**I-Scan** ist ein selbstgebauter 3D-Scanner, der günstig und einfach zu warten ist. Er kann große Objekte von allen Seiten fotografieren und daraus 3D-Modelle erstellen.
-
-### Wie funktioniert das System?
-- **3 bewegliche Kameras** fahren an einer Stange hoch und runter
-- Die **Kameras drehen sich** automatisch zu verschiedenen Winkeln  
-- Das System macht **viele Fotos** von allen Seiten des Objekts
-- Aus diesen Fotos entsteht später ein **3D-Modell** am Computer
-
-## Projektstruktur
-
-Das Projekt ist in mehrere Hauptkomponenten unterteilt:
-
-### Haupt-Verzeichnisse
-- `/implementation/ControlScript/` - Python-basierte Steuerungssoftware
-- `/implementation/PositionUnit_with_API/` - ESP32-basierte Positionseinheiten
-- `/docs/markdown/` - Umfassende Projektdokumentation
-
-### Kern-Dateien im ControlScript
-- `main.py` - Hauptanwendung mit GUI
-- `api_client.py` - API-Kommunikation
-- `device_control.py` - Gerätekontrolle
-- `logger.py` - Logging-Funktionalität
-- `operation_queue.py` - Verwaltung der Operationen
-- `webcam_helper.py` - Kamera-Funktionalität
-
-## System-Architektur
-
-Das I-Scan System basiert auf einer **REST API**-Architektur und umfasst:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        I-Scan System                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
-│  │   Control GUI   │◄──►│   REST API      │◄──►│  Hardware    │ │
-│  │   (main.py)     │    │   Webserver     │    │  Controller  │ │
-│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
-│           │                       │                     │       │
-│           ▼                       ▼                     ▼       │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
-│  │  Queue Manager  │    │  API Client     │    │ Position     │ │
-│  │ (operation_     │    │ (api_client.py) │    │ Units        │ │
-│  │  queue.py)      │    │                 │    │ (ESP32)      │ │
-│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
-│           │                       │                     │       │
-│           ▼                       ▼                     ▼       │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
-│  │  Calculator     │    │  Device Control │    │ Camera       │ │
-│  │ (calculator/)   │    │ (device_        │    │ System       │ │
-│  │                 │    │  control.py)    │    │              │ │
-│  └─────────────────┘    └─────────────────┘    └──────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Hardware-Komponenten
-1. **Bewegliche Module**: Drei Module, die entlang der Z-Achse bewegt werden können
-2. **Kameras**: Jede Einheit ist mit einer konfigurierbaren Kamera ausgestattet
-3. **Positionseinheiten**: ESP32-basierte Controller für Bewegungssteuerung
-4. **Beleuchtungseinheiten**: Steuerbare LED-Beleuchtung
-
-### Software-Komponenten
-- **Webserver**: Zentrale Steuerung via REST API
-- **Control Script**: Python-GUI für Benutzerinteraktion
-- **Position Units**: Firmware für Bewegungssteuerung
-- **Kalkulatoren**: Winkel- und Positionsberechnungen
-
-### Programmablauf-Diagramm
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Start     │───►│ Initialize  │───►│ Load Config │
-│  main.py    │    │   Logger    │    │    JSON     │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Create    │───►│  Connect    │───►│    Start    │
-│     GUI     │    │ Hardware    │    │   Camera    │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Queue     │───►│  Execute    │───►│   Capture   │
-│ Management  │    │ Operations  │    │   Images    │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  Generate   │───►│   Export    │───►│    Save     │
-│    CSV      │    │   Images    │    │   Results   │
-└─────────────┘    └─────────────┘    └─────────────┘
-```
+# I-Scan 3D-Scanner – Schritt-für-Schritt-Anleitung
 
 ---
 
-# 1. Ablauf der Programme
+## 1. Wie und warum nutzt man `calculator_simplified.py`?
 
-## 1.1 Überblick - Was passiert beim Scannen?
+### Was macht das Programm?
 
-### Schritt-für-Schritt Erklärung:
+Der **calculator_simplified.py** berechnet alle nötigen Positionen und Winkel, die der Scanner später abfahren soll. Das Ziel: Möglichst gleichmäßige und vollständige Fotos von allen Seiten deines Objekts.
 
-```
-Vorbereitungsphase:
-1. Calculator erstellt Winkeltabelle → CSV-Datei mit allen Positionen
-2. Scanner fährt zur Startposition (Home)
-3. Kameras werden aktiviert
+**Warum ist das wichtig?**
+- Nur mit den richtigen Winkeln und Höhen bekommst du genug Bilder für ein gutes 3D-Modell.
+- Die Berechnung per Hand wäre sehr aufwändig – das Programm macht das automatisch und fehlerfrei.
 
-Scan-Phase:
-4. Scanner bewegt sich zur ersten Position
-5. Kamera dreht sich zum ersten Winkel 
-6. Foto wird aufgenommen
-7. Wiederholung für alle Positionen und Winkel
+### Wie benutzt man das Programm?
 
-Nachbearbeitung:
-8. Alle Fotos werden gespeichert
-9. CSV-Log wird erstellt
-10. 3D-Software kann die Bilder zu einem Modell verarbeiten
-```
+1. **Starte das Programm**  
+   Öffne eine Eingabeaufforderung im Projektordner und gib ein:
+   ```powershell
+   py calculator/calculator_simplified.py
+   ```
+2. **Folge den Anweisungen**  
+   Du gibst z.B. die Höhe des Scanbereichs und die Anzahl der Fotos an.
 
-## 1.2 Die drei wichtigsten Programme
-
-### A) Calculator (calculator_simplified.py)
-**Was macht es:** Berechnet alle Winkelpositionen für den Scan
-
-```python
-# Startet die Berechnung für verschiedene Scan-Auflösungen
-python calculator_simplified.py
-```
-
-**Ergebnis:** CSV-Dateien mit perfekten Winkeln für den Scanner
-
-### B) Main Control (main.py)  
-**Was macht es:** Hauptprogramm mit grafischer Oberfläche
-
-```python
-# Startet das Hauptprogramm
-py main.py
-```
-
-**Funktionen:**
-- Kamera-Live-Ansicht
-- Manuelle Steuerung der Scanner-Position
-- Automatischer Scan mit CSV-Dateien
-- Einstellungen für Hardware
-
-### C) API Client (api_client.py)
-**Was macht es:** Kommuniziert mit der Scanner-Hardware
-
-**Funktionen:**
-- Sendet Bewegungsbefehle an die Motoren
-- Empfängt Status-Informationen
-- Steuert LED-Beleuchtung
-
-## 1.3 Typischer Arbeitsablauf für Studenten
-
-### Vorbereitung (einmalig):
-1. **Python installieren** und Bibliotheken hinzufügen
-2. **Scanner-Hardware** anschließen und IP-Adressen konfigurieren  
-3. **CSV-Dateien erstellen** mit dem Calculator
-
-### Jeden Scan:
-1. **Objekt positionieren** in der Mitte des Scanners
-2. **main.py starten** und Kamera aktivieren
-3. **CSV-Datei laden** (z.B. für 30 Aufnahmen)
-4. **Scan starten** und warten bis fertig
-5. **Fotos prüfen** und bei Bedarf wiederholen
+3. **Ergebnis: Eine CSV-Datei**  
+   Nach dem Durchlauf findest du eine Datei wie  
+   `winkeltabelle_50x0_30punkte_approximiert.csv`  
+   im Projektordner. Diese Datei enthält alle Bewegungs- und Foto-Befehle für den Scan.
 
 ---
 
-# 2. Verwendung der Programme
-
-## 2.1 Installation und Setup
-
-### Python-Bibliotheken installieren:
-```powershell
-py -m pip install pillow opencv-python requests tabulate matplotlib
-```
-
-### Erforderliche Bibliotheken:
-- `tkinter` (meist mit Python vorinstalliert) - für die grafische Oberfläche
-- `PIL` (Pillow) - für Bildbearbeitung
-- `OpenCV` - für Kamera-Funktionen
-- `requests` - für API-Kommunikation mit dem Scanner
-- `tabulate` - für schöne Tabellen im Terminal
-- `matplotlib` - für Grafiken und Diagramme
-
-### Programm starten:
-```powershell
-py main.py
-```
-
-## 2.2 Hardware-Konfiguration (config.json)
-
-Bevor ihr scannen könnt, müssen die IP-Adressen der Scanner-Teile eingetragen werden:
-
-```json
-{
-    "IpPositionUnitTop": "192.168.1.10",     # Oberer Scanner
-    "IpPositionUnitMid": "192.168.1.11",     # Mittlerer Scanner  
-    "IpPositionUnitBot": "192.168.1.12",     # Unterer Scanner
-    "IpLightingUnitA": "192.168.1.20",       # Beleuchtung A
-    "IpLightingUnitB": "192.168.1.21",       # Beleuchtung B
-    "ComPortMeasurementUnitTop": "COM3",      # USB-Anschluss Oben
-    "ComPortMeasurementUnitMid": "COM4",      # USB-Anschluss Mitte
-    "ComPortMeasurementUnitBot": "COM5"       # USB-Anschluss Unten
-}
-```
-
-## 2.3 CSV-Dateien verstehen und verwenden
-
-### Beispiel: winkeltabelle_50x0_30punkte_approximiert.csv
-
-Diese Datei enthält **30 Scan-Positionen** für einen **50cm hohen** Scan-Bereich:
+### Beispiel einer erzeugten CSV-Datei:
 
 ```csv
 type,params,description
@@ -228,267 +41,109 @@ servo,"{""angle"": 87}",Servo: Winkel auf 87° setzen (Y=2.3cm)
 photo,{},"Kamera: Foto aufnehmen bei Y=2.3cm, Winkel=87°"
 ```
 
-### Was bedeuten die Spalten?
+Jede Zeile steht für eine Aktion:  
+- **servo** = Kamera drehen  
+- **stepper** = Modul nach oben bewegen  
+- **photo** = Foto aufnehmen
 
-- **type**: Art der Aktion (`home`, `servo`, `stepper`, `photo`)
-- **params**: Parameter als JSON (Winkel, Schritte, Geschwindigkeit)  
-- **description**: Menschenlesbare Beschreibung was passiert
+---
 
-### Scan-Visualisierung
+### Visualisierung der Berechnung
 
 ![Scan-Visualisierung](scan_visualization_approximated.png)
 
 *Das Bild zeigt:*
-- **Blaue Linie**: Berechneter Scan-Pfad
-- **Rote Punkte**: Foto-Positionen  
-- **Grüne Linie**: Approximierter Pfad
+- **Blaue Linie**: Bewegungsweg des Moduls
+- **Rote Punkte**: Foto-Positionen
 - **Tabellen**: Genaue Winkel und Koordinaten
 
-## 2.4 Praktische Bedienung
+---
 
-### Mit der grafischen Oberfläche (GUI):
+## 2. Wie bindet man die CSV-Datei in `main.py` ein?
 
-1. **Kamera starten**: 
-   - Button "Start Camera" klicken
-   - Live-Bild vom Scanner erscheint
+### Warum ist das wichtig?
 
-2. **Scanner manuell bewegen**:
-   - Servo-Winkel eingeben (0-180°)
-   - Stepper-Schritte eingeben  
-   - "Add to Queue" um Bewegung zu planen
+`main.py` ist das Hauptprogramm mit grafischer Oberfläche. Es liest die CSV-Datei ein und führt die darin gespeicherten Bewegungen und Foto-Befehle automatisch aus. So musst du nicht jeden Schritt einzeln machen!
 
-3. **Automatischer Scan**:
-   - CSV-Datei mit "Import CSV" laden
-   - "Execute Queue" um den kompletten Scan zu starten
-   - Fotos werden automatisch gespeichert
+### Schritt-für-Schritt:
 
-4. **Beleuchtung einstellen**:
-   - LED-Farbe wählen (RGB-Werte)
-   - Helligkeit anpassen
+1. **Starte das Hauptprogramm**
+   ```powershell
+   py main.py
+   ```
+2. **Importiere die CSV-Datei**
+   - Klicke im Programm auf „Import CSV“
+   - Wähle z.B. `winkeltabelle_50x0_30punkte_approximiert.csv` aus
 
-### Mit PowerShell-Befehlen:
+3. **Starte den Scan**
+   - Klicke auf „Execute Queue“ oder „Scan starten“
+   - Der Scanner arbeitet jetzt alle Befehle aus der CSV-Datei automatisch ab
 
-```powershell
-# Scan-Konfiguration ändern
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/scan" -Method PUT -Body '{
-    "numPics": 30, 
-    "resolution": 0.5, 
-    "cameras": ["top", "mid", "bot"], 
-    "height": 50
-}' -ContentType "application/json"
+4. **Fotos werden gespeichert**
+   - Nach dem Scan findest du alle Bilder im Ausgabeordner
 
-# Scan starten
-Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/start" -Method POST
+---
+
+## 3. Wie funktioniert `main.py`?
+
+### Übersicht
+
+`main.py` ist die Steuerzentrale für den Scanner. Es bietet eine einfache grafische Oberfläche (GUI), mit der du:
+
+- Die Kamera live sehen kannst
+- Den Scanner manuell oder automatisch steuern kannst
+- CSV-Dateien laden und ausführen kannst
+- Die Beleuchtung einstellen kannst
+
+### Die wichtigsten Funktionen im Überblick
+
+1. **Kamera starten**
+   - Zeigt das Live-Bild der Kamera
+
+2. **Manuelle Steuerung**
+   - Servo-Winkel (Kamera drehen) und Stepper-Schritte (Modul bewegen) eingeben
+   - „Add to Queue“: Fügt die Bewegung zur Warteschlange hinzu
+
+3. **Automatischer Scan**
+   - CSV-Datei importieren (siehe oben)
+   - „Execute Queue“: Scanner arbeitet alle Schritte ab
+
+4. **Beleuchtung einstellen**
+   - Farbe und Helligkeit der LEDs anpassen
+
+5. **Status und Fehleranzeige**
+   - Zeigt an, was der Scanner gerade macht
+   - Gibt Hinweise bei Fehlern
+
+---
+
+### Beispielhafter Ablauf in der GUI
+
 ```
-
-## 2.5 Winkel-Berechnung verstehen
-
-### Das Koordinatensystem:
-
-```
-3D-Scanner Koordinatensystem:
-                                      
-        Z-Achse (Höhe)                
-              ▲                       
-              │                       
-              │     Y-Achse (Tiefe)   
-              │    ╱                  
-              │   ╱                   
-              │  ╱                    
-              │ ╱                     
-              │╱                      
-              └─────────────► X-Achse (Breite)
-```
-
-### Einfache Trigonometrie:
-
-```
-Warum verschiedene Winkel?
-
-       Kamera              Objekt
-         │                   │
-         │ ◄── distance ──► │
-         │                   │
-    ┌────▼────┐         ┌────▼────┐
-    │         │ ◄─ α ──►│         │
-    │  Servo  │         │ Target  │
-    │ Position│         │  Point  │
-    └─────────┘         └─────────┘
-
-Je höher die Kamera → Je steiler der Winkel
-α = arctan(distance / height)
-
-Beispiel: 
-- Höhe = 50cm, Distanz = 25cm
-- α = arctan(25/50) = 26.6°
+┌─────────────────────────────────────────────┐
+│   I-Scan Control (main.py)                 │
+├─────────────────────────────────────────────┤
+│ [Start Camera]  [Import CSV]  [Execute Queue]│
+│                                             │
+│ [Servo Angle: ___] [Stepper Steps: ___]     │
+│ [Add to Queue]                              │
+│                                             │
+│ [LED Color: ___] [Brightness: ___]          │
+│ [Set Lighting]                              │
+│                                             │
+│ [Status: ...]                               │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-# 3. API-Dokumentation
+## Zusammengefasst:
 
-## 3.1 Grundlagen der REST API
-
-Die Scanner-Hardware wird über **HTTP-Anfragen** gesteuert. Denkt daran wie an eine Website, die statt Webseiten Aktionen ausführt.
-
-### Basis-URL: `http://[Scanner-IP]/api/`
-
-## 3.2 GET-Requests (Informationen abrufen)
-
-### Konfiguration lesen:
-```powershell
-# Aktuelle Einstellungen des Scanners
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/general" -Method GET
-```
-
-**Antwort Beispiel:**
-```json
-{
-    "scanHeight": 50,
-    "numPoints": 30,
-    "currentPosition": "home",
-    "cameraActive": true
-}
-```
-
-### Scan-Status prüfen:
-```powershell  
-# Ist der Scanner gerade beschäftigt?
-Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/status" -Method GET
-```
-
-**Antwort Beispiel:**
-```json
-{
-    "status": "scanning",
-    "progress": 45,
-    "currentStep": "photo",
-    "remainingTime": "00:15:30"
-}
-```
-
-### Einzelnes Foto anfordern:
-```powershell
-# Foto mit bestimmten Parametern
-Invoke-RestMethod -Uri "http://192.168.1.10/api/picture?cam=1&height=20&angle=45" -Method GET
-```
-
-## 3.3 POST/PUT-Requests (Einstellungen ändern)
-
-### Beleuchtung konfigurieren:
-```powershell
-# LED-Farbe auf Rot setzen
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/lighting" -Method PUT -Body '{
-    "lightingUnit": "A", 
-    "colorHex": "FF0000FF",
-    "brightness": 80
-}' -ContentType "application/json"
-```
-
-### Servo-Position setzen:
-```powershell
-# Kamera auf 45° drehen
-Invoke-RestMethod -Uri "http://192.168.1.10/api/servo/position" -Method PUT -Body '{
-    "angle": 45,
-    "speed": 50
-}' -ContentType "application/json"
-```
-
-### Stepper-Motor bewegen:
-```powershell
-# 1000 Schritte nach oben
-Invoke-RestMethod -Uri "http://192.168.1.10/api/stepper/move" -Method PUT -Body '{
-    "steps": 1000,
-    "direction": 1,
-    "speed": 80
-}' -ContentType "application/json"
-```
-
-## 3.4 DELETE-Requests (Zurücksetzen)
-
-### Konfiguration löschen:
-```powershell
-# Alle Einstellungen auf Standard zurücksetzen
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/general" -Method DELETE
-```
-
-### Scan abbrechen:
-```powershell
-# Laufenden Scan stoppen
-Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/abort" -Method DELETE
-```
-
-## 3.5 Typische API-Workflows
-
-### Vollständiger Scan-Ablauf:
-
-```powershell
-# 1. Scanner zur Home-Position
-Invoke-RestMethod -Uri "http://192.168.1.10/api/position/home" -Method POST
-
-# 2. Beleuchtung einschalten  
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/lighting" -Method PUT -Body '{
-    "lightingUnit": "A", 
-    "colorHex": "FFFFFFFF",
-    "brightness": 100
-}' -ContentType "application/json"
-
-# 3. Scan-Parameter setzen
-Invoke-RestMethod -Uri "http://192.168.1.10/api/config/scan" -Method PUT -Body '{
-    "numPics": 30, 
-    "height": 50,
-    "cameras": ["top", "mid", "bot"]
-}' -ContentType "application/json"
-
-# 4. Scan starten
-Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/start" -Method POST
-
-# 5. Status überwachen (wiederholen bis fertig)
-do {
-    $status = Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/status" -Method GET
-    Write-Host "Progress: $($status.progress)%"
-    Start-Sleep -Seconds 5
-} while ($status.status -eq "scanning")
-```
-
-## 3.6 Fehlerbehandlung
-
-### Häufige HTTP-Status-Codes:
-- **200 OK**: Alles funktioniert
-- **400 Bad Request**: Falsche Parameter  
-- **404 Not Found**: Endpunkt existiert nicht
-- **500 Internal Server Error**: Hardware-Problem
-
-### Debugging-Tipps:
-
-```powershell
-# Scanner erreichbar?
-ping 192.168.1.10
-
-# Port offen?
-Test-NetConnection -ComputerName 192.168.1.10 -Port 80
-
-# Detaillierte Fehler anzeigen
-try {
-    Invoke-RestMethod -Uri "http://192.168.1.10/api/scan/start" -Method POST
-} catch {
-    Write-Host "Fehler: $($_.Exception.Message)"
-}
-```
+- **calculator_simplified.py** berechnet und erstellt die Bewegungs- und Foto-Befehle als CSV.
+- **main.py** liest diese CSV ein und führt den Scan automatisch aus.
+- So bekommst du mit wenigen Klicks perfekte Fotos für dein 3D-Modell!
 
 ---
 
-# Zusammenfassung für Studenten
-
-## Die drei wichtigsten Schritte:
-
-1. **CSV-Datei erstellen** mit `calculator_simplified.py`
-2. **Scanner steuern** mit `main.py` 
-3. **API verwenden** für erweiterte Funktionen
-
-## Wichtige Dateien merken:
-- `winkeltabelle_50x0_30punkte_approximiert.csv` → 30 Fotos, 50cm Höhe
-- `scan_visualization_approximated.png` → Zeigt den berechneten Pfad
-- `config.json` → IP-Adressen der Hardware
-
-Das I-Scan System ist perfekt für Studenten-Projekte, weil es alle Berechnungen automatisch macht und ihr euch auf das Experimentieren konzentrieren könnt!
+**Tipp:**  
+Wenn du etwas ändern willst (z.B. mehr Fotos, anderer Scanbereich), starte einfach calculator_simplified.py nochmal und erstelle eine neue CSV!
