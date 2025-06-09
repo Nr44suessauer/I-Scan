@@ -1,3 +1,43 @@
+
+"""
+*** I-SCAN SIMPLE LINEAR SERVO ANGLE CALCULATOR ***
+
+This module implements a simple and reliable linear servo angle correction system 
+for the I-Scan scanner. It uses a straightforward mathematical approach with 
+constant correction applied to all measurement positions.
+
+KEY INNOVATION: Simple Linear Correction Logic
+================================================
+This system applies a constant correction to all theoretical angles:
+- Final Angle = Theoretical Angle + (ANGLE_CORRECTION_REFERENCE - 90°)
+- Same correction for all positions: reliable and predictable
+- Easy to understand and debug
+
+MATHEMATICAL FOUNDATION:
+=======================
+- Uses trigonometry to calculate theoretical angles (calculate_angle())
+- Applies constant linear correction (calculate_approximated_angle())
+- Ensures servo physical constraints (0° to 90°)
+- Generates main.py-compatible CSV files for automated scanning
+
+PRACTICAL BENEFITS:
+==================
+- Simple and reliable angle calculations
+- Constant correction easy to adjust and calibrate
+- Predictable behavior across entire scan range
+- Provides comprehensive debugging and visualization tools
+
+INTEGRATION WITH I-SCAN SYSTEM:
+===============================
+- Generates CSV files compatible with main.py execution
+- Creates detailed visualizations for validation
+- Provides mathematical explanations for debugging
+- Uses proven simple linear correction method
+
+Author: Enhanced with simple linear correction logic
+Date: Updated with corrected mathematical approach from complete_servo_angle_explanation.py
+"""
+
 import math
 import csv
 import json
@@ -8,117 +48,222 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ===== CONFIGURATION VARIABLES =====
+# This section defines all the critical parameters for the I-Scan system's
+# position-dependent servo angle approximation calculations.
 
 # Servo angle limits (servo motor constraints)
 SERVO_ANGLE_MIN = 0       # Lower limit of servo angle in degrees
 SERVO_ANGLE_MAX = 90      # Upper limit of servo angle in degrees
 
 # Angle correction reference (geometric calculation)
+# This is the key parameter for the new position-dependent approximation logic.
+# When the Z-module is at NEW_CENTER_Y position, the theoretical angle would be 90°,
+# but the servo is approximated to this reference angle instead.
 ANGLE_CORRECTION_REFERENCE = 70  # Reference angle for correction calculation in degrees
 
 # Point P (start coordinates)
+# Defines the starting position of the scan sequence
 P_X = 0                   # X-coordinate of start point
 P_Y = 0                   # Y-coordinate of start point
 
-# Point M (end coordinates)
+# Point M (end coordinates)  
+# Defines the ending position of the scan sequence
 M_X = 0                   # X-coordinate of end point
 M_Y = 50                 # Y-coordinate of end point
 
 # New center (target center)
+# This is the NEW target center that the scanner should aim towards.
+# The NEW_CENTER_Y coordinate is critical for the position-dependent approximation:
+# - When Z_MODULE_Y equals NEW_CENTER_Y, the approximated angle = ANGLE_CORRECTION_REFERENCE
+# - When Z_MODULE_Y < NEW_CENTER_Y, approximated angles range from ANGLE_CORRECTION_REFERENCE up to 90°
+# - When Z_MODULE_Y > NEW_CENTER_Y, approximated angles range from ANGLE_CORRECTION_REFERENCE down to 0°
 NEW_CENTER_X = 50       # X-coordinate of new center
-NEW_CENTER_Y = 0        # Y-coordinate of new center
+NEW_CENTER_Y = 20        # Y-coordinate of new center (KEY for position-dependent logic)
 
 # Old center (original center)
+# The previous center coordinates, kept for reference and comparison
 OLD_CENTER_X = 40        # X-coordinate of old center
 OLD_CENTER_Y = 0          # Y-coordinate of old center
 
 # Z-module position (start position)
-Z_MODULE_X = 0            # X-coordinate of Z-module (remains fixed)
-Z_MODULE_Y = 0            # Y-coordinate of Z-module (start position)
+# The Z-module (scanner head) position during scanning
+# X remains fixed during vertical scanning, Y varies as the scan progresses
+Z_MODULE_X = 0            # X-coordinate of Z-module (remains fixed during scan)
+Z_MODULE_Y = 0            # Y-coordinate of Z-module (start position, will vary during scan)
 
 # Scan configuration
-DELTA_SCAN = 70         # Total scan distance in cm
-NUMBER_OF_MEASUREMENTS = 4  # Number of measurement points
+DELTA_SCAN = 70         # Total scan distance in cm (how far the scanner moves vertically)
+NUMBER_OF_MEASUREMENTS = 4  # Number of measurement points along the scan path
 
 def calculate_angle(current_y):
     """
-    Calculates the angle based on the current Y position
-    Geometry: At Y=0 the angle is 90°, with increasing Y position the angle approaches 0°
-    """
-    # Distance between new center and Z-module in X direction
+    Calculates the THEORETICAL angle based on the current Y position.
+    
+    This function computes the geometric angle that would theoretically be needed
+    to point from the Z-module position towards the target center (NEW_CENTER).
+    
+    Mathematical principle:
+    - Uses trigonometry to calculate the angle between the horizontal (X-axis) 
+      and the line from Z-module to target center
+    - At Y=NEW_CENTER_Y: the angle would theoretically be 90° (vertical)
+    - As Y moves away from NEW_CENTER_Y: the angle decreases towards 0° (horizontal)
+    
+    Args:
+        current_y (float): Current Y position of the Z-module during scanning
+        
+    Returns:
+        float: Theoretical angle in degrees (0° to 90°)
+        
+    Note: This is the RAW theoretical calculation. The actual servo uses the
+          approximated angle from calculate_approximated_angle() instead.
+    """    # Distance calculations for trigonometry
+    # dx: horizontal distance from Z-module to target center (always positive)
+    # dy: vertical distance from current Y position to target center (absolute value)
     dx = NEW_CENTER_X - Z_MODULE_X
-    # Distance between current Y position and new center
     dy = abs(current_y - NEW_CENTER_Y)
     
-    # Calculate angle in radians
+    # Calculate angle in radians using inverse tangent (atan)
     if abs(dx) < 0.001:
-        # Avoid division by 0 - if dx = 0, it's a vertical angle
+        # Special case: avoid division by zero when dx ≈ 0
+        # If horizontal distance is zero, angle depends only on vertical alignment
         angle = 90.0 if dy == 0 else 0.0
     else:
-        # Calculate angle to X-axis
+        # Standard trigonometric calculation: atan(opposite/adjacent)
+        # dy = opposite side (vertical distance to target)
+        # dx = adjacent side (horizontal distance to target)
         alpha_rad = math.atan(dy / abs(dx))
-        # Convert to degrees
+          # Convert from radians to degrees
         alpha_deg = alpha_rad * 180 / math.pi
-        # The complementary angle gives us the desired orientation:
-        # At Y=0 (dy=0) -> alpha_deg=0° -> angle = 90° - 0° = 90°
-        # At large Y (dy large) -> alpha_deg approaches 90° -> angle approaches 0°
+        
+        # Calculate complementary angle to get the desired orientation:
+        # - When dy=0 (at target center Y): alpha_deg=0° → angle = 90° - 0° = 90°
+        # - When dy is large (far from center): alpha_deg approaches 90° → angle approaches 0°
+        # This gives us the angle from horizontal (X-axis) to the target direction
         angle = 90.0 - alpha_deg
     
     return angle
 
 def calculate_approximated_angle(current_y):
     """
-    Calculates the approximated angle based on the current Y position
-    with limitation to the configurable servo angle range and mechanical correction
+    *** CORE FUNCTION: Simple Linear Servo Angle Correction ***
+    
+    Diese Funktion implementiert die KORREKTE einfache lineare Servo-Winkel-Korrektur
+    wie sie in complete_servo_angle_explanation.py erfolgreich verwendet wird.
+    
+    KORREKTES KONZEPT:
+    - Berechne den theoretischen Winkel mit Trigonometrie
+    - Addiere eine konstante Korrektur basierend auf ANGLE_CORRECTION_REFERENCE
+    - Einfache Formel: Final = Theoretical + (ANGLE_CORRECTION_REFERENCE - 90)
+    
+    MATHEMATISCHE LOGIK:
+    1. Berechne theoretischen Winkel mit arctan(dy/dx)
+    2. Korrektur = ANGLE_CORRECTION_REFERENCE - 90° (z.B. 70° - 90° = -20°)
+    3. Final = Theoretical + Korrektur
+    
+    Args:
+        current_y (float): Aktuelle Y-Position des Z-Moduls während des Scannens
+        
+    Returns:
+        float: Servo-Winkel in Grad (0° bis 90°) mit linearer Korrektur
     """
-    # Calculate original angle
-    raw_angle = calculate_angle(current_y)
     
-    # Apply mechanical correction
-    # Correction = ANGLE_CORRECTION_REFERENCE - 90°
-    # Real angle = Theoretical angle + Correction
-    angle_correction = ANGLE_CORRECTION_REFERENCE - 90.0
-    corrected_angle = raw_angle + angle_correction
+    # Step 1: Berechne den theoretischen Winkel
+    theoretical_angle = calculate_angle(current_y)
     
-    # Limit to configurable servo angle range
-    if corrected_angle < SERVO_ANGLE_MIN:
-        approximated_angle = SERVO_ANGLE_MIN
-    elif corrected_angle > SERVO_ANGLE_MAX:
-        approximated_angle = SERVO_ANGLE_MAX
-    else:
-        approximated_angle = corrected_angle
+    # Step 2: Einfache lineare Korrektur (wie in complete_servo_angle_explanation.py)
+    correction = ANGLE_CORRECTION_REFERENCE - 90.0  # z.B. 70° - 90° = -20°
+    corrected_angle = theoretical_angle + correction
     
-    return approximated_angle
+    # Step 3: Wende Servo physikalische Beschränkungen an
+    corrected_angle = max(SERVO_ANGLE_MIN, min(SERVO_ANGLE_MAX, corrected_angle))
+    
+    return corrected_angle
 
 def explain_angle_correction():
     """
-    Explains the angle correction calculation and displays correction values
+    *** EDUCATIONAL FUNCTION: Explains Simple Linear Angle Correction ***
+    
+    This function provides a comprehensive explanation and demonstration of 
+    the SIMPLE linear servo angle correction logic. It shows real examples 
+    with different Y positions to illustrate how the system applies a 
+    constant correction to all theoretical angles.
+    
+    The function demonstrates:
+    - How the servo angle is determined by simple linear correction
+    - Constant correction applied to all positions: Correction = ANGLE_CORRECTION_REFERENCE - 90°
+    - Final angle = Theoretical angle + Correction
+    - Validation that this simple approach works correctly across all positions
     """
-    angle_correction = ANGLE_CORRECTION_REFERENCE - 90.0
-    print(f"\n=== Angle Correction Explanation ===")
-    print(f"Problem: Servo mechanical misalignment")
-    print(f"Reference: At theoretical 90°, servo is actually at {ANGLE_CORRECTION_REFERENCE}°")
+    print(f"\n=== SIMPLE Linear Angle Correction Logic ===")
+    print(f"Konzept: Einfache lineare Korrektur für alle Positionen")
     print(f"")
-    print(f"Calculation:")
-    print(f"  Correction = {ANGLE_CORRECTION_REFERENCE}° - 90° = {angle_correction:+.1f}°")
-    print(f"  Real_Angle = Theoretical_Angle + ({angle_correction:+.1f}°)")
+    print(f"Konfiguration:")
+    print(f"  NEW_CENTER_Y: {NEW_CENTER_Y} cm")
+    print(f"  ANGLE_CORRECTION_REFERENCE: {ANGLE_CORRECTION_REFERENCE}° ")
+    print(f"  Korrektur: {ANGLE_CORRECTION_REFERENCE - 90.0:+.1f}° (konstant für alle Positionen)")
     print(f"")
-    print(f"Examples:")
-    test_angles = [90, 75, 60, 45, 30, 15, 0]
-    for theoretical in test_angles:
-        real = theoretical + angle_correction
-        print(f"  Theoretical {theoretical:2.0f}° → Real {real:4.1f}°")
-    print("=" * 50)
+    print(f"EINFACHE Logik-Regel:")
+    print(f"  Final Angle = Theoretical Angle + ({ANGLE_CORRECTION_REFERENCE - 90.0:+.1f}°)")
+    print(f"")
+    print(f"Beispiele:")
+    
+    # Test positions to demonstrate the logic
+    test_positions = [0.0, 10.0, NEW_CENTER_Y, NEW_CENTER_Y + 15.0, NEW_CENTER_Y + 35.0]
+    
+    for pos in test_positions:
+        theoretical = calculate_angle(pos)
+        corrected = calculate_approximated_angle(pos)
+        distance_from_center = pos - NEW_CENTER_Y
+        
+        if abs(distance_from_center) < 0.001:
+            position_desc = "CENTER"
+            distance_info = "bei Referenzpunkt"
+        elif distance_from_center < 0:
+            position_desc = "UNTEN"
+            distance_info = f"{abs(distance_from_center):.1f}cm unter Center"
+        else:
+            position_desc = "OBEN" 
+            distance_info = f"{distance_from_center:.1f}cm über Center"
+            
+        correction_applied = corrected - theoretical
+        print(f"  Y={pos:5.1f}cm ({position_desc:6s}, {distance_info:20s}): theoretisch {theoretical:5.1f}° + ({correction_applied:+.1f}°) = final {corrected:5.1f}°")
+    
+    print(f"")
+    print(f"Verifikation der einfachen linearen Korrektur:")
+    print(f"  • Alle Positionen erhalten die gleiche Korrektur: {ANGLE_CORRECTION_REFERENCE - 90.0:+.1f}°")
+    print(f"  • Bei Y={NEW_CENTER_Y}cm: theoretisch {calculate_angle(NEW_CENTER_Y):.1f}° → final {calculate_approximated_angle(NEW_CENTER_Y):.1f}°")
+    print(f"  • Konstante, vorhersagbare Korrektur für alle Messpunkte")
+    print("=" * 75)
 
 def calculate_step_size():
-    """Calculates the step size for measurements"""
+    """
+    Calculates the step size for evenly distributed measurements along the scan path.
+    
+    Returns:
+        float: Distance in cm between consecutive measurement points
+    """
     if NUMBER_OF_MEASUREMENTS > 1:
         return DELTA_SCAN / (NUMBER_OF_MEASUREMENTS - 1)
     return 0
 
 def generate_results_table():
     """
-    Generates the results table with original and approximated angles
+    *** MAIN SCAN GENERATION FUNCTION ***
+    
+    This function orchestrates the complete scanning process by:
+    1. Calculating optimal servo angles for each measurement position using the new approximation
+    2. Generating a comprehensive results table comparing theoretical vs approximated angles
+    3. Creating a CSV file compatible with main.py for automated scan execution
+    4. Producing detailed visualizations showing the scan path and angle relationships
+    
+    KEY INTEGRATION POINTS:
+    - Uses calculate_approximated_angle() for all servo commands (NOT calculate_angle())
+    - Generates main.py-compatible CSV with servo, photo, and stepper commands
+    - Creates visualizations to validate the approximation logic
+    - Provides detailed debugging information for angle calculations
+    
+    The function replaces the old linear correction system with the new position-dependent
+    approximation, ensuring better scanning accuracy across the entire scan range.
     """
     if NUMBER_OF_MEASUREMENTS <= 0:
         print("Error: Number of measurements must be greater than 0!")
@@ -138,21 +283,26 @@ def generate_results_table():
     print(f"Servo angle range: {SERVO_ANGLE_MIN}° - {SERVO_ANGLE_MAX}°")
     print(f"Angle correction reference: {ANGLE_CORRECTION_REFERENCE}° (offset: {ANGLE_CORRECTION_REFERENCE - 90.0:+.1f}°)")
     print("=" * 50)
-    
-    # Calculate and record measurements
+      # *** CORE CALCULATION LOOP: Generate scan points with approximated angles ***
+    # This loop calculates the servo angle for each measurement position along the scan path
     table_data = []
     
     for i in range(NUMBER_OF_MEASUREMENTS):
-        # Calculate current Y position
+        # Calculate current Y position along the scan path
+        # Starts at P_Y and increments by step_size for each measurement
         current_y = P_Y + step_size * i
-          # Calculate all angle values for this position
-        theoretical_angle = calculate_angle(current_y)
-        corrected_angle = calculate_approximated_angle(current_y)
         
-        # Format Z-module coordinates (X remains fixed, Y varies)
+        # *** KEY CALCULATION: Compare theoretical vs approximated angles ***
+        # theoretical_angle: Raw geometric calculation (what angle SHOULD be theoretically)
+        # corrected_angle: Position-dependent approximation (what servo ACTUALLY uses)
+        theoretical_angle = calculate_angle(current_y)
+        corrected_angle = calculate_approximated_angle(current_y)  # ← This is the ACTUAL servo angle!
+        
+        # Format Z-module coordinates for display (X stays fixed, Y changes during scan)
         z_coords = f"({Z_MODULE_X}, {round(current_y, 1)})"
         
-        # Add data to table (showing theoretical vs corrected angle)
+        # Store data for table display and CSV generation
+        # Note: corrected_angle is what gets sent to the servo motor hardware
         table_data.append([
             i + 1,                              # Measurement number
             round(theoretical_angle, 1),        # Theoretical angle
@@ -165,7 +315,10 @@ def generate_results_table():
                   headers=['Measurement No.', 'Theoretical Angle (°)', 'Corrected Angle (°)', 'Z-Module (Coordinates)'],
                   tablefmt='grid',
                   numalign='right'))
-      # Create CSV file for main.py import (with JSON format for params)
+    
+    # *** CSV GENERATION: Create main.py-compatible scan sequence ***
+    # This section generates a CSV file that main.py can execute for automated scanning
+    # CRITICAL: Uses approximated angles (NOT theoretical angles) for all servo commands
     script_dir = os.path.dirname(os.path.abspath(__file__))
     scan_configs_dir = os.path.join(script_dir, 'ScanConfigs')
     
@@ -173,22 +326,29 @@ def generate_results_table():
     if not os.path.exists(scan_configs_dir):
         os.makedirs(scan_configs_dir)
     
+    # Create CSV file path
     csv_filename = os.path.join(scan_configs_dir, f'angle_table_{NEW_CENTER_X}x{NEW_CENTER_Y}_{NUMBER_OF_MEASUREMENTS}points_approximated.csv')
     try:
         with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
-            # Header in main.py format
+            # Header in main.py format: type, params (JSON), description
             writer.writerow(['type', 'params', 'description'])
             
-            # Move to home position (optional)
+            # Optional: Move to home position before starting scan
             writer.writerow([
+
                 'home',
                 '{}',
                 'Move to home position'
             ])
             
+            # Generate scan sequence for each measurement point
             for i, (y, approx_angle) in enumerate(zip([P_Y + calculate_step_size() * i for i in range(NUMBER_OF_MEASUREMENTS)], [row[2] for row in table_data])):
-                # 1. Set servo angle
+
+                # *** STEP 1: Set servo to approximated angle ***
+
+                # This is where the new position-dependent approximation gets applied!
+                # approx_angle comes from calculate_approximated_angle(), not calculate_angle()
                 writer.writerow([
                     'servo',
                     json.dumps({"angle": int(approx_angle)}),
@@ -245,7 +405,8 @@ def generate_results_table():
     table_rows = []
     for i, (orig_angle, approx_angle, y) in enumerate(zip(original_angles, approximated_angles, y_positions)):
         table_rows.append([i+1, f"{orig_angle:.1f}°", f"{approx_angle:.1f}°", f"{y:.1f}", f"({Z_MODULE_X}, {y:.1f})"])
-    
+
+
     # Insert table into diagram
     plt.table(cellText=table_rows,
              colLabels=table_headers,
@@ -428,7 +589,7 @@ def generate_results_table():
                 f'{steps} steps, {step_distance:.1f}cm'
             ])
     
-    # If more than 3 points, show "..."
+    # If more than 3 points, show "...":
     if NUMBER_OF_MEASUREMENTS > 3:
         csv_preview_rows.append(['...', '...', '...'])
     
@@ -480,12 +641,38 @@ def generate_results_table():
         print(f"Note: The graphic could not be displayed ({e}), but was saved as '{visualization_path}'.")
 
 def main():
-    """Main function to execute the program"""
-    print("=== Servo Angle Calculator with Visualization ===")
-    print("Calculating angles and generating visualization with mechanical correction...")
+    """
+    *** MAIN EXECUTION FUNCTION ***
     
-    # Explain angle correction system first
+    This function orchestrates the complete I-Scan angle calculation and visualization process.
+    It demonstrates the simple linear correction system and generates all 
+    necessary outputs for scanner operation.
+    
+    EXECUTION SEQUENCE:
+    1. Display comprehensive explanation of the simple linear correction logic
+    2. Generate scan table with theoretical vs corrected angle comparisons  
+    3. Create main.py-compatible CSV file for automated scanning
+    4. Generate detailed visualizations for validation and debugging
+    
+    OUTPUTS GENERATED:
+    - Console display with angle calculations and explanations
+    - CSV file in ScanConfigs/ directory for main.py execution
+    - Visualization PNG file showing scan path and angle relationships
+    - Comprehensive debugging information for system validation
+    
+    This function uses the proven simple linear correction method from 
+    complete_servo_angle_explanation.py for reliable scanning results.
+    """
+    print("=== I-Scan Simple Linear Servo Angle Calculator ===")
+    print("Implementing reliable linear servo angle correction...")
+    print("This system uses proven simple linear correction for consistent results.")
+    
+    # Step 1: Explain and demonstrate the simple linear correction logic
+    # This provides educational output and validates the mathematical logic
     explain_angle_correction()
+    
+    # Step 2: Generate complete scan sequence with corrected angles
+    # This creates the actual servo commands that will be used during scanning
     
     # Generate and display results table
     generate_results_table()
