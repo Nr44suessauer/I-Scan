@@ -12,6 +12,7 @@ Version: 3.0 (Pure geometry implementation)
 """
 
 from calculations import print_step_by_step_explanation
+from servo_interpolation import print_servo_interpolation_explanation
 from visualizations import (
     create_geometric_visualization,
     # create_angle_progression_visualization,  # Temporarily disabled
@@ -20,20 +21,29 @@ from visualizations import (
     create_calculation_table_visualization,
     # create_complete_visualization  # Temporarily disabled
 )
+from visualizations.servo_interpolation import (
+    save_servo_interpolation_visualization,
+    save_servo_cone_detail
+)
 
 
 def main():
     """
-    Main function - executes complete explanation and visualization
+    Main function - executes complete explanation and visualization including servo interpolation
     """
-    print("\n🚀 STARTING COMPLETE GEOMETRIC ANGLE EXPLANATION...\n")
+    print("\n🚀 STARTING COMPLETE GEOMETRIC ANGLE AND SERVO INTERPOLATION EXPLANATION...\n")
     
-    # Step 1: Mathematical explanation
+    # Step 1: Mathematical explanation for geometric angles
     angles_data = print_step_by_step_explanation()
+    
+    # Step 2: Servo interpolation explanation
+    print("\n" + "="*80)
+    servo_data = print_servo_interpolation_explanation()
     
     print("🎨 CREATING VISUALIZATIONS...")
     print("   Please wait while diagrams are being generated...")
-      # Step 2: Create individual visualizations
+    
+    # Step 3: Create geometric visualizations
     create_geometric_visualization(angles_data)
     # create_angle_progression_visualization(angles_data)  # Temporarily disabled
     create_trigonometry_formulas_visualization()
@@ -44,11 +54,15 @@ def main():
     
     create_calculation_table_visualization(angles_data)
     
-    # Step 3: Create complete visualization
-    # create_complete_visualization(angles_data)  # Temporarily disabled
+    # Step 4: Create servo interpolation visualizations
+    save_servo_interpolation_visualization()
+    save_servo_cone_detail()
     
+    # Step 5: Create complete visualization
+    # create_complete_visualization(angles_data)  # Temporarily disabled    
     print("\n✅ COMPLETE ANALYSIS FINISHED!")
     print("   • Mathematical calculation explained")
+    print("   • Servo interpolation calculated")
     print("   • Individual visualizations created:")
     print("     - 01_geometric_representation.png")
     print("     - 02_angle_progression.png")
@@ -58,8 +72,9 @@ def main():
     print("     - 04_point_3_calculation.png")
     print("     - 04_point_4_calculation.png")
     print("     - 05_calculation_table.png")
-    print("     - 06_complete_geometric_angle_visualization.png")
-    print("   • Geometric angles ready for implementation")
+    print("     - 06_servo_interpolation.png")
+    print("     - 07_servo_cone_detail.png")
+    print("   • Geometric angles and servo interpolation ready for implementation")
     print("\n" + "="*80)
 
 
@@ -68,12 +83,15 @@ def main_silent():
     Silent version of main function - only creates visualizations without explanation text
     """
     from calculations import calculate_geometric_angles
+    from servo_interpolation import calculate_servo_interpolation
     
-    print("🎨 Creating geometric angle visualizations...")
+    print("🎨 Creating geometric angle and servo interpolation visualizations...")
     
     # Calculate angles without explanations
     angles_data = calculate_geometric_angles()
-      # Create all visualizations
+    servo_data = calculate_servo_interpolation()
+    
+    # Create all visualizations
     create_geometric_visualization(angles_data)
     # create_angle_progression_visualization(angles_data)  # Temporarily disabled
     create_trigonometry_formulas_visualization()
@@ -82,10 +100,15 @@ def main_silent():
         create_point_calculation_visualization(point_data, i + 1)
     
     create_calculation_table_visualization(angles_data)
+    
+    # Create servo visualizations
+    save_servo_interpolation_visualization()
+    save_servo_cone_detail()
+    
     # create_complete_visualization(angles_data)  # Temporarily disabled
     
     print("✅ All visualizations created successfully!")
-    return angles_data
+    return angles_data, servo_data
 
 
 def get_geometric_angles():
@@ -96,23 +119,19 @@ def get_geometric_angles():
     return calculate_geometric_angles()
 
 
+def get_servo_angles():
+    """
+    Returns calculated servo interpolation data without creating visualizations or explanations
+    """
+    from servo_interpolation import calculate_servo_interpolation
+    return calculate_servo_interpolation()
+
+
 # Backward compatibility aliases
 def main_servo():
-    """Legacy function name - redirects to main geometric calculation"""
+    """Legacy function name - redirects to main calculation including servo interpolation"""
     return main()
-
-def get_servo_angles():
-    """Legacy function name - redirects to geometric angle calculation"""
-    return get_geometric_angles()
 
 
 if __name__ == "__main__":
     main()
-
-
-
-# ALTERNATIVE CONFIGURATION WITH BASE_SERVO_ANGLE = 45°
-BASE_SERVO_ANGLE = 45    # Basis-Servowinkel für Approximation (Grad) - wird als MIN_SERVO_ANGLE verwendet
-MIN_SERVO_ANGLE = 90     # Minimaler Servowinkel bei Y=0 (Grad)
-MAX_SERVO_ANGLE = 0      # Maximaler Servowinkel bei Y=max (Grad) - für rückwärts Interpolation
-USE_APPROXIMATION = True # Verwende lineare Interpolation 90°-0° statt exakter Berechnung

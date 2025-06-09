@@ -41,3 +41,18 @@ SCANNER_MODULE_X = 0      # X-position of scanner (cm)
 SCANNER_MODULE_Y = 0      # Y-position of scanner (cm)
 SCAN_DISTANCE = 50        # Total scan distance (cm)
 NUMBER_OF_MEASUREMENTS = 6  # Number of measurement points
+
+# === SERVO MOTOR CONFIGURATION ===
+# Servo interpolation parameters for 3D scanner
+SERVO_MIN_ANGLE = 0.0      # Minimum servo angle (degrees)
+SERVO_MAX_ANGLE = 90.0     # Maximum servo angle (degrees)
+SERVO_NEUTRAL_ANGLE = 45.0 # Servo neutral position (perpendicular to Y-axis)
+
+# Coordinate system mapping (servo rotated by 45° from Y-axis, then 180°)
+# When servo is at 0°: coordinate angle = 225° (or -135°) (upper limit)
+# When servo is at 90°: coordinate angle = 315° (or -45°) (lower limit)
+COORD_MAX_ANGLE = -135.0   # Upper limit in coordinate system (servo at 0°)
+COORD_MIN_ANGLE = -45.0    # Lower limit in coordinate system (servo at 90°)
+
+# Servo mounting information
+SERVO_ROTATION_OFFSET = 45.0  # Servo rotation offset from Y-axis (degrees)
