@@ -46,13 +46,14 @@ NUMBER_OF_MEASUREMENTS = 6  # Number of measurement points
 # Servo interpolation parameters for 3D scanner
 SERVO_MIN_ANGLE = 0.0      # Minimum servo angle (degrees)
 SERVO_MAX_ANGLE = 90.0     # Maximum servo angle (degrees)
-SERVO_NEUTRAL_ANGLE = 45.0 # Servo neutral position (perpendicular to Y-axis)
+SERVO_NEUTRAL_ANGLE = 45.0 # Servo neutral position at 45° physical angle
 
 # Coordinate system mapping (servo rotated by 45° from Y-axis, then 180°)
 # When servo is at 0°: coordinate angle = 225° (or -135°) (upper limit)
 # When servo is at 90°: coordinate angle = 315° (or -45°) (lower limit)
 COORD_MAX_ANGLE = -135.0   # Upper limit in coordinate system (servo at 0°)
 COORD_MIN_ANGLE = -45.0    # Lower limit in coordinate system (servo at 90°)
+COORD_NEUTRAL_ANGLE = -90.0 # Neutral position in coordinate system (center of cone)
 
 # Servo mounting information
 SERVO_ROTATION_OFFSET = 45.0  # Servo rotation offset from Y-axis (degrees)

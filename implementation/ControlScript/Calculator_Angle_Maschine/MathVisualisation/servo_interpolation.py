@@ -22,7 +22,7 @@ from config import (
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
     SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS,
     SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, SERVO_NEUTRAL_ANGLE,
-    COORD_MIN_ANGLE, COORD_MAX_ANGLE
+    COORD_MIN_ANGLE, COORD_MAX_ANGLE, COORD_NEUTRAL_ANGLE
 )
 from calculations import calculate_geometric_angles
 
@@ -41,8 +41,7 @@ def calculate_servo_interpolation():
     
     for angle_data in geometric_angles:
         geometric_angle = angle_data['angle']
-        
-        # Convert geometric angle to servo coordinate system
+          # Convert geometric angle to servo coordinate system
         # The servo is rotated 45° from the Y-axis, then 180° (total transformation)
         servo_coordinate_angle = geometric_angle + 45.0 + 180.0
         
@@ -52,28 +51,35 @@ def calculate_servo_interpolation():
         while servo_coordinate_angle < -180.0:
             servo_coordinate_angle += 360.0
         
+        # Store original coordinate angle for interpolation
+        original_servo_coordinate_angle = servo_coordinate_angle
+        
         # Check if angle is in reachable range (-135° to -45°)
         is_reachable = (servo_coordinate_angle >= COORD_MAX_ANGLE and 
                        servo_coordinate_angle <= COORD_MIN_ANGLE)
         
-        # Clamp to servo range in coordinate system
-        if servo_coordinate_angle < COORD_MAX_ANGLE:
-            servo_coordinate_angle = COORD_MAX_ANGLE
-        elif servo_coordinate_angle > COORD_MIN_ANGLE:
-            servo_coordinate_angle = COORD_MIN_ANGLE
+        # Always perform interpolation, regardless of reachability
+        # Map from coordinate system to servo range using original angle
+        # We need to map the full geometric range to the full servo range
         
+        # For interpolation, we use the original coordinate angle
         # Map from coordinate system (-135° to -45°) to servo range (0° to 90°)
         # Linear interpolation: -135° → 0°, -45° → 90°
         servo_range = COORD_MIN_ANGLE - COORD_MAX_ANGLE  # 90°
         physical_range = SERVO_MAX_ANGLE - SERVO_MIN_ANGLE  # 90°
         
-        # Normalize coordinate angle to 0-1 range
-        normalized_angle = (servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
+        # Normalize coordinate angle to 0-1 range (using original angle)
+        normalized_angle = (original_servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
         
         # Map to physical servo range
         servo_angle = SERVO_MIN_ANGLE + (normalized_angle * physical_range)
         
-        # Calculate cone boundaries for visualization
+        # Clamp servo angle to physical limits (0° to 90°) only for safety
+        if servo_angle < SERVO_MIN_ANGLE:
+            servo_angle = SERVO_MIN_ANGLE
+        elif servo_angle > SERVO_MAX_ANGLE:
+            servo_angle = SERVO_MAX_ANGLE
+          # Calculate cone boundaries for visualization
         cone_angle_1 = COORD_MAX_ANGLE  # -135° (upper limit)
         cone_angle_2 = COORD_MIN_ANGLE  # -45° (lower limit)
         
@@ -81,7 +87,7 @@ def calculate_servo_interpolation():
             'point': angle_data['point'],
             'y_pos': angle_data['y_pos'],
             'geometric_angle': geometric_angle,
-            'servo_coordinate_angle': servo_coordinate_angle,
+            'servo_coordinate_angle': original_servo_coordinate_angle,
             'servo_angle': servo_angle,
             'is_reachable': is_reachable,
             'cone_angle_1': cone_angle_1,
@@ -108,6 +114,7 @@ def print_servo_interpolation_explanation():
     print(f"   • At {SERVO_NEUTRAL_ANGLE}°: perpendicular to Y-axis, parallel to X-axis")
     print(f"   • Physical range: {SERVO_MIN_ANGLE}° to {SERVO_MAX_ANGLE}°")
     print(f"   • Coordinate system range: {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
+    print(f"   • Neutral position in coordinate system: {COORD_NEUTRAL_ANGLE}° (center of cone)")
     print("   • This creates a cone of possible servo positions")
     print()
     
@@ -143,9 +150,11 @@ def print_servo_interpolation_explanation():
         reach_symbol = "✅" if data['is_reachable'] else "❌"
         print(f"     {data['point']}   | {data['y_pos']:5.1f} | {data['geometric_angle']:5.1f} | {data['servo_coordinate_angle']:6.1f} | {data['servo_angle']:5.1f} | {reach_symbol}")
     
+        
     print()
     print("🎯 SERVO CONE ANALYSIS:")
     print(f"   • Servo cone spans from {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
+    print(f"   • Neutral position at {COORD_NEUTRAL_ANGLE}° (center of cone)")
     print(f"   • This is a {COORD_MIN_ANGLE - COORD_MAX_ANGLE}° cone centered around the servo axis")
     print("   • Points outside this cone cannot be reached by the servo")
     print()
@@ -180,32 +189,35 @@ def map_geometric_to_servo_angle(geometric_angle):
     """
     # Convert to servo coordinate system
     servo_coordinate_angle = geometric_angle + 45.0 + 180.0
-    
-    # Normalize angle to -180° to +180° range
+      # Normalize angle to -180° to +180° range
     while servo_coordinate_angle > 180.0:
         servo_coordinate_angle -= 360.0
     while servo_coordinate_angle < -180.0:
         servo_coordinate_angle += 360.0
     
+    # Store original coordinate angle for interpolation
+    original_servo_coordinate_angle = servo_coordinate_angle
+    
     # Check if angle is in reachable range (-135° to -45°)
     is_reachable = (servo_coordinate_angle >= COORD_MAX_ANGLE and 
                    servo_coordinate_angle <= COORD_MIN_ANGLE)
     
-    # Clamp to servo range
-    if servo_coordinate_angle < COORD_MAX_ANGLE:
-        servo_coordinate_angle = COORD_MAX_ANGLE
-    elif servo_coordinate_angle > COORD_MIN_ANGLE:
-        servo_coordinate_angle = COORD_MIN_ANGLE
-    
+    # Always perform interpolation using original angle
     # Map to physical servo range (-135° → 0°, -45° → 90°)
     servo_range = COORD_MIN_ANGLE - COORD_MAX_ANGLE  # 90°
     physical_range = SERVO_MAX_ANGLE - SERVO_MIN_ANGLE  # 90°
-    normalized_angle = (servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
+    normalized_angle = (original_servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
     servo_angle = SERVO_MIN_ANGLE + (normalized_angle * physical_range)
+    
+    # Clamp servo angle to physical limits (0° to 90°) only for safety
+    if servo_angle < SERVO_MIN_ANGLE:
+        servo_angle = SERVO_MIN_ANGLE
+    elif servo_angle > SERVO_MAX_ANGLE:
+        servo_angle = SERVO_MAX_ANGLE
     
     return {
         'geometric_angle': geometric_angle,
-        'servo_coordinate_angle': servo_coordinate_angle,
+        'servo_coordinate_angle': original_servo_coordinate_angle,
         'servo_angle': servo_angle,
         'is_reachable': is_reachable
     }

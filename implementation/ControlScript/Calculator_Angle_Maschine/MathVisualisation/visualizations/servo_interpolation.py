@@ -23,7 +23,7 @@ from config import (
 )
 from servo_interpolation import (
     calculate_servo_interpolation,
-    SERVO_NEUTRAL_ANGLE, COORD_MIN_ANGLE, COORD_MAX_ANGLE,
+    SERVO_NEUTRAL_ANGLE, COORD_MIN_ANGLE, COORD_MAX_ANGLE, COORD_NEUTRAL_ANGLE,
     SERVO_MIN_ANGLE, SERVO_MAX_ANGLE
 )
 
@@ -232,19 +232,18 @@ def create_servo_cone_detail():
     cone_y = servo_y + cone_radius * np.sin(theta)
     cone_x = np.append([servo_x], cone_x)
     cone_y = np.append([servo_y], cone_y)
-    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone')
-    
-    # Draw neutral position (45° from Y-axis)
-    neutral_rad = math.radians(45 + 90)  # 45° from Y-axis = 135° in math coordinates
+    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone')    # Draw neutral position (center of servo cone at -90°)
+    neutral_rad = math.radians(COORD_NEUTRAL_ANGLE + 90)  # -90° in coordinate system = 0° in math coordinates
     neutral_x = servo_x + cone_radius * 0.7 * math.cos(neutral_rad)
     neutral_y = servo_y + cone_radius * 0.7 * math.sin(neutral_rad)
-    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label='Neutral Position (45°)')
-      # Add angle annotations
+    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label=f'Neutral Position ({COORD_NEUTRAL_ANGLE}°)')
+    
+    # Add angle annotations
     ax.annotate(f'{COORD_MAX_ANGLE}°', xy=(cone_x1, cone_y1), xytext=(cone_x1-1, cone_y1-0.5),
                 fontsize=12, fontweight='bold', color='purple')
     ax.annotate(f'{COORD_MIN_ANGLE}°', xy=(cone_x2, cone_y2), xytext=(cone_x2+0.5, cone_y2+0.5),
                 fontsize=12, fontweight='bold', color='purple')
-    ax.annotate('45°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
+    ax.annotate(f'{COORD_NEUTRAL_ANGLE}°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
                 fontsize=12, fontweight='bold', color='orange')
     
     # Add coordinate system labels
