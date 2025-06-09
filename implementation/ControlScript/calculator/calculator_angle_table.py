@@ -68,8 +68,8 @@ def calculate_angle(current_y):
 
 def calculate_step_size():
     """Berechnet die Schrittgröße für die Messungen"""
-    if NUMBER_OF_MEASUREMENTS > 0:
-        return DELTA_SCAN / NUMBER_OF_MEASUREMENTS
+    if NUMBER_OF_MEASUREMENTS > 1:
+        return DELTA_SCAN / (NUMBER_OF_MEASUREMENTS - 1)
     return 0
 
 def generate_presentation_view():

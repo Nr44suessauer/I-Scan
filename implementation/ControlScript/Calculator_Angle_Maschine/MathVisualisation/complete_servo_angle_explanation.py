@@ -61,15 +61,15 @@ def print_step_by_step_explanation():
     print(f"   • Scanner moves {SCAN_DISTANCE} cm vertically")
     print(f"   • {NUMBER_OF_MEASUREMENTS} measurement points are calculated")
     print()
-    
-    # Step 1: Calculate step size
-    step_size = SCAN_DISTANCE / NUMBER_OF_MEASUREMENTS
+      # Step 1: Calculate step size
+    step_size = SCAN_DISTANCE / (NUMBER_OF_MEASUREMENTS - 1)
     print("📏 STEP 1: Calculate step size")
     print("   " + "-" * 45)
-    print(f"   Formula: Step size = Total distance ÷ Number of measurements")
-    print(f"   Step size = {SCAN_DISTANCE} cm ÷ {NUMBER_OF_MEASUREMENTS}")
-    print(f"   Step size = {step_size} cm")
-    print(f"   → Each measurement point is {step_size} cm apart")
+    print(f"   Formula: Step size = Total distance ÷ (Number of measurements - 1)")
+    print(f"   Step size = {SCAN_DISTANCE} cm ÷ ({NUMBER_OF_MEASUREMENTS} - 1)")
+    print(f"   Step size = {step_size:.2f} cm")
+    print(f"   → Each measurement point is {step_size:.2f} cm apart")
+    print("   → This ensures the last measurement is at the full scan distance")
     print()
     
     # Step 2: Trigonometry for each point
@@ -276,7 +276,7 @@ SERVO ANGLE:
 
 CORRECTION:
 • Final° = Servo° + Correction
-• Correction = -20°
+• Correction = {ANGLE_CORRECTION_REFERENCE - 90}°
 
 MEASUREMENT SETUP:
 • dx = Target X - Scanner X
@@ -645,7 +645,7 @@ SERVO ANGLE:
 
 CORRECTION:
 • Final° = Servo° + Correction
-• Correction = -20°"""
+• Correction = {ANGLE_CORRECTION_REFERENCE - 90}°"""
     
     ax3.text(0.03, 0.97, formula_text, transform=ax3.transAxes, fontsize=10,
              verticalalignment='top', fontweight='bold', 
@@ -672,7 +672,7 @@ Calculation:
 • dy = |{example_data['y_pos']:.1f} - 0| = {example_data['dy']:.1f} cm
 • α = arctan({example_data['dy']:.1f}/{example_data['dx']}) = {example_data['alpha']:.2f}°
 • Servo = 90° - {example_data['alpha']:.2f}° = {example_data['theoretical']:.2f}°
-• Final = {example_data['theoretical']:.2f}° + (-20°) = {example_data['final']:.2f}°"""
+• Final = {example_data['theoretical']:.2f}° + ({ANGLE_CORRECTION_REFERENCE - 90}°) = {example_data['final']:.2f}°"""
     
     ax4.text(0.03, 0.97, example_text, transform=ax4.transAxes, fontsize=10,
              verticalalignment='top', fontweight='bold',

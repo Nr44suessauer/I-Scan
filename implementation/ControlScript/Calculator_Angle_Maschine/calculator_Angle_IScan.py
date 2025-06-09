@@ -112,8 +112,8 @@ def explain_angle_correction():
 
 def calculate_step_size():
     """Calculates the step size for measurements"""
-    if NUMBER_OF_MEASUREMENTS > 0:
-        return DELTA_SCAN / NUMBER_OF_MEASUREMENTS
+    if NUMBER_OF_MEASUREMENTS > 1:
+        return DELTA_SCAN / (NUMBER_OF_MEASUREMENTS - 1)
     return 0
 
 def generate_results_table():

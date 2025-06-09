@@ -70,16 +70,15 @@ NUMBER_OF_MEASUREMENTS = 10  # Anzahl der Messpunkte
         
         # In Grad umwandeln
         alpha_degrees = alpha * 180 / math.pi
-        
-        # Winkelkorrektur anwenden
+          # Winkelkorrektur anwenden
         angle = abs(90 - alpha_degrees)
         
         return angle
 
     def calculate_step_size(self):
         """Berechnet die Schrittgröße für die Messungen"""
-        if self.numberOfMeasurements > 0:
-            return self.deltaScan / self.numberOfMeasurements
+        if self.numberOfMeasurements > 1:
+            return self.deltaScan / (self.numberOfMeasurements - 1)
         return 0
 
     def generate_results_table(self):

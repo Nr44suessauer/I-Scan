@@ -2,12 +2,12 @@ type,params,description
 home,{},Move to home position
 servo,"{""angle"": 70}",Servo: Set angle to 70° (Y=0.0cm)
 photo,{},"Camera: Take photo at Y=0.0cm, Angle=70°"
-stepper,"{""steps"": 8148, ""direction"": 1, ""speed"": 80}","Stepper: 8148 steps, 17.5cm, Direction upward, Speed: 80"
-servo,"{""angle"": 50}",Servo: Set angle to 50° (Y=17.5cm)
-photo,{},"Camera: Take photo at Y=17.5cm, Angle=50°"
-stepper,"{""steps"": 8148, ""direction"": 1, ""speed"": 80}","Stepper: 8148 steps, 17.5cm, Direction upward, Speed: 80"
-servo,"{""angle"": 35}",Servo: Set angle to 35° (Y=35.0cm)
-photo,{},"Camera: Take photo at Y=35.0cm, Angle=35°"
-stepper,"{""steps"": 8148, ""direction"": 1, ""speed"": 80}","Stepper: 8148 steps, 17.5cm, Direction upward, Speed: 80"
-servo,"{""angle"": 23}",Servo: Set angle to 23° (Y=52.5cm)
-photo,{},"Camera: Take photo at Y=52.5cm, Angle=23°"
+stepper,"{""steps"": 10864, ""direction"": 1, ""speed"": 80}","Stepper: 10864 steps, 23.3cm, Direction upward, Speed: 80"
+servo,"{""angle"": 45}",Servo: Set angle to 45° (Y=23.3cm)
+photo,{},"Camera: Take photo at Y=23.3cm, Angle=45°"
+stepper,"{""steps"": 10864, ""direction"": 1, ""speed"": 80}","Stepper: 10864 steps, 23.3cm, Direction upward, Speed: 80"
+servo,"{""angle"": 27}",Servo: Set angle to 27° (Y=46.7cm)
+photo,{},"Camera: Take photo at Y=46.7cm, Angle=27°"
+stepper,"{""steps"": 10864, ""direction"": 1, ""speed"": 80}","Stepper: 10864 steps, 23.3cm, Direction upward, Speed: 80"
+servo,"{""angle"": 15}",Servo: Set angle to 15° (Y=70.0cm)
+photo,{},"Camera: Take photo at Y=70.0cm, Angle=15°"
