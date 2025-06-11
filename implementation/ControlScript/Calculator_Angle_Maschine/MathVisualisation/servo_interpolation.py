@@ -23,7 +23,7 @@ from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y, 
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
     SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS,
-    SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, SERVO_NEUTRAL_ANGLE,
+    SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, SERVO_NEUTRAL_ANGLE, SERVO_ROTATION_OFFSET,
     COORD_MIN_ANGLE, COORD_MAX_ANGLE, COORD_NEUTRAL_ANGLE
 )
 from calculations import calculate_geometric_angles
@@ -37,16 +37,16 @@ def calculate_servo_interpolation():
         list: List of dictionaries containing servo interpolation data
     """
     # Use the corrected calculation
-    return calculate_corrected_servo_interpolation()
-    # Get geometric angles
+    return calculate_corrected_servo_interpolation()    # Get geometric angles
     geometric_angles = calculate_geometric_angles()
     
     servo_data = []
-    
     for angle_data in geometric_angles:
-        geometric_angle = angle_data['angle']        # Convert geometric angle to servo coordinate system
+        geometric_angle = angle_data['angle']
+        
+        # Convert geometric angle to servo coordinate system
         # The servo is rotated 45° from the Y-axis, then 180° (total transformation)
-        servo_coordinate_angle = geometric_angle + 45.0 + 180.0
+        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -189,9 +189,8 @@ def map_geometric_to_servo_angle(geometric_angle):
     
     Returns:
         dict: Servo angle data
-    """
-    # Convert to servo coordinate system
-    servo_coordinate_angle = geometric_angle + 45.0 + 180.0
+    """    # Convert to servo coordinate system
+    servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
       # Normalize angle to -180° to +180° range
     while servo_coordinate_angle > 180.0:
         servo_coordinate_angle -= 360.0
@@ -318,9 +317,8 @@ def debug_servo_calculation():
     
     for i, angle_data in enumerate(geometric_angles):
         geometric_angle = angle_data['angle']
-        
-        # Convert geometric angle to servo coordinate system
-        servo_coordinate_angle = geometric_angle + 45.0 + 180.0
+          # Convert geometric angle to servo coordinate system
+        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -397,9 +395,8 @@ def analyze_visual_cone():
     
     for i, angle_data in enumerate(geometric_angles):
         geometric_angle = angle_data['angle']
-        
-        # Current transformation
-        servo_coordinate_angle = geometric_angle + 45.0 + 180.0
+          # Current transformation
+        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:
@@ -477,7 +474,7 @@ def calculate_corrected_servo_interpolation():
     SERVO SYSTEM EXPLANATION:
     - Servo cone zeigt in Richtung Target Object (180° Drehung vom ursprünglichen 2./3. Quadrant)
     - Cone ist im 1./4. Quadranten: -45° bis +45° (oder 315° bis 45°)
-    - SERVO_ROTATION_OFFSET = 45° bedeutet: 0° Target-Richtung = 45° Servo-Position
+    - 45° Rotation bedeutet: 0° Target-Richtung = 45° Servo-Position
     - Servo 0° → -45° coordinate (4. Quadrant)
     - Servo 45° → 0° coordinate (positive X-Achse, Target-Richtung)  
     - Servo 90° → +45° coordinate (1. Quadrant)
@@ -516,9 +513,8 @@ def calculate_corrected_servo_interpolation():
                 physical_servo_angle = 0.0
             else:
                 physical_servo_angle = 90.0
-        
-        # Keep original servo coordinate system for compatibility
-        servo_coordinate_angle = geometric_angle + 45.0 + 180.0
+          # Keep original servo coordinate system for compatibility
+        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:

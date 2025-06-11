@@ -31,16 +31,22 @@ NUMBER_OF_MEASUREMENTS = 10 # Number of measurement points
 SERVO_MIN_ANGLE = 0.0      # Minimum servo angle (degrees)
 SERVO_MAX_ANGLE = 90.0     # Maximum servo angle (degrees)
 SERVO_NEUTRAL_ANGLE = 45.0 # Servo neutral position at 45° physical angle
+SERVO_ROTATION_OFFSET = SERVO_NEUTRAL_ANGLE  # Servo rotation offset from Y-axis (degrees)
 
-# Coordinate system mapping (servo rotated by 45° from Y-axis, then 180°)
-# When servo is at 0°: coordinate angle = 225° (or -135°) (upper limit)
-# When servo is at 90°: coordinate angle = 315° (or -45°) (lower limit)
-COORD_MAX_ANGLE = -135.0   # Upper limit in coordinate system (servo at 0°)
-COORD_MIN_ANGLE = -45.0    # Lower limit in coordinate system (servo at 90°)
-COORD_NEUTRAL_ANGLE = -90.0 # Neutral position in coordinate system (center of cone)
+# Coordinate system mapping (automatically calculated from servo parameters)
+# Formula: servo_angle + SERVO_ROTATION_OFFSET + 180° → normalized to [-180°, 180°]
+def _normalize_angle(angle):
+    """Normalize angle to range [-180°, 180°]"""
+    while angle > 180:
+        angle -= 360
+    while angle <= -180:
+        angle += 360
+    return angle
 
-# Servo mounting information
-SERVO_ROTATION_OFFSET = 45.0  # Servo rotation offset from Y-axis (degrees)
+# Calculated coordinate system angles
+COORD_MAX_ANGLE = _normalize_angle(SERVO_MIN_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -135.0°
+COORD_MIN_ANGLE = _normalize_angle(SERVO_MAX_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -45.0°
+COORD_NEUTRAL_ANGLE = _normalize_angle(SERVO_NEUTRAL_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -90.0°
 
 # === VISUALIZATION CONFIGURATION ===
 # Control which visualizations are generated when running main.py
@@ -60,17 +66,6 @@ ENABLE_VISUALIZATIONS = {
 # Visualization settings
 VISUALIZATION_SETTINGS = {
     'save_individual_point_calculations': True,  # Save individual point calculation images
-    'show_detailed_explanations': True,         # Include detailed explanations in images
-    'use_color_coding': True,                   # Use color coding for reachability analysis
-    'export_high_resolution': True,            # Export in high resolution (300 DPI)
-}
-
-# === ADD-ON CONFIGURATION ===
-# Settings for optional add-on features
-ADDON_SETTINGS = {
-    'enable_educational_extensions': True,      # Allow educational add-ons to load
-    'fallback_to_basic_on_error': True,        # Use basic versions if enhanced add-ons fail
-    'show_addon_status_messages': True,        # Display status messages for add-ons
 }
 
 
