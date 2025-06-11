@@ -11,7 +11,7 @@ Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 """
 
 from .geometric import create_geometric_visualization
-# from .angle_progression import create_angle_progression_visualization  # Temporarily disabled
+from .angle_progression import create_angle_progression_visualization
 from .trigonometry_formulas import create_trigonometry_formulas_visualization
 from .point_calculation import create_point_calculation_visualization
 from .calculation_table import create_calculation_table_visualization
@@ -19,7 +19,7 @@ from .calculation_table import create_calculation_table_visualization
 
 __all__ = [
     'create_geometric_visualization',
-    # 'create_angle_progression_visualization',  # Temporarily disabled
+    'create_angle_progression_visualization',
     'create_trigonometry_formulas_visualization',
     'create_point_calculation_visualization',
     'create_calculation_table_visualization',

@@ -8,23 +8,35 @@ Main entry point that coordinates the complete geometric angle explanation and v
 This module orchestrates the calculation and visualization components for pure geometric calculations.
 
 Author: I-Scan Team
-Version: 3.0 (Pure geometry implementation)
+Version: 3.0 (Pure geometry implementation with Add-on support)
 """
 
 from calculations import print_step_by_step_explanation
-from servo_interpolation import print_servo_interpolation_explanation
+from servo_interpolation import print_servo_interpolation_explanation, print_detailed_reachability_table
+from config import ENABLE_VISUALIZATIONS, VISUALIZATION_SETTINGS
 from visualizations import (
     create_geometric_visualization,
-    # create_angle_progression_visualization,  # Temporarily disabled
+    create_angle_progression_visualization,
     create_trigonometry_formulas_visualization,
     create_point_calculation_visualization,
     create_calculation_table_visualization,
-    # create_complete_visualization  # Temporarily disabled
 )
 from visualizations.servo_interpolation import (
     save_servo_interpolation_visualization,
     save_servo_cone_detail
 )
+
+# Optional add-on imports
+try:
+    from addons import TARGET_COORD_ADDON_AVAILABLE
+    if TARGET_COORD_ADDON_AVAILABLE:
+        from addons.target_coord_angle_explanation import save_target_coord_angle_visualization
+    else:
+        save_target_coord_angle_visualization = None
+except ImportError:
+    TARGET_COORD_ADDON_AVAILABLE = False
+    save_target_coord_angle_visualization = None
+    print("⚠️ Add-ons package not available - target coordinate explanation will be skipped")
 
 
 def main():
@@ -40,41 +52,79 @@ def main():
     print("\n" + "="*80)
     servo_data = print_servo_interpolation_explanation()
     
+    # Step 2.5: Detailed reachability analysis
+    print("\n" + "="*80)
+    print_detailed_reachability_table()
+    
     print("🎨 CREATING VISUALIZATIONS...")
     print("   Please wait while diagrams are being generated...")
     
-    # Step 3: Create geometric visualizations
-    create_geometric_visualization(angles_data)
-    # create_angle_progression_visualization(angles_data)  # Temporarily disabled
-    create_trigonometry_formulas_visualization()
+    # Step 3: Create visualizations based on configuration
+    visualization_count = 0
     
-    # Create individual point calculations
-    for i, point_data in enumerate(angles_data):
-        create_point_calculation_visualization(point_data, i + 1)
+    # Core geometric visualizations (01-05)
+    if ENABLE_VISUALIZATIONS['geometric_representation']:
+        create_geometric_visualization(angles_data)
+        visualization_count += 1
+        print("📊 Geometric visualization saved: output\\01_geometric_representation.png")
+        print("   ✅ 01_geometric_representation.png")
     
-    create_calculation_table_visualization(angles_data)
+    if ENABLE_VISUALIZATIONS['angle_progression']:
+        create_angle_progression_visualization(angles_data)
+        visualization_count += 1
+        print("📊 Angle progression visualization saved: output\\02_angle_progression.png")
+        print("   ✅ 02_angle_progression.png")
     
-    # Step 4: Create servo interpolation visualizations
-    save_servo_interpolation_visualization()
-    save_servo_cone_detail()
+    if ENABLE_VISUALIZATIONS['trigonometry_formulas']:
+        create_trigonometry_formulas_visualization()
+        visualization_count += 1
+        print("📊 Trigonometry formulas visualization saved: output\\03_trigonometry_formulas.png")
+        print("   ✅ 03_trigonometry_formulas.png")
     
-    # Step 5: Create complete visualization
-    # create_complete_visualization(angles_data)  # Temporarily disabled    
-    print("\n✅ COMPLETE ANALYSIS FINISHED!")
+    if ENABLE_VISUALIZATIONS['point_calculations'] and VISUALIZATION_SETTINGS['save_individual_point_calculations']:
+        for i, point_data in enumerate(angles_data):
+            create_point_calculation_visualization(point_data, i + 1)
+            visualization_count += 1
+        print("📊 Point calculation visualizations saved: output\\04_point_X_calculation.png")
+        print("   ✅ 04_point_1-6_calculation.png (6 files)")
+    
+    if ENABLE_VISUALIZATIONS['calculation_table']:
+        create_calculation_table_visualization(angles_data)
+        visualization_count += 1
+        print("📊 Calculation table visualization saved: output\\05_calculation_table.png")
+        print("   ✅ 05_calculation_table.png")
+    
+    # Advanced servo and coordinate analysis (06-08)
+    if ENABLE_VISUALIZATIONS['servo_interpolation']:
+        save_servo_interpolation_visualization()
+        visualization_count += 1
+        print("🎨 Creating servo interpolation visualization...")
+        print("✅ Servo interpolation visualization saved: output/06_servo_interpolation.png")
+        print("   ✅ 06_servo_interpolation.png")
+    
+    if ENABLE_VISUALIZATIONS['servo_cone_detail']:
+        save_servo_cone_detail()
+        visualization_count += 1
+        print("🎨 Creating servo cone detail visualization...")
+        print("✅ Servo cone detail visualization saved: output/07_servo_cone_detail.png")
+        print("   ✅ 07_servo_cone_detail.png")
+    
+    # Add-on features (08+)
+    if ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
+        if TARGET_COORD_ADDON_AVAILABLE and save_target_coord_angle_visualization:
+            save_target_coord_angle_visualization()
+            visualization_count += 1
+            print("   ✅ 08_target_coord_angle_explanation.png (Add-on)")
+        else:
+            print("   ⚠️ 08_target_coord_angle_explanation.png (Add-on not available)")
+    
+    print(f"\n✅ COMPLETE ANALYSIS FINISHED! ({visualization_count} visualizations created)")
     print("   • Mathematical calculation explained")
     print("   • Servo interpolation calculated")
-    print("   • Individual visualizations created:")
-    print("     - 01_geometric_representation.png")
-    print("     - 02_angle_progression.png")
-    print("     - 03_trigonometry_formulas.png")
-    print("     - 04_point_1_calculation.png")
-    print("     - 04_point_2_calculation.png")
-    print("     - 04_point_3_calculation.png")
-    print("     - 04_point_4_calculation.png")
-    print("     - 05_calculation_table.png")
-    print("     - 06_servo_interpolation.png")
-    print("     - 07_servo_cone_detail.png")
+    if TARGET_COORD_ADDON_AVAILABLE and ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
+        print("   • Target coordinate angle explanation included (Add-on)")
     print("   • Geometric angles and servo interpolation ready for implementation")
+    print(f"   • Configuration: {sum(ENABLE_VISUALIZATIONS.values())}/{len(ENABLE_VISUALIZATIONS)} visualizations enabled")
     print("\n" + "="*80)
 
 
@@ -91,47 +141,57 @@ def main_silent():
     angles_data = calculate_geometric_angles()
     servo_data = calculate_servo_interpolation()
     
-    # Create all visualizations
-    create_geometric_visualization(angles_data)
-    # create_angle_progression_visualization(angles_data)  # Temporarily disabled
-    create_trigonometry_formulas_visualization()
+    # Create visualizations based on configuration
+    visualization_count = 0
     
-    for i, point_data in enumerate(angles_data):
-        create_point_calculation_visualization(point_data, i + 1)
+    if ENABLE_VISUALIZATIONS['geometric_representation']:
+        create_geometric_visualization(angles_data)
+        visualization_count += 1
     
-    create_calculation_table_visualization(angles_data)
+    if ENABLE_VISUALIZATIONS['angle_progression']:
+        create_angle_progression_visualization(angles_data)
+        visualization_count += 1
     
-    # Create servo visualizations
-    save_servo_interpolation_visualization()
-    save_servo_cone_detail()
+    if ENABLE_VISUALIZATIONS['trigonometry_formulas']:
+        create_trigonometry_formulas_visualization()
+        visualization_count += 1
     
-    # create_complete_visualization(angles_data)  # Temporarily disabled
+    if ENABLE_VISUALIZATIONS['point_calculations'] and VISUALIZATION_SETTINGS['save_individual_point_calculations']:
+        for i, point_data in enumerate(angles_data):
+            create_point_calculation_visualization(point_data, i + 1)
+            visualization_count += 6
     
-    print("✅ All visualizations created successfully!")
+    if ENABLE_VISUALIZATIONS['calculation_table']:
+        create_calculation_table_visualization(angles_data)
+        visualization_count += 1
+    
+    if ENABLE_VISUALIZATIONS['servo_interpolation']:
+        save_servo_interpolation_visualization()
+        visualization_count += 1
+    
+    if ENABLE_VISUALIZATIONS['servo_cone_detail']:
+        save_servo_cone_detail()
+        visualization_count += 1
+    
+    if ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
+        if TARGET_COORD_ADDON_AVAILABLE and save_target_coord_angle_visualization:
+            save_target_coord_angle_visualization()
+            visualization_count += 1
+        # Silent mode - no warning messages
+    
+    print(f"✅ {visualization_count} visualizations created successfully!")
     return angles_data, servo_data
-
-
-def get_geometric_angles():
-    """
-    Returns calculated geometric angles without creating visualizations or explanations
-    """
-    from calculations import calculate_geometric_angles
-    return calculate_geometric_angles()
 
 
 def get_servo_angles():
     """
-    Returns calculated servo interpolation data without creating visualizations or explanations
+    Returns only the servo angles for integration with other systems
     """
-    from servo_interpolation import calculate_servo_interpolation
-    return calculate_servo_interpolation()
-
-
-# Backward compatibility aliases
-def main_servo():
-    """Legacy function name - redirects to main calculation including servo interpolation"""
-    return main()
+    from calculations import calculate_geometric_angles
+    angles_data = calculate_geometric_angles()
+    return [point_data['servo_angle'] for point_data in angles_data]
 
 
 if __name__ == "__main__":
+    """Run complete explanation when executed directly"""
     main()

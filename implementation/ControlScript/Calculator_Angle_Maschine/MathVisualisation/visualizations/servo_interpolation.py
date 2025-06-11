@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SERVO INTERPOLATION VISUALIZATION
-=================================
+SERVO INTERPOLATION VISUALIZATION - SIMPLIFIED VERSION
+======================================================
 
-Creates visualizations for servo motor interpolation calculations.
-Shows the servo cone, reachable areas, and angle mappings.
+Creates simplified visualizations for servo motor interpolation calculations.
+Shows geometry and a table with color-coded reachability.
 
 Author: I-Scan Team
-Version: 1.0
+Version: 2.0
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import numpy as np
 import math
 from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y,
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS,
     ensure_output_dir
 )
 from servo_interpolation import (
@@ -30,16 +28,16 @@ from servo_interpolation import (
 
 def create_servo_interpolation_visualization():
     """
-    Create a comprehensive visualization of servo interpolation
+    Create a simplified visualization of servo interpolation with geometry and table
     """
     # Get servo data
     servo_data = calculate_servo_interpolation()
     
-    # Create figure with subplots
-    fig = plt.figure(figsize=(16, 12))
+    # Create figure with 2 subplots: geometry and table
+    fig = plt.figure(figsize=(16, 10))
     
-    # === SUBPLOT 1: Geometric Setup with Servo Cone ===
-    ax1 = plt.subplot(2, 2, 1)
+    # === SUBPLOT 1: Geometric Setup with Servo Cones ===
+    ax1 = plt.subplot(2, 1, 1)
     
     # Plot scanner path
     y_positions = [data['y_pos'] for data in servo_data]
@@ -56,122 +54,109 @@ def create_servo_interpolation_visualization():
         linestyle = '-' if data['is_reachable'] else '--'
         ax1.plot([SCANNER_MODULE_X, TARGET_CENTER_X], 
                 [data['y_pos'], TARGET_CENTER_Y], 
-                color=color, linestyle=linestyle, alpha=0.7, linewidth=1)
-    
-    # Draw servo cone from first position
-    cone_center_x = SCANNER_MODULE_X
-    cone_center_y = y_positions[0]
-    cone_radius = 30  # Visual radius for cone display    # Convert cone angles to cartesian for visualization
-    # Note: COORD_MAX_ANGLE = -135°, COORD_MIN_ANGLE = -45° (rotated 180°)
-    angle1_rad = math.radians(COORD_MAX_ANGLE + 90)  # -135° + 90° = -45° (upper boundary)
-    angle2_rad = math.radians(COORD_MIN_ANGLE + 90)  # -45° + 90° = 45° (lower boundary)
-    
-    # Create cone visualization
-    cone_x1 = cone_center_x + cone_radius * math.cos(angle1_rad)
-    cone_y1 = cone_center_y + cone_radius * math.sin(angle1_rad)
-    cone_x2 = cone_center_x + cone_radius * math.cos(angle2_rad)
-    cone_y2 = cone_center_y + cone_radius * math.sin(angle2_rad)
-    
-    # Draw cone boundaries
-    ax1.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=2, alpha=0.8)
-    ax1.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=2, alpha=0.8)
-    
-    # Fill cone area
-    theta = np.linspace(angle1_rad, angle2_rad, 50)
-    cone_x = cone_center_x + cone_radius * np.cos(theta)
-    cone_y = cone_center_y + cone_radius * np.sin(theta)
-    cone_x = np.append([cone_center_x], cone_x)
-    cone_y = np.append([cone_center_y], cone_y)
-    ax1.fill(cone_x, cone_y, color='purple', alpha=0.2, label=f'Servo Cone ({COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°)')
+                color=color, linestyle=linestyle, alpha=0.7, linewidth=1)    # Draw servo cones from all positions (zeigen in Richtung Target Object)
+    for i, data in enumerate(servo_data):
+        cone_center_x = SCANNER_MODULE_X
+        cone_center_y = data['y_pos']
+        cone_radius = 25  # Visual radius for cone display
+        
+        # Servo cone zeigt in Richtung Target: 1./4. Quadranten (-45° bis +45°)
+        coord_min = -45.0  # 4th quadrant boundary
+        coord_max = 45.0   # 1st quadrant boundary
+        
+        # Convert coordinate angles to radians for display
+        angle1_rad = math.radians(coord_min)  # -45°
+        angle2_rad = math.radians(coord_max)  # +45°
+        
+        # Create cone visualization
+        cone_x1 = cone_center_x + cone_radius * math.cos(angle1_rad)
+        cone_y1 = cone_center_y + cone_radius * math.sin(angle1_rad)
+        cone_x2 = cone_center_x + cone_radius * math.cos(angle2_rad)
+        cone_y2 = cone_center_y + cone_radius * math.sin(angle2_rad)
+        
+        # Color based on reachability
+        cone_color = 'green' if data['is_reachable'] else 'red'
+        cone_alpha = 0.3 if data['is_reachable'] else 0.2
+        
+        # Draw cone boundaries
+        if i == 0:  # Only add label once
+            ax1.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=1, alpha=0.6, label='Servo Cone Boundaries')
+            ax1.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=1, alpha=0.6)
+        else:
+            ax1.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=1, alpha=0.6)
+            ax1.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=1, alpha=0.6)
+        
+        # Fill cone area
+        theta = np.linspace(angle1_rad, angle2_rad, 30)
+        cone_x = cone_center_x + cone_radius * np.cos(theta)
+        cone_y = cone_center_y + cone_radius * np.sin(theta)
+        cone_x = np.append([cone_center_x], cone_x)
+        cone_y = np.append([cone_center_y], cone_y)
+        ax1.fill(cone_x, cone_y, color=cone_color, alpha=cone_alpha)
     
     ax1.set_xlabel('X Position (cm)', fontweight='bold')
     ax1.set_ylabel('Y Position (cm)', fontweight='bold')
-    ax1.set_title('Servo Cone and Reachable Area', fontweight='bold', fontsize=12)
+    ax1.set_title('3D Scanner Servo Interpolation - Geometric Overview', fontweight='bold', fontsize=14)
     ax1.grid(True, alpha=0.3)
     ax1.legend()
-    ax1.set_aspect('equal')
+    ax1.set_aspect('equal', adjustable='box')
     
-    # === SUBPLOT 2: Angle Progression ===
-    ax2 = plt.subplot(2, 2, 2)
+    # === SUBPLOT 2: Servo Reachability Table ===
+    ax2 = plt.subplot(2, 1, 2)
+    ax2.axis('off')  # Hide axes for table
     
-    points = [data['point'] for data in servo_data]
-    geometric_angles = [data['geometric_angle'] for data in servo_data]
-    servo_coordinate_angles = [data['servo_coordinate_angle'] for data in servo_data]
-    servo_physical_angles = [data['servo_angle'] for data in servo_data]
+    # Create table data
+    table_data = []
+    colors = []    # Table headers
+    headers = ['Point', 'Y-Pos\n(cm)', 'Geometric\nAngle (°)', 'Target Coord\nAngle (°)', 'Physical\nServo (°)', 'Reachable']
     
-    ax2.plot(points, geometric_angles, 'b-o', label='Geometric Angle', linewidth=2, markersize=6)
-    ax2.plot(points, servo_coordinate_angles, 'g-s', label='Servo Coordinate Angle', linewidth=2, markersize=6)
-    ax2.plot(points, servo_physical_angles, 'r-^', label='Physical Servo Angle', linewidth=2, markersize=6)
-    
-    # Add horizontal lines for servo limits
-    ax2.axhline(y=COORD_MIN_ANGLE, color='purple', linestyle='--', alpha=0.7, label=f'Servo Limit {COORD_MIN_ANGLE}°')
-    ax2.axhline(y=COORD_MAX_ANGLE, color='purple', linestyle='--', alpha=0.7, label=f'Servo Limit {COORD_MAX_ANGLE}°')
-    ax2.axhline(y=SERVO_MIN_ANGLE, color='orange', linestyle=':', alpha=0.7, label=f'Physical Limit {SERVO_MIN_ANGLE}°')
-    ax2.axhline(y=SERVO_MAX_ANGLE, color='orange', linestyle=':', alpha=0.7, label=f'Physical Limit {SERVO_MAX_ANGLE}°')
-    
-    ax2.set_xlabel('Measurement Point', fontweight='bold')
-    ax2.set_ylabel('Angle (degrees)', fontweight='bold')
-    ax2.set_title('Angle Progression: Geometric → Servo', fontweight='bold', fontsize=12)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=8)
-    
-    # === SUBPLOT 3: Servo Mapping Diagram ===
-    ax3 = plt.subplot(2, 2, 3)
-    
-    # Create servo mapping visualization
-    coord_angles = np.linspace(COORD_MIN_ANGLE, COORD_MAX_ANGLE, 100)
-    physical_angles = []
-    
-    for coord_angle in coord_angles:
-        # Map coordinate angle to physical angle
-        servo_range = COORD_MAX_ANGLE - COORD_MIN_ANGLE
-        physical_range = SERVO_MAX_ANGLE - SERVO_MIN_ANGLE
-        normalized = (coord_angle - COORD_MIN_ANGLE) / servo_range
-        physical_angle = SERVO_MIN_ANGLE + (normalized * physical_range)
-        physical_angles.append(physical_angle)
-    
-    ax3.plot(coord_angles, physical_angles, 'b-', linewidth=3, label='Coordinate → Physical Mapping')
-    
-    # Plot actual measurement points
     for data in servo_data:
-        color = 'green' if data['is_reachable'] else 'red'
-        marker = 'o' if data['is_reachable'] else 'x'
-        ax3.plot(data['servo_coordinate_angle'], data['servo_angle'], 
-                color=color, marker=marker, markersize=8, 
-                label=f'Point {data["point"]}' if data['point'] <= 3 else "")
+        # Determine row color based on reachability
+        if data['is_reachable']:
+            row_color = ['lightgreen'] * 6  # Green for reachable
+            reach_text = '✓ YES'
+        else:
+            row_color = ['lightcoral'] * 6  # Red for unreachable
+            reach_text = '✗ NO'
+        
+        colors.append(row_color)
+        
+        # Format row data with corrected values
+        row = [
+            f"{data['point']}",
+            f"{data['y_pos']:.1f}",
+            f"{data['geometric_angle']:.1f}°",
+            f"{data['target_coord_angle']:.1f}°",  # NEW: Target angle in coordinate system
+            f"{data['servo_angle']:.1f}°",   # CORRECTED: Physical servo control angle
+            reach_text
+        ]
+        table_data.append(row)
     
-    ax3.set_xlabel('Servo Coordinate Angle (degrees)', fontweight='bold')
-    ax3.set_ylabel('Physical Servo Angle (degrees)', fontweight='bold')
-    ax3.set_title('Servo Angle Mapping', fontweight='bold', fontsize=12)
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(fontsize=8)
+    # Create the table
+    table = ax2.table(cellText=table_data,
+                     colLabels=headers,
+                     cellLoc='center',
+                     loc='center',
+                     bbox=[0, 0, 1, 1])
     
-    # === SUBPLOT 4: Reachability Analysis ===
-    ax4 = plt.subplot(2, 2, 4)
+    # Style the table
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 2)  # Make rows taller
     
-    # Create reachability chart
-    reachable_points = [data['point'] for data in servo_data if data['is_reachable']]
-    unreachable_points = [data['point'] for data in servo_data if not data['is_reachable']]
+    # Style header row
+    for i in range(len(headers)):
+        table[(0, i)].set_facecolor('#4472C4')
+        table[(0, i)].set_text_props(weight='bold', color='white')
+        table[(0, i)].set_height(0.15)
     
-    reachable_y = [data['y_pos'] for data in servo_data if data['is_reachable']]
-    unreachable_y = [data['y_pos'] for data in servo_data if not data['is_reachable']]
+    # Style data rows with colors
+    for i, row_colors in enumerate(colors):
+        for j, color in enumerate(row_colors):
+            table[(i+1, j)].set_facecolor(color)
+            table[(i+1, j)].set_height(0.12)
     
-    if reachable_points:
-        ax4.bar(reachable_points, [1]*len(reachable_points), color='green', alpha=0.7, label='Reachable')
-    if unreachable_points:
-        ax4.bar(unreachable_points, [1]*len(unreachable_points), color='red', alpha=0.7, label='Unreachable')
-    
-    # Add text annotations
-    for data in servo_data:
-        ax4.text(data['point'], 0.5, f"{data['servo_angle']:.1f}°", 
-                ha='center', va='center', fontweight='bold', fontsize=8)
-    
-    ax4.set_xlabel('Measurement Point', fontweight='bold')
-    ax4.set_ylabel('Reachability', fontweight='bold')
-    ax4.set_title('Servo Reachability Analysis', fontweight='bold', fontsize=12)
-    ax4.set_ylim(0, 1.2)
-    ax4.grid(True, alpha=0.3, axis='x')
-    ax4.legend()
+    ax2.set_title('Servo Reachability Analysis Table', fontweight='bold', fontsize=14, pad=20)
     
     # Add overall title
     fig.suptitle('3D Scanner Servo Interpolation Analysis', fontsize=16, fontweight='bold', y=0.95)
@@ -212,38 +197,44 @@ def create_servo_cone_detail():
     
     # Draw servo position
     servo_x, servo_y = 0, 0
-    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')
-      # Draw servo cone
+    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')    # Draw servo cone (zeigt in Richtung Target: 1./4. Quadranten -45° bis +45°)
     cone_radius = 5
-    angle1_rad = math.radians(COORD_MAX_ANGLE + 90)  # Convert to standard math coordinates (-135° + 90° = -45°)
-    angle2_rad = math.radians(COORD_MIN_ANGLE + 90)  # (-45° + 90° = 45°)
-      # Cone boundaries
+    coord_min = -45.0  # 4th quadrant boundary
+    coord_max = 45.0   # 1st quadrant boundary
+    
+    # Convert coordinate angles to radians
+    angle1_rad = math.radians(coord_min)  # -45°
+    angle2_rad = math.radians(coord_max)  # +45°
+    
+    # Cone boundaries
     cone_x1 = servo_x + cone_radius * math.cos(angle1_rad)
     cone_y1 = servo_y + cone_radius * math.sin(angle1_rad)
     cone_x2 = servo_x + cone_radius * math.cos(angle2_rad)
     cone_y2 = servo_y + cone_radius * math.sin(angle2_rad)
     
-    ax.plot([servo_x, cone_x1], [servo_y, cone_y1], 'purple', linewidth=3, label=f'{COORD_MAX_ANGLE}° Limit')
-    ax.plot([servo_x, cone_x2], [servo_y, cone_y2], 'purple', linewidth=3, label=f'{COORD_MIN_ANGLE}° Limit')
+    ax.plot([servo_x, cone_x1], [servo_y, cone_y1], 'purple', linewidth=3, label='-45° Limit (4. Quadrant)')
+    ax.plot([servo_x, cone_x2], [servo_y, cone_y2], 'purple', linewidth=3, label='+45° Limit (1. Quadrant)')
     
-    # Fill cone
+    # Fill cone (1. und 4. Quadrant)
     theta = np.linspace(angle1_rad, angle2_rad, 50)
     cone_x = servo_x + cone_radius * np.cos(theta)
     cone_y = servo_y + cone_radius * np.sin(theta)
     cone_x = np.append([servo_x], cone_x)
     cone_y = np.append([servo_y], cone_y)
-    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone')    # Draw neutral position (center of servo cone at -90°)
-    neutral_rad = math.radians(COORD_NEUTRAL_ANGLE + 90)  # -90° in coordinate system = 0° in math coordinates
+    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone (Target-Richtung)')
+    
+    # Draw neutral position (0° = positive X-axis, Target-Richtung)
+    neutral_rad = math.radians(0)  # Positive X-Achse = 0° (Servo 45° position)
     neutral_x = servo_x + cone_radius * 0.7 * math.cos(neutral_rad)
     neutral_y = servo_y + cone_radius * 0.7 * math.sin(neutral_rad)
-    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label=f'Neutral Position ({COORD_NEUTRAL_ANGLE}°)')
+    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label='Neutral Position (0°, Target-Richtung)')
     
     # Add angle annotations
-    ax.annotate(f'{COORD_MAX_ANGLE}°', xy=(cone_x1, cone_y1), xytext=(cone_x1-1, cone_y1-0.5),
+    ax.annotate('-45°', xy=(cone_x1, cone_y1), xytext=(cone_x1+0.5, cone_y1-0.5),
                 fontsize=12, fontweight='bold', color='purple')
-    ax.annotate(f'{COORD_MIN_ANGLE}°', xy=(cone_x2, cone_y2), xytext=(cone_x2+0.5, cone_y2+0.5),
+    ax.annotate('+45°', xy=(cone_x2, cone_y2), xytext=(cone_x2+0.5, cone_y2+0.5),
                 fontsize=12, fontweight='bold', color='purple')
-    ax.annotate(f'{COORD_NEUTRAL_ANGLE}°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
+    ax.annotate('0°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
                 fontsize=12, fontweight='bold', color='orange')
     
     # Add coordinate system labels
@@ -254,7 +245,7 @@ def create_servo_cone_detail():
     ax.set_ylim(-6, 6)
     ax.set_xlabel('X Coordinate', fontweight='bold')
     ax.set_ylabel('Y Coordinate', fontweight='bold')
-    ax.set_title('Servo Motor Cone Concept\n(Rotated 45° from Y-axis)', fontweight='bold', fontsize=14)
+    ax.set_title('Servo Motor Cone Concept\n(Zeigt in Richtung Target: -45° bis +45°)', fontweight='bold', fontsize=14)
     ax.grid(True, alpha=0.3)
     ax.legend()
     ax.set_aspect('equal')

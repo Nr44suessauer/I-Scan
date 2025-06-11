@@ -1,26 +1,45 @@
-# Servo Angle Calculation - Modular Structure
+# 3D Scanner Geometric Angle Calculation System
 
-This project has been refactored from a single 791-line file into a modular structure for better maintainability and reusability.
+This project provides comprehensive geometric angle calculations and visualizations for a 3D scanner servo system, organized in a modular structure with core features and optional add-ons.
 
-## File Structure
+## 📁 Project Structure
 
 ```
 MathVisualisation/
-├── README.md                                    # This documentation
-├── complete_servo_angle_explanation.py         # Original file (791 lines)
-├── complete_servo_angle_explanation_backup.py  # Backup of original file
-├── config.py                                   # Configuration constants
-├── calculations.py                              # Mathematical calculation functions
-├── main.py                                      # Main coordinator with multiple entry points
-└── visualizations/                              # Visualization package
-    ├── __init__.py                             # Package initialization
-    ├── geometric.py                            # Geometric representation
-    ├── angle_progression.py                    # Angle progression visualization
-    ├── trigonometry_formulas.py                # Formula explanations
-    ├── point_calculation.py                    # Individual point calculations
-    ├── calculation_table.py                    # Summary table
-    └── complete.py                             # Comprehensive visualization
+├── README.md                          # This documentation
+├── config.py                          # Configuration constants & visualization controls
+├── calculations.py                    # Core mathematical calculation functions
+├── servo_interpolation.py             # Servo angle interpolation
+├── main.py                           # Main coordinator with multiple entry points
+├── addons/                           # 🎓 Optional add-on features
+│   ├── README.md                     # Add-on documentation
+│   ├── __init__.py                   # Add-on package initialization
+│   ├── target_coord_angle_explanation.py  # Educational explanations
+│   └── target_coord_explanation/     # Enhanced visualization modules
+├── visualizations/                   # 📊 Core visualization package
+│   ├── __init__.py                   # Package initialization
+│   ├── geometric.py                  # Geometric representation (01)
+│   ├── angle_progression.py          # Angle progression visualization (02)
+│   ├── trigonometry_formulas.py      # Formula explanations (03)
+│   ├── point_calculation.py          # Individual point calculations (04)
+│   ├── calculation_table.py          # Summary table (05)
+│   └── servo_interpolation.py        # Servo visualizations (06-07)
+└── output/                           # Generated PNG visualizations
 ```
+
+## 🎯 Feature Overview
+
+### 📊 **CORE FEATURES (01-07)** - Always Available
+1. **01_geometric_representation.png** - Scanner setup and measurement points
+2. **02_angle_progression.png** - How angles change with scanner position  
+3. **03_trigonometry_formulas.png** - Mathematical formulas explanation
+4. **04_point_X_calculation.png** - Detailed calculations for each point (6 files)
+5. **05_calculation_table.png** - Summary table of all results
+6. **06_servo_interpolation.png** - Servo angle interpolation
+7. **07_servo_cone_detail.png** - Detailed servo cone analysis
+
+### 🎓 **ADD-ON FEATURES (08+)** - Optional Extensions
+8. **08_target_coord_angle_explanation.png** - **Student-friendly educational explanation**
 
 ## Usage
 
@@ -49,6 +68,32 @@ print(angles)
 - Returns only the calculated servo angles as a list
 - No console output or file generation
 - Perfect for integration with other systems
+
+## ⚙️ Configuration
+
+Control which visualizations are generated in `config.py`:
+
+```python
+ENABLE_VISUALIZATIONS = {
+    # CORE FEATURES (01-07) - Main functionality
+    'geometric_representation': True,    # 01_geometric_representation.png
+    'angle_progression': True,          # 02_angle_progression.png  
+    'trigonometry_formulas': True,      # 03_trigonometry_formulas.png
+    'point_calculations': True,         # 04_point_X_calculation.png
+    'calculation_table': True,          # 05_calculation_table.png
+    'servo_interpolation': True,        # 06_servo_interpolation.png
+    'servo_cone_detail': True,          # 07_servo_cone_detail.png
+    
+    # ADD-ON FEATURES (08+) - Optional educational extensions
+    'target_coord_angle_explanation': False,  # 08 (Add-on, disabled by default)
+}
+```
+
+### Enable Add-on Features
+```python
+# To enable the educational add-on
+ENABLE_VISUALIZATIONS['target_coord_angle_explanation'] = True
+```
 
 ## Module Descriptions
 
