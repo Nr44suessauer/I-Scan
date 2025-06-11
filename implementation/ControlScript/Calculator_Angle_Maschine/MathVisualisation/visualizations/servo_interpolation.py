@@ -256,6 +256,123 @@ def save_servo_cone_detail():
     return output_path
 
 
+def create_servo_geometry_graph_only():
+    """
+    Create only the geometric visualization part (without table) from servo interpolation
+    """
+    # Get servo data
+    servo_data = calculate_servo_interpolation()
+    
+    # Create figure with single plot for geometry only
+    fig = plt.figure(figsize=(12, 8))
+    ax = plt.subplot(1, 1, 1)
+    
+    # Plot scanner path
+    y_positions = [data['y_pos'] for data in servo_data]
+    x_positions = [config.SCANNER_MODULE_X for _ in servo_data]
+    
+    ax.plot(x_positions, y_positions, 'b-', linewidth=3, label='Scanner Path', marker='o', markersize=8)
+    
+    # Plot target
+    ax.plot(config.TARGET_CENTER_X, config.TARGET_CENTER_Y, 'ro', markersize=12, label='Target Object')
+    
+    # Plot lines from each scanner position to target
+    for data in servo_data:
+        color = 'green' if data['is_reachable'] else 'red'
+        linestyle = '-' if data['is_reachable'] else '--'
+        ax.plot([config.SCANNER_MODULE_X, config.TARGET_CENTER_X], 
+                [data['y_pos'], config.TARGET_CENTER_Y], 
+                color=color, linestyle=linestyle, alpha=0.7, linewidth=1)
+    
+    # Draw servo cones from all positions
+    for i, data in enumerate(servo_data):
+        cone_center_x = config.SCANNER_MODULE_X
+        cone_center_y = data['y_pos']
+        cone_radius = 25  # Visual radius for cone display
+        
+        # Servo cone points toward Target: 1st/4th Quadrants (-45° to +45°)
+        coord_min = -45.0  # 4th quadrant boundary
+        coord_max = 45.0   # 1st quadrant boundary
+        
+        # Convert coordinate angles to radians for display
+        angle1_rad = math.radians(coord_min)  # -45°
+        angle2_rad = math.radians(coord_max)  # +45°
+        
+        # Create cone visualization
+        cone_x1 = cone_center_x + cone_radius * math.cos(angle1_rad)
+        cone_y1 = cone_center_y + cone_radius * math.sin(angle1_rad)
+        cone_x2 = cone_center_x + cone_radius * math.cos(angle2_rad)
+        cone_y2 = cone_center_y + cone_radius * math.sin(angle2_rad)
+        
+        # Color based on reachability
+        cone_color = 'green' if data['is_reachable'] else 'red'
+        cone_alpha = 0.3 if data['is_reachable'] else 0.2
+        
+        # Draw cone boundaries
+        if i == 0:  # Only add label once
+            ax.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=1, alpha=0.6, label='Servo Cone Boundaries')
+            ax.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=1, alpha=0.6)
+        else:
+            ax.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=1, alpha=0.6)
+            ax.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=1, alpha=0.6)
+        
+        # Fill cone area
+        theta = np.linspace(angle1_rad, angle2_rad, 30)
+        cone_x = cone_center_x + cone_radius * np.cos(theta)
+        cone_y = cone_center_y + cone_radius * np.sin(theta)
+        cone_x = np.append([cone_center_x], cone_x)
+        cone_y = np.append([cone_center_y], cone_y)
+        ax.fill(cone_x, cone_y, color=cone_color, alpha=cone_alpha)
+    
+    # Add coordinate information as text
+    info_text = f"Configuration:\n"
+    info_text += f"• Target: ({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm\n"
+    info_text += f"• Scanner: ({config.SCANNER_MODULE_X}, {config.SCANNER_MODULE_Y}) cm\n"
+    info_text += f"• Scan distance: {config.SCAN_DISTANCE} cm\n"
+    info_text += f"• Measurements: {config.NUMBER_OF_MEASUREMENTS}\n"
+    
+    # Count reachable points
+    reachable_count = sum(1 for data in servo_data if data['is_reachable'])
+    total_count = len(servo_data)
+    coverage_percent = (reachable_count / total_count) * 100
+    
+    info_text += f"• Coverage: {reachable_count}/{total_count} ({coverage_percent:.1f}%)"
+    
+    ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', fontweight='bold',
+            bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.8))
+    
+    ax.set_xlabel('X Position (cm)', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Y Position (cm)', fontweight='bold', fontsize=12)
+    ax.set_title('3D Scanner Servo Interpolation - Geometric View', fontweight='bold', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper right')
+    ax.set_aspect('equal', adjustable='box')
+    
+    plt.tight_layout()
+    return fig
+
+
+def save_servo_geometry_graph_only():
+    """
+    Create and save only the geometric graph from servo interpolation
+    """
+    config.ensure_output_dir()
+    
+    print("🎨 Creating servo geometry graph (separate)...")
+    
+    fig = create_servo_geometry_graph_only()
+    
+    # Save the figure
+    output_path = "output/06_servo_geometry_graph_only.png"
+    fig.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
+    
+    print(f"✅ Servo geometry graph saved: {output_path}")
+    
+    plt.close(fig)
+    return output_path
+
+
 if __name__ == "__main__":
     """Run servo interpolation visualizations when executed directly"""
     save_servo_interpolation_visualization()

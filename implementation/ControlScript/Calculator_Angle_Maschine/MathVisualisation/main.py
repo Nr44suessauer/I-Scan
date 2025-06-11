@@ -293,6 +293,7 @@ def show_help():
     print("  --csv, -c      Full analysis + CSV export")
     print("  --math, -m     Mathematics + CSV only (no visualizations)")
     print("  --silent, -s   Silent math + CSV (minimal output)")
+    print("  --servo-graph, -g  Save only servo geometry graph")
     print("  --help, -h     Show this help")
     print()
     print("CONFIGURATION OPTIONS:")
@@ -433,17 +434,27 @@ def main_math_silent_with_config(config_updates=None):
     # Run silent mode
     main_math_silent()
 
+
+def save_servo_graph_only_with_config(config_updates=None):
+    """Create and save only the servo geometry graph with configuration override support"""
+    if config_updates:
+        apply_config_overrides(config_updates)
+    
+    # Import and call the function
+    from visualizations.servo_interpolation import save_servo_geometry_graph_only
+    return save_servo_geometry_graph_only()
+
 if __name__ == "__main__":
     import sys
     
     # Parse command line arguments
     args = sys.argv[1:]  # Remove script name
-    
-    # Check for flags
+      # Check for flags
     create_csv = "--csv" in args or "-c" in args
     math_only = "--math" in args or "-m" in args
     silent = "--silent" in args or "-s" in args
     show_help_flag = "--help" in args or "-h" in args
+    servo_graph_only = "--servo-graph" in args or "-g" in args
     
     # Parse configuration overrides
     config_updates = parse_config_args(args)
@@ -454,11 +465,15 @@ if __name__ == "__main__":
         for key, value in config_updates.items():
             print(f"   {key} = {value}")
         print()
-    
-    # Execute based on flags (priority order: help -> silent -> math -> csv -> standard)
+      # Execute based on flags (priority order: help -> servo-graph -> silent -> math -> csv -> standard)
     if show_help_flag:
         # Show command line usage help
         show_help()
+    elif servo_graph_only:
+        # Save only the servo geometry graph
+        print("🎯 Creating servo geometry graph only...")
+        output_path = save_servo_graph_only_with_config(config_updates)
+        print(f"✅ Servo geometry graph saved: {output_path}")
     elif silent:
         # Silent mathematics and CSV only (minimal output)
         main_math_silent_with_config(config_updates)
