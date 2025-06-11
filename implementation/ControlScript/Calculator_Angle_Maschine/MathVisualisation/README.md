@@ -1,163 +1,219 @@
-# 3D Scanner Geometric Angle Calculation System
+# 3D Scanner Geometric Angle Calculator 📐
 
-This project provides comprehensive geometric angle calculations and visualizations for a 3D scanner servo system, organized in a modular structure with core features and optional add-ons.
+Kompakte Mathematik-Engine für 3D-Scanner Servoansteuerung mit Visualisierungen.
 
-## 📁 Project Structure
+## 🎯 System Konzept
 
 ```
-MathVisualisation/
-├── README.md                          # This documentation
-├── config.py                          # Configuration constants & visualization controls
-├── calculations.py                    # Core mathematical calculation functions
-├── servo_interpolation.py             # Servo angle interpolation
-├── main.py                           # Main coordinator with multiple entry points
-├── addons/                           # 🎓 Optional add-on features
-│   ├── README.md                     # Add-on documentation
-│   ├── __init__.py                   # Add-on package initialization
-│   ├── target_coord_angle_explanation.py  # Educational explanations
-│   └── target_coord_explanation/     # Enhanced visualization modules
-├── visualizations/                   # 📊 Core visualization package
-│   ├── __init__.py                   # Package initialization
-│   ├── geometric.py                  # Geometric representation (01)
-│   ├── angle_progression.py          # Angle progression visualization (02)
-│   ├── point_calculation.py          # Individual point calculations (04)
-│   ├── calculation_table.py          # Summary table (05)
-│   └── servo_interpolation.py        # Servo visualizations (06-07)
-└── output/                           # Generated PNG visualizations
+                3D SCANNER SYSTEM
+    ┌─────────────────────────────────────────┐
+    │  Scanner(0,0) ───────────► Target(100,0)│
+    │      │                                  │
+    │      ▼ 100cm scan distance              │
+    │  ┌───────┐                              │
+    │  │Point 1│ ◄── Calculate angles         │
+    │  │Point 2│                              │
+    │  │  ...  │                              │
+    │  │Point10│                              │
+    │  └───────┘                              │
+    └─────────────────────────────────────────┘
+         ▼ PROCESSING FLOW ▼
+    ┌─────────────────────────────────────────┐
+    │ 1. Geometric Calculation                │
+    │    atan2(dx,dy) → angle                 │
+    │ 2. Servo Interpolation                  │
+    │    angle + 45° + 180° → servo_angle     │
+    │ 3. Visualization Generation             │
+    │    PNG files in output/ + subfolder/    │
+    └─────────────────────────────────────────┘
 ```
 
-## 🎯 Feature Overview
+## 📂 Funktions-Mapping
 
-### 📊 **CORE FEATURES (01-06)** - Always Available
-1. **01_geometric_representation.png** - Scanner setup and measurement points
-2. **02_angle_progression.png** - How angles change with scanner position  
-3. **04_point_X_calculation.png** - Detailed calculations for each point (6 files)
-4. **05_calculation_table.png** - Summary table of all results
-5. **06_servo_interpolation.png** - Servo angle interpolation
-6. **07_servo_cone_detail.png** - Detailed servo cone analysis
+### CORE MODULE: `config.py`
+```
+🔧 ensure_output_dir()         ← Verzeichnis-Management
+📊 OUTPUT_DIR                  ← "output"
+📁 POINT_CALCULATIONS_SUBDIR   ← "point_calculations"
+⚙️  TARGET_CENTER_X/Y          ← Scanner-Koordinaten
+📏 SCAN_DISTANCE               ← 100cm
+🎛️  ENABLE_VISUALIZATIONS      ← Feature-Kontrolle
+```
 
-### 🎓 **ADD-ON FEATURES (08+)** - Optional Extensions
-8. **08_target_coord_angle_explanation.png** - **Student-friendly educational explanation**
+### MATH ENGINE: `calculations.py`
+```
+🧮 print_step_by_step_explanation()  ← Vollständige Ausgabe
+🔢 calculate_geometric_angles()      ← Stille Berechnung
+📐 Algorithmus:
+   for point in range(10):
+       y = point * step_size
+       dx = target_x - scanner_x
+       dy = target_y - y
+       angle = atan2(dx, dy) * 180/π
+```
 
-## Usage
+### SERVO LOGIC: `servo_interpolation.py`
+```
+🎯 print_servo_interpolation_explanation()  ← Servo-Details
+⚙️  calculate_servo_interpolation()         ← Servo-Winkel
+🔄 print_detailed_reachability_table()     ← Erreichbarkeits-Analyse
+📊 Servo-Mapping:
+   geometric_angle + 45° + 180° = servo_coord_angle
+   if -135° ≤ servo_coord_angle ≤ -45°: REACHABLE
+```
 
-### 1. Full Explanation Mode (Default)
+### COORDINATOR: `main.py`
+```
+🚀 main()                 ← Vollmodus (Erklärung + Visualisierungen)
+🔇 main_silent()          ← Nur Visualisierungen
+📊 get_servo_angles()     ← Nur Daten zurückgeben
+```
+
+## 📊 Visualisierungs-Pipeline
+
+```
+VISUALIZATION MODULES (visualizations/)
+├── geometric.py ────────────► 01_geometric_representation.png
+├── angle_progression.py ────► 02_angle_progression.png
+├── point_calculation.py ────► 04_point_X_calculation.png (subfolder)
+├── calculation_table.py ───► 05_calculation_table.png
+└── servo_interpolation.py ─► 06_servo_interpolation.png
+                            └► 07_servo_cone_detail.png
+```
+
+### Subfolder-System:
+```
+output/
+├── 01_geometric_representation.png
+├── 02_angle_progression.png
+├── 05_calculation_table.png
+├── 06_servo_interpolation.png
+├── 07_servo_cone_detail.png
+└── point_calculations/          ← NEUE STRUKTUR
+    ├── 04_point_1_calculation.png
+    ├── 04_point_2_calculation.png
+    ├── ...
+    └── 04_point_10_calculation.png
+```
+
+## 🔄 Datenfluss-Diagramm
+
+```
+    ┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
+    │   CONFIG    │───▶│   CALCULATIONS   │───▶│ SERVO_INTERP    │
+    │             │    │                  │    │                 │
+    │ - Scanner   │    │ 1. Step size     │    │ 1. Coord mapping│
+    │ - Target    │    │ 2. For each pt:  │    │ 2. Reachability │
+    │ - Distance  │    │   • dx, dy       │    │ 3. Physical ang │
+    │             │    │   • atan2()      │    │                 │
+    └─────────────┘    └──────────────────┘    └─────────────────┘
+            │                    │                        │
+            ▼                    ▼                        ▼
+    ┌─────────────────────────────────────────────────────────────┐
+    │                    MAIN COORDINATOR                         │
+    │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+    │  │    MATH     │  │    SERVO    │  │    VISUALIZATIONS   │  │
+    │  │   ENGINE    │  │   ENGINE    │  │                     │  │
+    │  │             │  │             │  │ ├─ geometric.py     │  │
+    │  │ Geometric   │──┤ Interpolate │──┤ ├─ progression.py   │  │
+    │  │ Angles      │  │ & Check     │  │ ├─ point_calc.py    │  │
+    │  │             │  │ Limits      │  │ ├─ table.py         │  │
+    │  │             │  │             │  │ └─ servo_vis.py     │  │
+    │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+    └─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │  OUTPUT FILES   │
+                    │                 │
+                    │ 📁 output/      │
+                    │ ├─ 01-07.png    │
+                    │ └─ point_calc/  │
+                    │    └─ 04_X.png  │
+                    └─────────────────┘
+```
+
+## ⚙️ Kern-Algorithmus
+
+```
+INPUT: Scanner(0,0), Target(100,0), Distance=100cm, Points=10
+
+STEP 1: Geometric Calculation
+step = distance / (points - 1)  // 11.11cm
+for i in range(points):
+    y = i * step
+    dx = target_x - scanner_x    // 100
+    dy = target_y - y            // 0 to -100
+    angle = atan2(dx, dy) * 180/π  // 90° to 135°
+
+STEP 2: Servo Mapping
+servo_coord = angle + 45 + 180  // -45° to 0°
+if -135° ≤ servo_coord ≤ -45°:
+    physical = servo_coord + 135  // 0° to 90°
+    status = REACHABLE
+else:
+    status = UNREACHABLE
+
+STEP 3: Visualization
+save main files to output/
+save point calcs to output/point_calculations/
+```
+
+## 🚀 Schnellstart
+
 ```python
+# Vollständige Analyse
 python main.py
-```
-- Shows step-by-step mathematical explanation
-- Creates all visualizations
-- Saves PNG files with detailed diagrams
 
-### 2. Silent Visualization Mode
-```python
-from main import main_silent
-main_silent()
-```
-- Creates only visualizations without text explanation
-- Useful for generating diagrams programmatically
-
-### 3. Calculation Only Mode
-```python
+# Nur Berechnungen
 from main import get_servo_angles
 angles = get_servo_angles()
-print(angles)
+
+# Spezifische Visualisierung
+from visualizations.geometric import create_geometric_visualization
+create_geometric_visualization(angles)
 ```
-- Returns only the calculated servo angles as a list
-- No console output or file generation
-- Perfect for integration with other systems
 
-## ⚙️ Configuration
-
-Control which visualizations are generated in `config.py`:
+## 📋 Feature-Kontrolle (config.py)
 
 ```python
 ENABLE_VISUALIZATIONS = {
-    # CORE FEATURES (01-07) - Main functionality
-    'geometric_representation': True,    # 01_geometric_representation.png
-    'angle_progression': True,          # 02_angle_progression.png  
-    'trigonometry_formulas': True,      # 03_trigonometry_formulas.png
-    'point_calculations': True,         # 04_point_X_calculation.png
-    'calculation_table': True,          # 05_calculation_table.png
-    'servo_interpolation': True,        # 06_servo_interpolation.png
-    'servo_cone_detail': True,          # 07_servo_cone_detail.png
-    
-    # ADD-ON FEATURES (08+) - Optional educational extensions
-    'target_coord_angle_explanation': False,  # 08 (Add-on, disabled by default)
+    'geometric_representation': True,   # Scanner-Setup
+    'angle_progression': True,         # Winkel-Verlauf  
+    'point_calculations': True,        # Detail-Berechnungen
+    'calculation_table': True,         # Ergebnis-Tabelle
+    'servo_interpolation': True,       # Servo-Diagramm
+    'servo_cone_detail': True,         # Servo-Kegel
 }
 ```
 
-### Enable Add-on Features
-```python
-# To enable the educational add-on
-ENABLE_VISUALIZATIONS['target_coord_angle_explanation'] = True
+**Aktueller Status: SCAN_DISTANCE=100cm, 10 Punkte, 100% erreichbar, Subfolder aktiv** ✅
+
+## 🎓 ADD-ONS: `addons/`
+
+```
+🏫 target_coord_explanation/
+└── target_coord_angle_explanation.py  ← Erweiterte Erklärungen
 ```
 
-## Module Descriptions
-
-### `config.py`
-- Contains all configuration constants
-- Scanner positions, target coordinates
-- Matplotlib settings for consistent styling
-
-### `calculations.py`
-- `print_step_by_step_explanation()`: Detailed console output with calculations
-- `calculate_servo_angles()`: Silent calculation function returning results
-
-### `visualizations/` Package
-Each visualization module is self-contained:
-- **geometric.py**: Shows scanner setup and measurement points
-- **angle_progression.py**: Displays how angles change with position
-- **trigonometry_formulas.py**: Explains the mathematical formulas used
-- **point_calculation.py**: Detailed breakdown for each measurement point
-- **calculation_table.py**: Summary table of all results
-- **complete.py**: Comprehensive view combining all elements
-
-### `main.py`
-Main coordinator providing three entry points:
-- `main()`: Full explanation with visualizations
-- `main_silent()`: Only visualizations
-- `get_servo_angles()`: Only calculations
-
-## Benefits of Modular Structure
-
-1. **Maintainability**: Each component can be modified independently
-2. **Reusability**: Import only the functions you need
-3. **Testing**: Each module can be tested separately
-4. **Extensibility**: Easy to add new visualization types
-5. **Integration**: Clean API for use in larger systems
-
-## Generated Output Files
-
-The system creates an `output/` directory and saves 9 PNG visualization files there:
-- `output/01_geometric_representation.png`
-- `output/02_angle_progression.png`
-- `output/03_trigonometry_formulas.png`
-- `output/04_point_1_calculation.png`
-- `output/04_point_2_calculation.png`
-- `output/04_point_3_calculation.png`
-- `output/04_point_4_calculation.png`
-- `output/05_calculation_table.png`
-- `output/06_complete_servo_angle_visualization.png`
-
-The output directory is automatically created if it doesn't exist.
-
-## Integration Example
+## 🔧 Integration & API
 
 ```python
-# Use in your own project
+# Direkte Integration
 from main import get_servo_angles
 from visualizations.geometric import create_geometric_visualization
 
-# Get calculation results
-servo_angles = get_servo_angles()
+angles = get_servo_angles()         # Nur Daten
+create_geometric_visualization()    # Spezifische Visualisierung
 
-# Generate specific visualization
-create_geometric_visualization()
-
-# Access individual angle data
-for angle_data in servo_angles:
-    print(f"Point {angle_data['point']}: {angle_data['final']:.2f}°")
+# Daten-Struktur
+angle_data = {
+    'point': 1,
+    'y_position': 0.0,
+    'dx': 100, 'dy': 0.0,
+    'angle': 90.0,
+    'distance': 100.0
+}
 ```
 
-The modular structure maintains 100% compatibility with the original functionality while providing enhanced flexibility for development and integration.
+**Kompakte Mathematik-Engine für präzise 3D-Scanner Servoansteuerung** 🎯
