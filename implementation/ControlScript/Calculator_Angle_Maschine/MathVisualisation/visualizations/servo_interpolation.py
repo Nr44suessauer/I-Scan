@@ -259,12 +259,11 @@ def save_servo_cone_detail():
 def create_servo_geometry_graph_only():
     """
     Create only the geometric visualization part (without table) from servo interpolation
-    """
-    # Get servo data
+    """    # Get servo data
     servo_data = calculate_servo_interpolation()
     
-    # Create figure with single plot for geometry only
-    fig = plt.figure(figsize=(12, 8))
+    # Create figure with single plot for geometry only - wider to accommodate external legend and info
+    fig = plt.figure(figsize=(16, 8))
     ax = plt.subplot(1, 1, 1)
     
     # Plot scanner path
@@ -322,31 +321,36 @@ def create_servo_geometry_graph_only():
         cone_y = cone_center_y + cone_radius * np.sin(theta)
         cone_x = np.append([cone_center_x], cone_x)
         cone_y = np.append([cone_center_y], cone_y)
-        ax.fill(cone_x, cone_y, color=cone_color, alpha=cone_alpha)
-    
-    # Add coordinate information as text
-    info_text = f"Configuration:\n"
-    info_text += f"• Target: ({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm\n"
-    info_text += f"• Scanner: ({config.SCANNER_MODULE_X}, {config.SCANNER_MODULE_Y}) cm\n"
-    info_text += f"• Scan distance: {config.SCAN_DISTANCE} cm\n"
-    info_text += f"• Measurements: {config.NUMBER_OF_MEASUREMENTS}\n"
-    
-    # Count reachable points
+        ax.fill(cone_x, cone_y, color=cone_color, alpha=cone_alpha)    # Count reachable points
     reachable_count = sum(1 for data in servo_data if data['is_reachable'])
     total_count = len(servo_data)
     coverage_percent = (reachable_count / total_count) * 100
-    
-    info_text += f"• Coverage: {reachable_count}/{total_count} ({coverage_percent:.1f}%)"
-    
-    ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', fontweight='bold',
-            bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.8))
     
     ax.set_xlabel('X Position (cm)', fontweight='bold', fontsize=12)
     ax.set_ylabel('Y Position (cm)', fontweight='bold', fontsize=12)
     ax.set_title('3D Scanner Servo Interpolation - Geometric View', fontweight='bold', fontsize=14)
     ax.grid(True, alpha=0.3)
-    ax.legend(loc='upper right')
+    
+    # Create legend with configuration data integrated
+    legend_elements = ax.get_legend_handles_labels()
+    handles, labels = legend_elements    # Add configuration information as legend entries with visual separation
+    from matplotlib.lines import Line2D
+    config_handles = [
+        Line2D([0], [0], color='white', linewidth=0, label=''),  # Empty line for spacing
+        Line2D([0], [0], color='gray', linewidth=2, label='─────────────'),  # Separator line
+        Line2D([0], [0], color='white', linewidth=0, label='● Configuration:'),
+        Line2D([0], [0], color='white', linewidth=0, label=f'  → Target: ({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm'),
+        Line2D([0], [0], color='white', linewidth=0, label=f'  → Scanner: ({config.SCANNER_MODULE_X}, {config.SCANNER_MODULE_Y}) cm'),
+        Line2D([0], [0], color='white', linewidth=0, label=f'  → Scan distance: {config.SCAN_DISTANCE} cm'),
+        Line2D([0], [0], color='white', linewidth=0, label=f'  → Measurements: {config.NUMBER_OF_MEASUREMENTS}'),
+        Line2D([0], [0], color='white', linewidth=0, label=f'  → Coverage: {reachable_count}/{total_count} ({coverage_percent:.1f}%)')
+    ]
+      # Combine original legend with configuration
+    all_handles = handles + config_handles
+    all_labels = labels + [handle.get_label() for handle in config_handles]
+    
+    ax.legend(all_handles, all_labels, bbox_to_anchor=(1.02, 1), loc='upper left', 
+              frameon=True, fancybox=True, shadow=True)
     ax.set_aspect('equal', adjustable='box')
     
     plt.tight_layout()
