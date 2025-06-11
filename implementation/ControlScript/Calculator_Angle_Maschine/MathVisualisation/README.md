@@ -20,7 +20,6 @@ MathVisualisation/
 │   ├── __init__.py                   # Package initialization
 │   ├── geometric.py                  # Geometric representation (01)
 │   ├── angle_progression.py          # Angle progression visualization (02)
-│   ├── trigonometry_formulas.py      # Formula explanations (03)
 │   ├── point_calculation.py          # Individual point calculations (04)
 │   ├── calculation_table.py          # Summary table (05)
 │   └── servo_interpolation.py        # Servo visualizations (06-07)
@@ -29,14 +28,13 @@ MathVisualisation/
 
 ## 🎯 Feature Overview
 
-### 📊 **CORE FEATURES (01-07)** - Always Available
+### 📊 **CORE FEATURES (01-06)** - Always Available
 1. **01_geometric_representation.png** - Scanner setup and measurement points
 2. **02_angle_progression.png** - How angles change with scanner position  
-3. **03_trigonometry_formulas.png** - Mathematical formulas explanation
-4. **04_point_X_calculation.png** - Detailed calculations for each point (6 files)
-5. **05_calculation_table.png** - Summary table of all results
-6. **06_servo_interpolation.png** - Servo angle interpolation
-7. **07_servo_cone_detail.png** - Detailed servo cone analysis
+3. **04_point_X_calculation.png** - Detailed calculations for each point (6 files)
+4. **05_calculation_table.png** - Summary table of all results
+5. **06_servo_interpolation.png** - Servo angle interpolation
+6. **07_servo_cone_detail.png** - Detailed servo cone analysis
 
 ### 🎓 **ADD-ON FEATURES (08+)** - Optional Extensions
 8. **08_target_coord_angle_explanation.png** - **Student-friendly educational explanation**

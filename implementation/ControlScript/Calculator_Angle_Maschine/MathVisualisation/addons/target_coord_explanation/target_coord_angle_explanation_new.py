@@ -4,8 +4,8 @@
 TARGET COORDINATE ANGLE CALCULATION EXPLANATION - ENHANCED VERSION
 ================================================================
 
-Erstellt eine umfassende, studentenfreundliche Erklärung der Target Coordinate Angle 
-Berechnung mit allen verschiedenen Winkeln und detaillierten Erklärungen.
+Creates a comprehensive, student-friendly explanation of the Target Coordinate Angle 
+calculation with all different angles and detailed explanations.
 
 Author: I-Scan Team
 Version: 2.0 (Enhanced Student-Friendly Version)
@@ -30,19 +30,19 @@ from calculations import calculate_geometric_angles
 
 def create_student_friendly_visualization():
     """
-    Erstellt eine umfassende, studentenfreundliche Darstellung der Target Coordinate Angle Berechnung
-    mit allen verschiedenen Winkeln und detaillierten Erklärungen
+    Creates a comprehensive, student-friendly representation of the Target Coordinate Angle calculation
+    with all different angles and detailed explanations
     """
     # Get measurement data
     geometric_angles = calculate_geometric_angles()
     
-    # Create figure with subplots - größer für mehr Inhalt
+    # Create figure with subplots - larger for more content
     fig = plt.figure(figsize=(20, 12))
     
     # Create a 2x3 grid layout
     gs = fig.add_gridspec(3, 3, height_ratios=[2, 1.5, 1], width_ratios=[1.5, 1, 1])
     
-    # === HAUPTPLOT: Koordinatensystem und Vektoren (oben links, groß) ===
+    # === MAIN PLOT: Coordinate system and vectors (top left, large) ===
     ax_main = fig.add_subplot(gs[0, :2])
     ax_main.set_aspect('equal')
     
@@ -297,17 +297,16 @@ Negative Winkel = Target unter Scanner
     dy = TARGET_CENTER_Y - scanner_y
     angle_rad = math.atan2(dy, dx)
     angle_deg = math.degrees(angle_rad)
-    
-    example_text = f"""
-🎓 DETAILLIERTE BEISPIELRECHNUNG FÜR PUNKT 1:
+      example_text = f"""
+🎓 DETAILED EXAMPLE CALCULATION FOR POINT 1:
 
-Gegeben: Target bei ({TARGET_CENTER_X}, {TARGET_CENTER_Y}), Scanner bei ({SCANNER_MODULE_X}, {scanner_y})
+Given: Target at ({TARGET_CENTER_X}, {TARGET_CENTER_Y}), Scanner at ({SCANNER_MODULE_X}, {scanner_y})
 
-Schritt 1: dx = {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {dx} cm
-Schritt 2: dy = {TARGET_CENTER_Y} - {scanner_y} = {dy} cm  
-Schritt 3: angle_rad = atan2({dy}, {dx}) = {angle_rad:.4f} radians
-Schritt 4: angle_deg = {angle_rad:.4f} × (180/π) = {angle_deg:.2f}°
-Schritt 5: Normalisiert = {angle_deg:.2f}° (bereits im korrekten Bereich)
+Step 1: dx = {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {dx} cm
+Step 2: dy = {TARGET_CENTER_Y} - {scanner_y} = {dy} cm  
+Step 3: angle_rad = atan2({dy}, {dx}) = {angle_rad:.4f} radians
+Step 4: angle_deg = {angle_rad:.4f} × (180/π) = {angle_deg:.2f}°
+Step 5: Normalized = {angle_deg:.2f}° (already in correct range)
 
 ✅ Ergebnis: Der Scanner muss sich um {angle_deg:.2f}° zum Target ausrichten (Quadrant I - rechts oben)
 """

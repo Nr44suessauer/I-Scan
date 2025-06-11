@@ -34,10 +34,12 @@ def create_geometric_visualization(angles_data):
     ax = plt.subplot(1, 1, 1)
     ax.set_title('Scanner Movement Path and Target Positioning', 
                  fontsize=12, fontweight='bold', pad=20, color='darkblue')
+      # Setup axes - dynamically adapt to SCAN_DISTANCE and target position
+    max_x = max(TARGET_CENTER_X + 20, 90)  # Ensure target is visible with margin
+    max_y = max(SCAN_DISTANCE + 10, TARGET_CENTER_Y + 20)  # Adapt to scan distance
     
-    # Setup axes
-    ax.set_xlim(-25, 90)
-    ax.set_ylim(-15, 80)
+    ax.set_xlim(-25, max_x)
+    ax.set_ylim(-15, max_y)
     ax.grid(True, alpha=0.3, linewidth=0.6, linestyle='--')
     ax.set_aspect('equal')
     ax.set_xlabel('X-Position (cm)', fontsize=10, fontweight='bold')

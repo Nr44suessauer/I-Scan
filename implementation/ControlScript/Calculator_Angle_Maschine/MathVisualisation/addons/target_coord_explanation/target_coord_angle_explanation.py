@@ -6,8 +6,8 @@ TARGET COORDINATE ANGLE CALCULATION EXPLANATION (ADD-ON)
 
 OPTIONAL ADD-ON FEATURE - Educational extension
 
-Erklärt und visualisiert die Berechnung des Target Coordinate Angle
-für das 3D Scanner Servo-System mit erweiterten studentenfreundlichen Erklärungen.
+Explains and visualizes the calculation of the Target Coordinate Angle
+for the 3D Scanner Servo System with extended student-friendly explanations.
 
 This is an optional add-on feature that provides detailed educational
 explanations. It is not part of the core functionality (01-07).
@@ -36,66 +36,64 @@ from calculations import calculate_geometric_angles
 
 def explain_target_coord_angle_calculation():
     """
-    Erklärt die Target Coordinate Angle Berechnung Schritt für Schritt
+    Explains the Target Coordinate Angle calculation step by step
     """
     print("=" * 80)
     print("   TARGET COORDINATE ANGLE CALCULATION EXPLANATION")
     print("=" * 80)
     print()
     
-    print("🎯 WAS IST DER TARGET COORDINATE ANGLE?")
-    print("   Der Target Coordinate Angle ist der Winkel vom Scanner zum Target")
-    print("   im Standard-Koordinatensystem (0° = +X-Achse, 90° = +Y-Achse)")
+    print("🎯 WHAT IS THE TARGET COORDINATE ANGLE?")
+    print("   The Target Coordinate Angle is the angle from scanner to target")
+    print("   in the standard coordinate system (0° = +X-axis, 90° = +Y-axis)")
     print()
     
-    print("📊 KOORDINATENSYSTEM:")
-    print("   • 0° = +X-Achse (rechts)")
-    print("   • 90° = +Y-Achse (oben)")
-    print("   • 180° = -X-Achse (links)")
-    print("   • 270° = -Y-Achse (unten)")
+    print("📊 COORDINATE SYSTEM:")
+    print("   • 0° = +X-axis (right)")
+    print("   • 90° = +Y-axis (up)")
+    print("   • 180° = -X-axis (left)")
+    print("   • 270° = -Y-axis (down)")
     print()
     
-    print("🔧 VERWENDETE VARIABLEN:")
+    print("🔧 USED VARIABLES:")
     print(f"   • TARGET_CENTER_X = {TARGET_CENTER_X} cm (Target X-Position)")
     print(f"   • TARGET_CENTER_Y = {TARGET_CENTER_Y} cm (Target Y-Position)")
     print(f"   • SCANNER_MODULE_X = {SCANNER_MODULE_X} cm (Scanner X-Position)")
-    print(f"   • scanner_y = variabel (Scanner Y-Position, ändert sich für jeden Messpunkt)")
+    print(f"   • scanner_y = variable (Scanner Y-Position, changes for each measurement point)")
     print()
     
-    print("📐 BERECHNUNGSFORMEL:")
+    print("📐 CALCULATION FORMULA:")
     print("   1. dx = TARGET_CENTER_X - SCANNER_MODULE_X")
     print("   2. dy = TARGET_CENTER_Y - scanner_y")
     print("   3. target_coord_angle = atan2(dy, dx) * (180/π)")
-    print("   4. Normalisierung auf -180° bis +180° Bereich")
+    print("   4. Normalization to -180° to +180° range")
     print()
-    
-    # Get geometric angles for calculation
+      # Get geometric angles for calculation
     geometric_angles = calculate_geometric_angles()
     
-    print("🧮 SCHRITT-FÜR-SCHRITT BERECHNUNG FÜR ALLE MESSPUNKTE:")
+    print("🧮 STEP-BY-STEP CALCULATION FOR ALL MEASUREMENT POINTS:")
     print("   " + "-" * 75)
     print()
     
     for i, angle_data in enumerate(geometric_angles):
         scanner_y = angle_data['y_pos']
-        
-        print(f"   📍 MESSPUNKT {i+1} (Scanner Y = {scanner_y} cm):")
+        print(f"   📍 MEASUREMENT POINT {i+1} (Scanner Y = {scanner_y} cm):")
         print("   " + "~" * 50)
         
-        # Schritt 1: dx berechnen
+        # Step 1: calculate dx
         dx = TARGET_CENTER_X - SCANNER_MODULE_X
-        print(f"   Schritt 1: dx = {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {dx} cm")
+        print(f"   Step 1: dx = {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {dx} cm")
         
-        # Schritt 2: dy berechnen
+        # Step 2: calculate dy
         dy = TARGET_CENTER_Y - scanner_y
-        print(f"   Schritt 2: dy = {TARGET_CENTER_Y} - {scanner_y} = {dy} cm")
+        print(f"   Step 2: dy = {TARGET_CENTER_Y} - {scanner_y} = {dy} cm")
         
-        # Schritt 3: atan2 berechnen
+        # Step 3: calculate atan2
         angle_rad = math.atan2(dy, dx)
         angle_deg = math.degrees(angle_rad)
-        print(f"   Schritt 3: atan2({dy}, {dx}) = {angle_rad:.4f} rad = {angle_deg:.2f}°")
+        print(f"   Step 3: atan2({dy}, {dx}) = {angle_rad:.4f} rad = {angle_deg:.2f}°")
         
-        # Schritt 4: Normalisierung
+        # Step 4: normalization
         normalized_angle = angle_deg
         while normalized_angle > 180.0:
             normalized_angle -= 360.0
@@ -103,25 +101,24 @@ def explain_target_coord_angle_calculation():
             normalized_angle += 360.0
         
         if abs(normalized_angle - angle_deg) > 0.001:
-            print(f"   Schritt 4: Normalisiert von {angle_deg:.2f}° zu {normalized_angle:.2f}°")
+            print(f"   Step 4: Normalized from {angle_deg:.2f}° to {normalized_angle:.2f}°")
         else:
-            print(f"   Schritt 4: Bereits im Bereich [-180°, +180°]: {normalized_angle:.2f}°")
-        
-        # Vektor-Richtung erklären
+            print(f"   Step 4: Already in range [-180°, +180°]: {normalized_angle:.2f}°")
+          # Explain vector direction
         if dx > 0 and dy > 0:
-            quadrant = "1. Quadrant (rechts oben)"
+            quadrant = "1st Quadrant (right up)"
         elif dx < 0 and dy > 0:
-            quadrant = "2. Quadrant (links oben)"
+            quadrant = "2nd Quadrant (left up)"
         elif dx < 0 and dy < 0:
-            quadrant = "3. Quadrant (links unten)"
+            quadrant = "3rd Quadrant (left down)"
         else:
-            quadrant = "4. Quadrant (rechts unten)"
+            quadrant = "4th Quadrant (right down)"
         
-        print(f"   → Vektor zeigt in {quadrant}")
+        print(f"   → Vector points to {quadrant}")
         print(f"   → Target Coordinate Angle: {normalized_angle:.2f}°")
         print()
     
-    print("✅ TARGET COORDINATE ANGLE BERECHNUNG ABGESCHLOSSEN!")
+    print("✅ TARGET COORDINATE ANGLE CALCULATION COMPLETED!")
     print()
     
     return geometric_angles
@@ -129,7 +126,7 @@ def explain_target_coord_angle_calculation():
 
 def create_target_coord_angle_visualization():
     """
-    Erstellt eine visuelle Darstellung der Target Coordinate Angle Berechnung
+    Creates a visual representation of the Target Coordinate Angle calculation
     """
     # Get measurement data
     geometric_angles = calculate_geometric_angles()
@@ -253,20 +250,19 @@ def create_target_coord_angle_visualization():
     for i in range(len(headers)):
         table[(0, i)].set_facecolor('#4472C4')
         table[(0, i)].set_text_props(weight='bold', color='white')
-    
-    # Add explanation text
+      # Add explanation text
     explanation = """
-BERECHNUNGSFORMEL:
-1. dx = TARGET_CENTER_X - SCANNER_MODULE_X = 50 - 0 = 50 cm (konstant)
-2. dy = TARGET_CENTER_Y - scanner_y = 25 - scanner_y (variabel)
+CALCULATION FORMULA:
+1. dx = TARGET_CENTER_X - SCANNER_MODULE_X = 50 - 0 = 50 cm (constant)
+2. dy = TARGET_CENTER_Y - scanner_y = 50 - scanner_y (variable)
 3. target_coord_angle = atan2(dy, dx) * (180/π)
-4. Normalisierung auf [-180°, +180°] Bereich
+4. Normalization to [-180°, +180°] range
 
-KOORDINATENSYSTEM:
-• 0° = +X-Achse (rechts)      • 180° = -X-Achse (links)
-• 90° = +Y-Achse (oben)       • 270° = -Y-Achse (unten)
+COORDINATE SYSTEM:
+• 0° = +X-axis (right)      • 180° = -X-axis (left)
+• 90° = +Y-axis (up)        • 270° = -Y-axis (down)
 
-QUADRANTEN:
+QUADRANTS:
 I: dx>0, dy≥0    II: dx≤0, dy>0    III: dx<0, dy≤0    IV: dx≥0, dy<0
     """
     
@@ -274,7 +270,7 @@ I: dx>0, dy≥0    II: dx≤0, dy>0    III: dx<0, dy≤0    IV: dx≥0, dy<0
             verticalalignment='top', fontfamily='monospace',
             bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgray', alpha=0.8))
     
-    ax2.set_title('Target Coordinate Angle Berechnung - Details', fontweight='bold', fontsize=14)
+    ax2.set_title('Target Coordinate Angle Calculation - Details', fontweight='bold', fontsize=14)
     
     plt.tight_layout()
     return fig
@@ -282,11 +278,11 @@ I: dx>0, dy≥0    II: dx≤0, dy>0    III: dx<0, dy≤0    IV: dx≥0, dy<0
 
 def save_target_coord_angle_visualization():
     """
-    Speichert die erweiterte Target Coordinate Angle Visualisierung
+    Saves the enhanced Target Coordinate Angle visualization
     """
     ensure_output_dir()
     
-    print("🎨 Erstelle erweiterte Target Coordinate Angle Visualisierung...")
+    print("🎨 Creating enhanced Target Coordinate Angle visualization...")
     
     # Import the enhanced function from subdirectory
     try:
@@ -297,7 +293,7 @@ def save_target_coord_angle_visualization():
         output_path = os.path.join(parent_dir, "output", "08_target_coord_angle_explanation.png")
         fig.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
         
-        print(f"✅ Erweiterte Target Coordinate Angle Visualisierung gespeichert: {output_path}")
+        print(f"✅ Enhanced Target Coordinate Angle visualization saved: {output_path}")
         
         plt.close(fig)
         return output_path
@@ -311,7 +307,7 @@ def save_target_coord_angle_visualization():
         output_path = os.path.join(parent_dir, "output", "08_target_coord_angle_explanation_basic.png")
         fig.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
         
-        print(f"✅ Basic Target Coordinate Angle Visualisierung gespeichert: {output_path}")
+        print(f"✅ Basic Target Coordinate Angle visualization saved: {output_path}")
         
         plt.close(fig)
         return output_path

@@ -18,7 +18,7 @@ import os
 from config import (
     TARGET_CENTER_X, TARGET_CENTER_Y, 
     SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    OUTPUT_DIR, ensure_output_dir
+    OUTPUT_DIR, POINT_CALCULATIONS_SUBDIR, ensure_output_dir
 )
 
 
@@ -125,13 +125,14 @@ def create_point_calculation_visualization(point_data, point_number):
 
 ✅ RESULT: {point_data['angle']:.2f}° geometric angle for Point {point_number}"""
     
-    ax2.text(0.05, 0.95, calculation_text, transform=ax2.transAxes, fontsize=10,            verticalalignment='top', fontweight='bold',
+    ax2.text(0.05, 0.95, calculation_text, transform=ax2.transAxes, fontsize=10,
+            verticalalignment='top', fontweight='bold',
             bbox=dict(boxstyle="round,pad=0.6", facecolor="lightcyan", 
                      edgecolor='teal', linewidth=2, alpha=0.95))
     
     plt.tight_layout()
     ensure_output_dir()
-    output_path = os.path.join(OUTPUT_DIR, f'04_point_{point_number}_calculation.png')
+    output_path = os.path.join(OUTPUT_DIR, POINT_CALCULATIONS_SUBDIR, f'04_point_{point_number}_calculation.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none', pad_inches=0.2)
     print(f"📊 Point {point_number} calculation visualization saved: {output_path}")
