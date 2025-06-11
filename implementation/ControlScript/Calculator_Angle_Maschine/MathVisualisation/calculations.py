@@ -7,7 +7,9 @@ CALCULATION MODULE FOR GEOMETRIC ANGLE CALCULATION
 Contains pure geometric calculations for the 3D scanner angles.
 Only trigonometric calculations - no servo interpolation.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 3.0 (Pure geometry implementation)
 """
 

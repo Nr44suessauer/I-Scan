@@ -1,6 +1,10 @@
 """
 Logger-Modul
 Verwaltet die Protokollierung und Anzeige von Nachrichten
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 """
 import re
 import tkinter as tk

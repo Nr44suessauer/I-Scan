@@ -3,11 +3,13 @@
 """
 VISUALIZATIONS PACKAGE
 ======================
-
 Package containing all visualization modules for the 3D scanner servo angle calculation.
+Modular split from complete_servo_angle_explanation.py
 
-Author: I-Scan Team
-Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
+Version: 2.0
 """
 
 from .geometric import create_geometric_visualization

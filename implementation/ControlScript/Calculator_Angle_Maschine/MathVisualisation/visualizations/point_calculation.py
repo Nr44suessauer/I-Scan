@@ -7,7 +7,9 @@ POINT CALCULATION VISUALIZATION MODULE
 Creates individual point calculation visualization with coordinate system
 for each measurement point.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 """
 
@@ -28,13 +30,9 @@ def create_point_calculation_visualization(point_data, point_number):
     """
     fig = plt.figure(figsize=(18, 10))
     fig.patch.set_facecolor('white')
-    fig.suptitle(f'CALCULATION FOR MEASUREMENT POINT {point_number}', 
-                 fontsize=16, fontweight='bold', y=0.95, color='navy')
     
     # Left side: Coordinate system with highlighted point
     ax1 = plt.subplot(1, 2, 1)
-    ax1.set_title(f'Coordinate System - Point {point_number}', 
-                  fontsize=12, fontweight='bold', pad=20, color='darkblue')
     
     # Grid and axes
     ax1.grid(True, alpha=0.3)
@@ -94,11 +92,8 @@ def create_point_calculation_visualization(point_data, point_number):
                  bbox=dict(boxstyle="round,pad=0.2", facecolor="purple", alpha=0.7))
     
     ax1.legend(loc='upper left', fontsize=8)
-    
-    # Right side: Calculation text
+      # Right side: Calculation text
     ax2 = plt.subplot(1, 2, 2)
-    ax2.set_title(f'Step-by-Step Calculation', 
-                  fontsize=12, fontweight='bold', pad=20, color='darkblue')
     ax2.axis('off')
     ax2.set_facecolor('#f8f9fa')
     

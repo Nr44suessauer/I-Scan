@@ -7,7 +7,9 @@ SERVO INTERPOLATION VISUALIZATION - SIMPLIFIED VERSION
 Creates simplified visualizations for servo motor interpolation calculations.
 Shows geometry and a table with color-coded reachability.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 2.0
 """
 
@@ -59,8 +61,7 @@ def create_servo_interpolation_visualization():
         cone_center_x = SCANNER_MODULE_X
         cone_center_y = data['y_pos']
         cone_radius = 25  # Visual radius for cone display
-        
-        # Servo cone zeigt in Richtung Target: 1./4. Quadranten (-45° bis +45°)
+          # Servo cone points toward Target: 1st/4th Quadrants (-45° to +45°)
         coord_min = -45.0  # 4th quadrant boundary
         coord_max = 45.0   # 1st quadrant boundary
         
@@ -85,8 +86,7 @@ def create_servo_interpolation_visualization():
         else:
             ax1.plot([cone_center_x, cone_x1], [cone_center_y, cone_y1], 'purple', linewidth=1, alpha=0.6)
             ax1.plot([cone_center_x, cone_x2], [cone_center_y, cone_y2], 'purple', linewidth=1, alpha=0.6)
-        
-        # Fill cone area
+          # Fill cone area
         theta = np.linspace(angle1_rad, angle2_rad, 30)
         cone_x = cone_center_x + cone_radius * np.cos(theta)
         cone_y = cone_center_y + cone_radius * np.sin(theta)
@@ -96,7 +96,6 @@ def create_servo_interpolation_visualization():
     
     ax1.set_xlabel('X Position (cm)', fontweight='bold')
     ax1.set_ylabel('Y Position (cm)', fontweight='bold')
-    ax1.set_title('3D Scanner Servo Interpolation - Geometric Overview', fontweight='bold', fontsize=14)
     ax1.grid(True, alpha=0.3)
     ax1.legend()
     ax1.set_aspect('equal', adjustable='box')
@@ -155,12 +154,7 @@ def create_servo_interpolation_visualization():
         for j, color in enumerate(row_colors):
             table[(i+1, j)].set_facecolor(color)
             table[(i+1, j)].set_height(0.12)
-    
-    ax2.set_title('Servo Reachability Analysis Table', fontweight='bold', fontsize=14, pad=20)
-    
-    # Add overall title
-    fig.suptitle('3D Scanner Servo Interpolation Analysis', fontsize=16, fontweight='bold', y=0.95)
-    
+      
     plt.tight_layout()
     return fig
 
@@ -194,10 +188,11 @@ def create_servo_cone_detail():
     # Draw coordinate system
     ax.axhline(y=0, color='black', linewidth=1, alpha=0.5)
     ax.axvline(x=0, color='black', linewidth=1, alpha=0.5)
-    
-    # Draw servo position
+      # Draw servo position
     servo_x, servo_y = 0, 0
-    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')    # Draw servo cone (zeigt in Richtung Target: 1./4. Quadranten -45° bis +45°)
+    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')
+    
+    # Draw servo cone (points toward Target: 1st/4th Quadrants -45° to +45°)
     cone_radius = 5
     coord_min = -45.0  # 4th quadrant boundary
     coord_max = 45.0   # 1st quadrant boundary
@@ -205,29 +200,27 @@ def create_servo_cone_detail():
     # Convert coordinate angles to radians
     angle1_rad = math.radians(coord_min)  # -45°
     angle2_rad = math.radians(coord_max)  # +45°
-    
-    # Cone boundaries
+      # Cone boundaries
     cone_x1 = servo_x + cone_radius * math.cos(angle1_rad)
     cone_y1 = servo_y + cone_radius * math.sin(angle1_rad)
     cone_x2 = servo_x + cone_radius * math.cos(angle2_rad)
     cone_y2 = servo_y + cone_radius * math.sin(angle2_rad)
     
-    ax.plot([servo_x, cone_x1], [servo_y, cone_y1], 'purple', linewidth=3, label='-45° Limit (4. Quadrant)')
-    ax.plot([servo_x, cone_x2], [servo_y, cone_y2], 'purple', linewidth=3, label='+45° Limit (1. Quadrant)')
+    ax.plot([servo_x, cone_x1], [servo_y, cone_y1], 'purple', linewidth=3, label='-45° Limit (4th Quadrant)')
+    ax.plot([servo_x, cone_x2], [servo_y, cone_y2], 'purple', linewidth=3, label='+45° Limit (1st Quadrant)')
     
-    # Fill cone (1. und 4. Quadrant)
+    # Fill cone (1st and 4th Quadrant)
     theta = np.linspace(angle1_rad, angle2_rad, 50)
     cone_x = servo_x + cone_radius * np.cos(theta)
     cone_y = servo_y + cone_radius * np.sin(theta)
     cone_x = np.append([servo_x], cone_x)
     cone_y = np.append([servo_y], cone_y)
-    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone (Target-Richtung)')
-    
-    # Draw neutral position (0° = positive X-axis, Target-Richtung)
-    neutral_rad = math.radians(0)  # Positive X-Achse = 0° (Servo 45° position)
+    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone (Target Direction)')
+      # Draw neutral position (0° = positive X-axis, Target Direction)
+    neutral_rad = math.radians(0)  # Positive X-Axis = 0° (Servo 45° position)
     neutral_x = servo_x + cone_radius * 0.7 * math.cos(neutral_rad)
     neutral_y = servo_y + cone_radius * 0.7 * math.sin(neutral_rad)
-    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label='Neutral Position (0°, Target-Richtung)')
+    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label='Neutral Position (0°, Target Direction)')
     
     # Add angle annotations
     ax.annotate('-45°', xy=(cone_x1, cone_y1), xytext=(cone_x1+0.5, cone_y1-0.5),
@@ -236,8 +229,7 @@ def create_servo_cone_detail():
                 fontsize=12, fontweight='bold', color='purple')
     ax.annotate('0°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
                 fontsize=12, fontweight='bold', color='orange')
-    
-    # Add coordinate system labels
+      # Add coordinate system labels
     ax.text(6, 0.2, '+X', fontsize=12, fontweight='bold')
     ax.text(0.2, 6, '+Y', fontsize=12, fontweight='bold')
     
@@ -245,7 +237,6 @@ def create_servo_cone_detail():
     ax.set_ylim(-6, 6)
     ax.set_xlabel('X Coordinate', fontweight='bold')
     ax.set_ylabel('Y Coordinate', fontweight='bold')
-    ax.set_title('Servo Motor Cone Concept\n(Zeigt in Richtung Target: -45° bis +45°)', fontweight='bold', fontsize=14)
     ax.grid(True, alpha=0.3)
     ax.legend()
     ax.set_aspect('equal')

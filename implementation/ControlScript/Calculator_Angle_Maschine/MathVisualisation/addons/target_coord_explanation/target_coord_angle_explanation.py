@@ -12,7 +12,9 @@ for the 3D Scanner Servo System with extended student-friendly explanations.
 This is an optional add-on feature that provides detailed educational
 explanations. It is not part of the core functionality (01-07).
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 1.0 (Add-on)
 """
 

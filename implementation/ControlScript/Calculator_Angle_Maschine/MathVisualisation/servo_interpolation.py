@@ -12,7 +12,9 @@ Servo Configuration:
 - At 45°: perpendicular to Y-axis, parallel to X-axis
 - Coordinate system range: -135° to -45° (rotated by 225° total)
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 1.0 (Servo interpolation implementation - corrected 180° rotation)
 """
 

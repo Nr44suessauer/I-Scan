@@ -7,7 +7,9 @@ GEOMETRIC VISUALIZATION MODULE
 Creates geometric representation visualization of the 3D scanner system.
 Shows the scanner path, target position, and measurement points.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 """
 
@@ -28,13 +30,10 @@ def create_geometric_visualization(angles_data):
     """
     fig = plt.figure(figsize=(16, 12))
     fig.patch.set_facecolor('white')
-    fig.suptitle('GEOMETRIC REPRESENTATION OF 3D SCANNER SYSTEM', 
-                 fontsize=16, fontweight='bold', y=0.95, color='navy')
     
     ax = plt.subplot(1, 1, 1)
-    ax.set_title('Scanner Movement Path and Target Positioning', 
-                 fontsize=12, fontweight='bold', pad=20, color='darkblue')
-      # Setup axes - dynamically adapt to SCAN_DISTANCE and target position
+    
+    # Setup axes - dynamically adapt to SCAN_DISTANCE and target position
     max_x = max(TARGET_CENTER_X + 20, 90)  # Ensure target is visible with margin
     max_y = max(SCAN_DISTANCE + 10, TARGET_CENTER_Y + 20)  # Adapt to scan distance
     

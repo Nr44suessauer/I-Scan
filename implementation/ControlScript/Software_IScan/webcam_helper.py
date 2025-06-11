@@ -1,6 +1,12 @@
 """
-Webcam-Helper-Modul
-Bietet Funktionen zur Steuerung und Anzeige eines Webcam-Streams
+WEBCAM HELPER MODULE
+====================
+Provides functions for controlling and displaying a webcam stream.
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
+Version: 1.0
 """
 import os
 import cv2

@@ -7,7 +7,9 @@ ANGLE PROGRESSION VISUALIZATION MODULE
 Creates angle progression visualization showing how geometric angles change
 across measurement points.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 3.0 (Pure geometry implementation)
 """
 
@@ -22,16 +24,11 @@ def create_angle_progression_visualization(angles_data):
     across scanner movement points.
     
     Args:
-        angles_data: List of angle calculation dictionaries
-    """
+        angles_data: List of angle calculation dictionaries    """
     fig = plt.figure(figsize=(14, 10))
     fig.patch.set_facecolor('white')
-    fig.suptitle('GEOMETRIC ANGLE PROGRESSION ACROSS MEASUREMENT POINTS', 
-                 fontsize=16, fontweight='bold', y=0.95, color='navy')
     
     ax = plt.subplot(1, 1, 1)
-    ax.set_title('Pure Geometric Angles Along Scan Path', 
-                 fontsize=12, fontweight='bold', pad=20, color='darkblue')
     
     # Extract data
     y_positions = [data['y_pos'] for data in angles_data]

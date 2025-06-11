@@ -2,6 +2,10 @@
 
 The complete I-Scan hardware control application with GUI interface for 3D scanning operations. This application provides comprehensive control over all scanner hardware components through a user-friendly interface.
 
+**Author:** Marc Nauendorf  
+**Email:** marc.nauendorf@hs-heilbronn.de  
+**Website:** deadlinedriven.dev
+
 ## Core Application - `main.py`
 
 ### Primary Features

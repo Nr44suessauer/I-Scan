@@ -1,6 +1,10 @@
 """
 API-Client-Modul
 Verwaltet die HTTP-Requests an die API-Endpunkte
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 """
 import requests
 import time

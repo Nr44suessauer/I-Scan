@@ -7,7 +7,9 @@ CALCULATION TABLE VISUALIZATION MODULE
 Creates calculation table visualization showing all measurement point 
 calculations in a structured table format.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 """
 
@@ -22,13 +24,11 @@ def create_calculation_table_visualization(angles_data):
     """
     fig = plt.figure(figsize=(16, 10))
     fig.patch.set_facecolor('white')
-    fig.suptitle('COMPLETE CALCULATION TABLE', 
-                 fontsize=16, fontweight='bold', y=0.95, color='navy')
     
     ax = plt.subplot(1, 1, 1)
-    ax.set_title('Summary of All Measurement Point Calculations', 
-                 fontsize=12, fontweight='bold', pad=20, color='darkblue')
-    ax.axis('off')    # Prepare table data for pure geometric angles
+    ax.axis('off')
+    
+    # Prepare table data for pure geometric angles
     table_data = []
     headers = ['Point', 'Y-Position\n(cm)', 'dx\n(cm)', 'dy\n(cm)', 
                'Angle°\n(to Y-axis)', 'Distance\n(cm)']

@@ -1,6 +1,10 @@
 """
 Gerätesteuerungs-Modul
 Bietet Klassen und Methoden zur Steuerung verschiedener Hardware-Geräte
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 """
 from api_client import ApiClient
 from servo_angle_calculator import ServoAngleCalculator

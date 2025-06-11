@@ -7,7 +7,9 @@ CONFIGURATION MODULE FOR GEOMETRIC ANGLE CALCULATION
 Contains all configuration constants used across the 3D scanner geometric angle calculation system.
 Pure geometric calculations without servo interpolation.
 
-Author: I-Scan Team
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 Version: 3.0 (Pure geometry - no servo interpolation)
 """
 
@@ -17,12 +19,12 @@ import shutil
 
 # === 3D SCANNER CONFIGURATION ===
 # Pure geometric configuration
-TARGET_CENTER_X = 33      # X-position of target object (cm)
+TARGET_CENTER_X = 50      # X-position of target object (cm)
 TARGET_CENTER_Y = 50      # Y-position of target object (cm)
 SCANNER_MODULE_X = 0      # X-position of scanner (cm)
 SCANNER_MODULE_Y = 0      # Y-position of scanner (cm)
-SCAN_DISTANCE = 80       # Total scan distance (cm)
-NUMBER_OF_MEASUREMENTS = 7 # Number of measurement points
+SCAN_DISTANCE = 100       # Total scan distance (cm)
+NUMBER_OF_MEASUREMENTS = 10 # Number of measurement points
 
 # === SERVO MOTOR CONFIGURATION ===
 # Servo interpolation parameters for 3D scanner
@@ -46,7 +48,6 @@ ENABLE_VISUALIZATIONS = {
     # CORE FEATURES (01-07) - Main functionality
     'geometric_representation': True,    # 01_geometric_representation.png
     'angle_progression': True,          # 02_angle_progression.png  
-    # 'trigonometry_formulas': False,      # 03_trigonometry_formulas.png (DELETED)
     'point_calculations': True,         # 04_point_X_calculation.png (all points)
     'calculation_table': True,          # 05_calculation_table.png
     'servo_interpolation': True,        # 06_servo_interpolation.png

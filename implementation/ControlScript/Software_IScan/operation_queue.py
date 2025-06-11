@@ -1,6 +1,10 @@
 """
 Operations-Queue-Modul
 Verwaltet die Operationswarteschlange
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 """
 import time
 import threading

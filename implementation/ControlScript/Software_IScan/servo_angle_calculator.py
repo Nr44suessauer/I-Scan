@@ -1,7 +1,13 @@
 """
-Servo-Winkel-Rechner-Modul
-Berechnet den erforderlichen Servo-Winkel basierend auf der aktuellen Y-Position
-im Koordinatensystem für den I-Scan-Aufbau.
+SERVO ANGLE CALCULATOR MODULE
+=============================
+Calculates the required servo angle based on the current Y-position
+in the coordinate system for the I-Scan setup.
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
+Version: 1.0
 """
 import math
 

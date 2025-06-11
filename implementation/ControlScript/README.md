@@ -2,6 +2,10 @@
 
 Clean, modern servo angle calculation system for the I-Scan 3D scanner.
 
+**Author:** Marc Nauendorf  
+**Email:** marc.nauendorf@hs-heilbronn.de  
+**Website:** deadlinedriven.dev
+
 ## 🎯 System Overview
 
 The I-Scan system has been streamlined to use **linear interpolation** between 90°-0° instead of the old trigonometric correction system. This provides better predictability and easier calibration.

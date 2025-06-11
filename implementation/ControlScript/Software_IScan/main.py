@@ -3,6 +3,10 @@ IScan-ControlScript - Hauptprogramm
 Eine GUI-Anwendung zur Steuerung von Hardware über eine API-Schnittstelle.
 Diese Anwendung stellt eine Benutzeroberfläche bereit, um mit Hardware-Komponenten
 wie Servomotoren, Schrittmotoren, LED-Leuchten und Buttons über eine REST-API zu interagieren.
+
+Author: Marc Nauendorf
+Email: marc.nauendorf@hs-heilbronn.de
+Website: deadlinedriven.dev
 """
 import os
 import csv
