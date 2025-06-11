@@ -17,11 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import os
-from config import (
-    TARGET_CENTER_X, TARGET_CENTER_Y, 
-    SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    SCAN_DISTANCE, OUTPUT_DIR, ensure_output_dir
-)
+import config
 
 
 def create_geometric_visualization(angles_data):
@@ -33,9 +29,9 @@ def create_geometric_visualization(angles_data):
     
     ax = plt.subplot(1, 1, 1)
     
-    # Setup axes - dynamically adapt to SCAN_DISTANCE and target position
-    max_x = max(TARGET_CENTER_X + 20, 90)  # Ensure target is visible with margin
-    max_y = max(SCAN_DISTANCE + 10, TARGET_CENTER_Y + 20)  # Adapt to scan distance
+    # Setup axes - dynamically adapt to config.SCAN_DISTANCE and target position
+    max_x = max(config.TARGET_CENTER_X + 20, 90)  # Ensure target is visible with margin
+    max_y = max(config.SCAN_DISTANCE + 10, config.TARGET_CENTER_Y + 20)  # Adapt to scan distance
     
     ax.set_xlim(-25, max_x)
     ax.set_ylim(-15, max_y)
@@ -50,14 +46,14 @@ def create_geometric_visualization(angles_data):
     ax.axvline(x=0, color='black', linewidth=1.5, alpha=0.8)
     
     # Scanner path
-    scan_y = np.linspace(0, SCAN_DISTANCE, 100)
-    ax.plot([SCANNER_MODULE_X] * len(scan_y), scan_y, 'g-', 
+    scan_y = np.linspace(0, config.SCAN_DISTANCE, 100)
+    ax.plot([config.SCANNER_MODULE_X] * len(scan_y), scan_y, 'g-', 
             linewidth=8, alpha=0.6, label='Scanner Movement Path', solid_capstyle='round')
     
     # Target object
-    ax.plot(TARGET_CENTER_X, TARGET_CENTER_Y, 'bs', markersize=16, 
+    ax.plot(config.TARGET_CENTER_X, config.TARGET_CENTER_Y, 'bs', markersize=16, 
             markeredgewidth=3, markeredgecolor='navy', zorder=10)
-    ax.text(TARGET_CENTER_X + 5, TARGET_CENTER_Y - 3, f'TARGET OBJECT\n({TARGET_CENTER_X}, {TARGET_CENTER_Y}) cm', 
+    ax.text(config.TARGET_CENTER_X + 5, config.TARGET_CENTER_Y - 3, f'TARGET OBJECT\n({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm', 
             ha='left', va='top', fontsize=9, fontweight='bold',
             bbox=dict(boxstyle="round,pad=0.4", facecolor="lightblue", 
                      edgecolor='navy', linewidth=1.5, alpha=0.95))
@@ -70,7 +66,7 @@ def create_geometric_visualization(angles_data):
         edge_color = 'darkgreen'
         
         # Measurement point
-        ax.plot(SCANNER_MODULE_X, y_pos, 'o', color=point_color, markersize=14, 
+        ax.plot(config.SCANNER_MODULE_X, y_pos, 'o', color=point_color, markersize=14, 
                 markeredgewidth=3, markeredgecolor=edge_color, zorder=15)
           # Connection line to target using ONLY exact trigonometric angle
         # (Physical servo uses interpolated angle, but visualization shows exact geometry)
@@ -79,7 +75,7 @@ def create_geometric_visualization(angles_data):
         geometric_angle_rad = math.radians(data['angle'])
         dx_exact = line_length * math.sin(geometric_angle_rad)
         dy_exact = line_length * math.cos(geometric_angle_rad)
-        ax.plot([SCANNER_MODULE_X, SCANNER_MODULE_X + dx_exact], 
+        ax.plot([config.SCANNER_MODULE_X, config.SCANNER_MODULE_X + dx_exact], 
                 [y_pos, y_pos + dy_exact], 
                 '-', color='darkblue', linewidth=3, alpha=0.8,                label='Geometric Direction' if i == 0 else "")
         
@@ -88,7 +84,7 @@ def create_geometric_visualization(angles_data):
                     f'Angle: {data["angle"]:.1f}°\n' \
                     f'Distance: {data["hypotenuse"]:.1f}cm'
         
-        ax.text(SCANNER_MODULE_X - 12, y_pos, label_text,
+        ax.text(config.SCANNER_MODULE_X - 12, y_pos, label_text,
                 ha='right', va='center', fontsize=8, fontweight='bold',
                 bbox=dict(boxstyle="round,pad=0.3", facecolor=point_color,                         edgecolor=edge_color, linewidth=1, alpha=0.8))
 
@@ -96,8 +92,8 @@ def create_geometric_visualization(angles_data):
               fancybox=True, shadow=True, framealpha=0.9)
     
     plt.tight_layout()
-    ensure_output_dir()
-    output_path = os.path.join(OUTPUT_DIR, '01_geometric_representation.png')
+    config.ensure_output_dir()
+    output_path = os.path.join(config.OUTPUT_DIR, '01_geometric_representation.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none', pad_inches=0.2)
     print(f"📊 Geometric visualization saved: {output_path}")

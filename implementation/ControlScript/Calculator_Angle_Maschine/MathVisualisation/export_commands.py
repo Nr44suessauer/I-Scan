@@ -16,7 +16,7 @@ import os
 import json
 import math
 from datetime import datetime
-from config import OUTPUT_DIR, SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS
+import config
 from servo_interpolation import calculate_servo_interpolation
 
 
@@ -27,16 +27,16 @@ def create_command_csv():
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"iscan_commands_{timestamp}.csv"
-    filepath = os.path.join(OUTPUT_DIR, filename)
+    filepath = os.path.join(config.OUTPUT_DIR, filename)
     
     # Ensure output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(config.OUTPUT_DIR, exist_ok=True)
     
     # Get servo data
     servo_data = calculate_servo_interpolation()
     
-    # Calculate stepper distance
-    stepper_distance_cm = SCAN_DISTANCE / (NUMBER_OF_MEASUREMENTS - 1)
+    # Calculate stepper distance using current config values
+    stepper_distance_cm = config.SCAN_DISTANCE / (config.NUMBER_OF_MEASUREMENTS - 1)
     
     # Prepare commands
     commands = []

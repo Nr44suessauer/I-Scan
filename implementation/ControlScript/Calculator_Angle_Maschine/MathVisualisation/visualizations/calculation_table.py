@@ -15,13 +15,10 @@ Version: 2.0 (Modular split from complete_servo_angle_explanation.py)
 
 import matplotlib.pyplot as plt
 import os
-from config import OUTPUT_DIR, ensure_output_dir
+import config
 
 
 def create_calculation_table_visualization(angles_data):
-    """
-    Creates calculation table visualization
-    """
     fig = plt.figure(figsize=(16, 10))
     fig.patch.set_facecolor('white')
     
@@ -70,8 +67,8 @@ def create_calculation_table_visualization(angles_data):
             table[(i, j)].set_height(0.20)
     
     plt.tight_layout()
-    ensure_output_dir()
-    output_path = os.path.join(OUTPUT_DIR, '05_calculation_table.png')
+    config.ensure_output_dir()
+    output_path = os.path.join(config.OUTPUT_DIR, '05_calculation_table.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none', pad_inches=0.2)
     print(f"📊 Calculation table visualization saved: {output_path}")

@@ -81,6 +81,7 @@ Compact mathematics engine for 3D scanner servo control with visualizations.
 🧮 main_math_csv()           ← NEW: Mathematics + CSV Only (No visualizations)
 🤫 main_math_silent()        ← NEW: Silent Math + CSV (Minimal output)
 ❓ show_help()               ← NEW: Command line usage help
+⚙️  Configuration Override  ← NEW: Command line parameter override system
 
 Command Line Interface:
 python main.py              ← Standard full analysis
@@ -88,6 +89,11 @@ python main.py --csv/-c     ← Full analysis + CSV export
 python main.py --math/-m    ← Math + CSV only (fast)
 python main.py --silent/-s  ← Silent mode (automation)
 python main.py --help/-h    ← Usage help
+
+Configuration Override System:
+python main.py --target-x 33 --target-y 50 --scan-distance 80 --measurements 7  ← Original I-Scan Setup
+python main.py --target-x 100 --target-y 75 --measurements 5                     ← Custom Configuration
+python main.py --servo-min 10 --servo-max 80 --servo-neutral 45                  ← Servo Parameters
 ```
 
 ## 📊 Visualization Pipeline
@@ -228,12 +234,75 @@ python main.py -s
 ```
 **Output:** CSV file only with minimal console output (fastest execution for automation)
 
+### Custom Configuration Parameters
+```bash
+# Original I-Scan setup recreation
+python main.py --target-x 33 --target-y 50 --scan-distance 80 --measurements 7
+
+# Custom target position with math mode
+python main.py --math --target-x 100 --target-y 75 --measurements 5
+
+# Custom servo parameters
+python main.py --silent --servo-min 10 --servo-max 80 --servo-neutral 45
+
+# Combined custom parameters
+python main.py --target-x 33 --target-y 50 --scan-distance 80 --measurements 7 --servo-neutral 45
+```
+
 ### Help
 ```bash
 python main.py --help
 # or short version:
 python main.py -h
 ```
+
+## 🎯 Available Configuration Parameters
+
+The command-line interface allows you to override default configuration values dynamically:
+
+### Scan Parameters
+- `--target-x X`: Target X coordinate (default: 50.0)
+- `--target-y Y`: Target Y coordinate (default: 50.0)  
+- `--scanner-x X`: Scanner X coordinate (default: 0.0)
+- `--scanner-y Y`: Scanner Y coordinate (default: 0.0)
+- `--scan-distance D`: Maximum scan distance (default: 70.71)
+- `--measurements N`: Number of measurements (default: 6)
+
+### Servo Parameters
+- `--servo-min ANGLE`: Minimum servo angle in degrees (default: 0.0)
+- `--servo-max ANGLE`: Maximum servo angle in degrees (default: 90.0)
+- `--servo-neutral ANGLE`: Neutral servo angle in degrees (default: 45.0)
+- `--servo-offset ANGLE`: Servo rotation offset (default: same as neutral)
+
+### Real-World Examples
+
+#### Original I-Scan Setup Recreation
+```bash
+python main.py --target-x 33 --target-y 50 --scan-distance 80 --measurements 7
+```
+This recreates the exact setup from the original I-Scan project with:
+- Target at (33, 50) mm
+- Maximum scan distance of 80 mm  
+- 7 measurement points
+- Results in angles: -135°, -120°, -105°, -90°, -75°, -60°, -45°
+
+#### Custom Servo Range
+```bash
+python main.py --math --servo-min 10 --servo-max 80 --servo-neutral 45
+```
+This uses a custom servo with:
+- Range: 10° to 80° (instead of 0° to 90°)
+- Neutral position at 45°
+- Coordinate system automatically recalculated
+
+#### Quick Custom Scan
+```bash
+python main.py --silent --target-x 100 --target-y 75 --measurements 5
+```
+Fast execution with:
+- Target at (100, 75) mm
+- 5 measurement points
+- Silent mode (CSV only)
 
 ### Advanced Usage (Python API)
 ```python

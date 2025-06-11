@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 SERVO INTERPOLATION VISUALIZATION - SIMPLIFIED VERSION
@@ -16,16 +16,8 @@ Version: 2.0
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from config import (
-    TARGET_CENTER_X, TARGET_CENTER_Y,
-    SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    ensure_output_dir
-)
-from servo_interpolation import (
-    calculate_servo_interpolation,
-    SERVO_NEUTRAL_ANGLE, COORD_MIN_ANGLE, COORD_MAX_ANGLE, COORD_NEUTRAL_ANGLE,
-    SERVO_MIN_ANGLE, SERVO_MAX_ANGLE
-)
+import config
+from servo_interpolation import calculate_servo_interpolation
 
 
 def create_servo_interpolation_visualization():
@@ -43,22 +35,22 @@ def create_servo_interpolation_visualization():
     
     # Plot scanner path
     y_positions = [data['y_pos'] for data in servo_data]
-    x_positions = [SCANNER_MODULE_X for _ in servo_data]
+    x_positions = [config.SCANNER_MODULE_X for _ in servo_data]
     
     ax1.plot(x_positions, y_positions, 'b-', linewidth=3, label='Scanner Path', marker='o', markersize=8)
     
     # Plot target
-    ax1.plot(TARGET_CENTER_X, TARGET_CENTER_Y, 'ro', markersize=12, label='Target Object')
+    ax1.plot(config.TARGET_CENTER_X, config.TARGET_CENTER_Y, 'ro', markersize=12, label='Target Object')
     
     # Plot lines from each scanner position to target
     for data in servo_data:
         color = 'green' if data['is_reachable'] else 'red'
         linestyle = '-' if data['is_reachable'] else '--'
-        ax1.plot([SCANNER_MODULE_X, TARGET_CENTER_X], 
-                [data['y_pos'], TARGET_CENTER_Y], 
+        ax1.plot([config.SCANNER_MODULE_X, config.TARGET_CENTER_X], 
+                [data['y_pos'], config.TARGET_CENTER_Y], 
                 color=color, linestyle=linestyle, alpha=0.7, linewidth=1)    # Draw servo cones from all positions (zeigen in Richtung Target Object)
     for i, data in enumerate(servo_data):
-        cone_center_x = SCANNER_MODULE_X
+        cone_center_x = config.SCANNER_MODULE_X
         cone_center_y = data['y_pos']
         cone_radius = 25  # Visual radius for cone display
           # Servo cone points toward Target: 1st/4th Quadrants (-45° to +45°)
@@ -163,7 +155,7 @@ def save_servo_interpolation_visualization():
     """
     Create and save the servo interpolation visualization
     """
-    ensure_output_dir()
+    config.ensure_output_dir()
     
     print("🎨 Creating servo interpolation visualization...")
     
@@ -248,7 +240,7 @@ def save_servo_cone_detail():
     """
     Create and save the detailed servo cone visualization
     """
-    ensure_output_dir()
+    config.ensure_output_dir()
     
     print("🎨 Creating servo cone detail visualization...")
     
@@ -268,3 +260,5 @@ if __name__ == "__main__":
     """Run servo interpolation visualizations when executed directly"""
     save_servo_interpolation_visualization()
     save_servo_cone_detail()
+
+

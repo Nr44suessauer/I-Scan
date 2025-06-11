@@ -1,0 +1,16 @@
+type,params,description
+home,{},Execute home function
+servo,"{""angle"": 66}",Point 1: Set servo to 66° (Y=0.0cm)
+photo,"{""delay"": 2.0}",Point 1: Capture photo
+stepper,"{""steps"": 5821, ""direction"": 1, ""speed"": 80}",Move 12.50cm forward (5821 steps)
+servo,"{""angle"": 56}",Point 2: Set servo to 56° (Y=12.5cm)
+photo,"{""delay"": 2.0}",Point 2: Capture photo
+stepper,"{""steps"": 5821, ""direction"": 1, ""speed"": 80}",Move 12.50cm forward (5821 steps)
+servo,"{""angle"": 45}",Point 3: Set servo to 45° (Y=25.0cm)
+photo,"{""delay"": 2.0}",Point 3: Capture photo
+stepper,"{""steps"": 5821, ""direction"": 1, ""speed"": 80}",Move 12.50cm forward (5821 steps)
+servo,"{""angle"": 34}",Point 4: Set servo to 34° (Y=37.5cm)
+photo,"{""delay"": 2.0}",Point 4: Capture photo
+stepper,"{""steps"": 5821, ""direction"": 1, ""speed"": 80}",Move 12.50cm forward (5821 steps)
+servo,"{""angle"": 24}",Point 5: Set servo to 24° (Y=50.0cm)
+photo,"{""delay"": 2.0}",Point 5: Capture photo

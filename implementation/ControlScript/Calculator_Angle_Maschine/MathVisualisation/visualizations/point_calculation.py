@@ -17,11 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import math
 import os
-from config import (
-    TARGET_CENTER_X, TARGET_CENTER_Y, 
-    SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    OUTPUT_DIR, POINT_CALCULATIONS_SUBDIR, ensure_output_dir
-)
+import config
 
 
 def create_point_calculation_visualization(point_data, point_number):
@@ -48,27 +44,27 @@ def create_point_calculation_visualization(point_data, point_number):
     ax1.axvline(x=0, color='black', linewidth=1.5, alpha=0.8)
     
     # Scanner position (current point)
-    ax1.plot(SCANNER_MODULE_X, point_data['y_pos'], 'ro', markersize=15, 
+    ax1.plot(config.SCANNER_MODULE_X, point_data['y_pos'], 'ro', markersize=15, 
              markeredgewidth=3, markeredgecolor='darkred', zorder=10,
              label=f'Scanner at Point {point_number}')
     
     # Target position
-    ax1.add_patch(patches.Rectangle((TARGET_CENTER_X-2, TARGET_CENTER_Y-2), 4, 4, 
+    ax1.add_patch(patches.Rectangle((config.TARGET_CENTER_X-2, config.TARGET_CENTER_Y-2), 4, 4, 
                       facecolor='blue', edgecolor='darkblue', linewidth=2, alpha=0.8))
-    ax1.text(TARGET_CENTER_X + 5, TARGET_CENTER_Y, f'TARGET\n({TARGET_CENTER_X}, {TARGET_CENTER_Y})', 
+    ax1.text(config.TARGET_CENTER_X + 5, config.TARGET_CENTER_Y, f'TARGET\n({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y})', 
              ha='left', va='center', fontsize=9, fontweight='bold',
              bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", 
                       edgecolor='blue', linewidth=2, alpha=0.9))
     
     # Triangle visualization
-    ax1.add_patch(patches.Circle((SCANNER_MODULE_X, point_data['y_pos']), 1.5, 
+    ax1.add_patch(patches.Circle((config.SCANNER_MODULE_X, point_data['y_pos']), 1.5, 
                       facecolor='red', edgecolor='red', linewidth=2, alpha=0.9))    # Connection line using geometric angle
-    ax1.plot([SCANNER_MODULE_X, TARGET_CENTER_X], [point_data['y_pos'], TARGET_CENTER_Y], 
+    ax1.plot([config.SCANNER_MODULE_X, config.TARGET_CENTER_X], [point_data['y_pos'], config.TARGET_CENTER_Y], 
              'r--', linewidth=3, alpha=0.8, label=f'Geometric line to target')
     
     # Distance annotations using geometric angle
-    mid_x = (SCANNER_MODULE_X + TARGET_CENTER_X) / 2
-    mid_y = (point_data['y_pos'] + TARGET_CENTER_Y) / 2
+    mid_x = (config.SCANNER_MODULE_X + config.TARGET_CENTER_X) / 2
+    mid_y = (point_data['y_pos'] + config.TARGET_CENTER_Y) / 2
     distance = math.sqrt(point_data['dx']**2 + point_data['dy']**2)
     geometric_angle = point_data['angle']
     ax1.text(mid_x, mid_y, f'{distance:.1f} cm\n(Angle: {geometric_angle:.1f}°)', ha='center', va='bottom', 
@@ -78,16 +74,16 @@ def create_point_calculation_visualization(point_data, point_number):
     
     # dx and dy lines
     if point_data['dx'] > 0:
-        ax1.plot([SCANNER_MODULE_X, TARGET_CENTER_X], [point_data['y_pos'], point_data['y_pos']], 
+        ax1.plot([config.SCANNER_MODULE_X, config.TARGET_CENTER_X], [point_data['y_pos'], point_data['y_pos']], 
                  'green', linewidth=2, alpha=0.7)
         ax1.text(mid_x, point_data['y_pos'] - 5, f'dx = {point_data["dx"]} cm', 
                  ha='center', va='top', fontsize=8, fontweight='bold',
                  bbox=dict(boxstyle="round,pad=0.2", facecolor="lightgreen", alpha=0.7))
     
     if point_data['dy'] > 0:
-        ax1.plot([TARGET_CENTER_X, TARGET_CENTER_X], [point_data['y_pos'], TARGET_CENTER_Y], 
+        ax1.plot([config.TARGET_CENTER_X, config.TARGET_CENTER_X], [point_data['y_pos'], config.TARGET_CENTER_Y], 
                  'purple', linewidth=2, alpha=0.7)
-        ax1.text(TARGET_CENTER_X + 2, (point_data['y_pos'] + TARGET_CENTER_Y)/2, 
+        ax1.text(config.TARGET_CENTER_X + 2, (point_data['y_pos'] + config.TARGET_CENTER_Y)/2, 
                  f'dy = {point_data["dy"]:.1f} cm', ha='left', va='center', fontsize=8, fontweight='bold',
                  bbox=dict(boxstyle="round,pad=0.2", facecolor="purple", alpha=0.7))
     
@@ -101,12 +97,12 @@ def create_point_calculation_visualization(point_data, point_number):
     calculation_text = f"""MEASUREMENT POINT {point_number} CALCULATION:
 
 📍 POSITION DATA:
-• Scanner position: ({SCANNER_MODULE_X}, {point_data['y_pos']:.1f}) cm
-• Target position: ({TARGET_CENTER_X}, {TARGET_CENTER_Y}) cm
+• Scanner position: ({config.SCANNER_MODULE_X}, {point_data['y_pos']:.1f}) cm
+• Target position: ({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm
 
 📏 DISTANCE CALCULATION:
-• dx = {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {point_data['dx']} cm
-• dy = |{point_data['y_pos']:.1f} - {TARGET_CENTER_Y}| = {point_data['dy']:.1f} cm
+• dx = {config.TARGET_CENTER_X} - {config.SCANNER_MODULE_X} = {point_data['dx']} cm
+• dy = |{point_data['y_pos']:.1f} - {config.TARGET_CENTER_Y}| = {point_data['dy']:.1f} cm
 • Distance = √(dx² + dy²) = √({point_data['dx']}² + {point_data['dy']:.1f}²) = {math.sqrt(point_data['dx']**2 + point_data['dy']**2):.1f} cm
 
 🧮 TRIGONOMETRIC CALCULATION (Pure Geometry):
@@ -126,9 +122,9 @@ def create_point_calculation_visualization(point_data, point_number):
                      edgecolor='teal', linewidth=2, alpha=0.95))
     
     plt.tight_layout()
-    ensure_output_dir()
-    output_path = os.path.join(OUTPUT_DIR, POINT_CALCULATIONS_SUBDIR, f'04_point_{point_number}_calculation.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', 
+    config.ensure_output_dir()
+    output_path = os.path.join(config.OUTPUT_DIR, config.POINT_CALCULATIONS_SUBDIR, f'04_point_{point_number}_calculation.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight',
                 facecolor='white', edgecolor='none', pad_inches=0.2)
     print(f"📊 Point {point_number} calculation visualization saved: {output_path}")
     plt.close()

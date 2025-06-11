@@ -295,17 +295,143 @@ def show_help():
     print("  --silent, -s   Silent math + CSV (minimal output)")
     print("  --help, -h     Show this help")
     print()
+    print("CONFIGURATION OPTIONS:")
+    print("  --target-x VALUE       Set target X position (cm) [default: 50]")
+    print("  --target-y VALUE       Set target Y position (cm) [default: 50]")
+    print("  --scanner-x VALUE      Set scanner X position (cm) [default: 0]")
+    print("  --scanner-y VALUE      Set scanner Y position (cm) [default: 0]")
+    print("  --scan-distance VALUE  Set scan distance (cm) [default: 100]")
+    print("  --measurements VALUE   Set number of measurements [default: 10]")
+    print("  --servo-min VALUE      Set servo minimum angle (°) [default: 0.0]")
+    print("  --servo-max VALUE      Set servo maximum angle (°) [default: 90.0]")
+    print("  --servo-neutral VALUE  Set servo neutral angle (°) [default: 45.0]")
+    print("  --servo-offset VALUE   Set servo rotation offset (°) [default: 45.0]")
+    print()
     print("EXAMPLES:")
-    print("  python main.py              # Standard full analysis")
-    print("  python main.py --csv        # Full analysis + CSV")
-    print("  python main.py --math       # Math + CSV only")
-    print("  python main.py --silent     # Silent mode")
+    print("  python main.py --csv")
+    print("  python main.py --silent --target-x 100 --target-y 75")
+    print("  python main.py --math --servo-min 10 --servo-max 80")
+    print("  python main.py --csv --scan-distance 80 --measurements 7")
     print()
     print("OUTPUT:")
     print("  📁 output/")
     print("  ├─ 01-07.png (visualizations, if enabled)")
     print("  ├─ iscan_commands_*.csv (CSV export)")
     print("  └─ point_calculations/ (detail visualizations)")
+
+
+def parse_config_args(args):
+    """Parse configuration arguments and return updated config dict"""
+    config_updates = {}
+    
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        
+        # Configuration parameters that need values
+        config_params = {
+            '--target-x': 'TARGET_CENTER_X',
+            '--target-y': 'TARGET_CENTER_Y', 
+            '--scanner-x': 'SCANNER_MODULE_X',
+            '--scanner-y': 'SCANNER_MODULE_Y',
+            '--scan-distance': 'SCAN_DISTANCE',
+            '--measurements': 'NUMBER_OF_MEASUREMENTS',
+            '--servo-min': 'SERVO_MIN_ANGLE',
+            '--servo-max': 'SERVO_MAX_ANGLE',
+            '--servo-neutral': 'SERVO_NEUTRAL_ANGLE',
+            '--servo-offset': 'SERVO_ROTATION_OFFSET'
+        }
+        
+        if arg in config_params:
+            if i + 1 < len(args):
+                try:
+                    value = float(args[i + 1])
+                    # NUMBER_OF_MEASUREMENTS should be int
+                    if config_params[arg] == 'NUMBER_OF_MEASUREMENTS':
+                        value = int(value)
+                    config_updates[config_params[arg]] = value
+                    i += 2  # Skip the value argument
+                except ValueError:
+                    print(f"⚠️ Invalid value for {arg}: {args[i + 1]}")
+                    i += 1
+            else:
+                print(f"⚠️ Missing value for {arg}")
+                i += 1
+        else:
+            i += 1
+    
+    return config_updates
+
+
+def apply_config_overrides(config_updates):
+    """Apply configuration overrides to the config module"""
+    import config
+    
+    # Update basic configuration values
+    for key, value in config_updates.items():
+        if hasattr(config, key):
+            old_value = getattr(config, key)
+            setattr(config, key, value)
+            print(f"🔧 Config override: {key} = {value} (was {old_value})")
+    
+    # Recalculate derived servo values if any servo parameters changed
+    servo_params = ['SERVO_MIN_ANGLE', 'SERVO_MAX_ANGLE', 'SERVO_NEUTRAL_ANGLE', 'SERVO_ROTATION_OFFSET']
+    if any(param in config_updates for param in servo_params):
+        print("🔄 Recalculating derived servo coordinate values...")
+        
+        # Recalculate derived values
+        config.COORD_MAX_ANGLE = config._normalize_angle(
+            config.SERVO_MIN_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
+        )
+        config.COORD_MIN_ANGLE = config._normalize_angle(
+            config.SERVO_MAX_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
+        )
+        config.COORD_NEUTRAL_ANGLE = config._normalize_angle(
+            config.SERVO_NEUTRAL_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
+        )
+        
+        print(f"   COORD_MAX_ANGLE = {config.COORD_MAX_ANGLE}°")
+        print(f"   COORD_MIN_ANGLE = {config.COORD_MIN_ANGLE}°")
+        print(f"   COORD_NEUTRAL_ANGLE = {config.COORD_NEUTRAL_ANGLE}°")
+
+
+def create_csv_with_config(config_updates=None):
+    """Create CSV with optional configuration overrides"""
+    if config_updates:
+        apply_config_overrides(config_updates)
+    
+    # Import after potential config changes
+    from export_commands import create_command_csv
+    
+    print("📤 CREATING SOFTWARE_ISCAN CSV WITH CUSTOM CONFIGURATION...")
+    create_command_csv()
+
+
+def main_with_config_support(create_csv=False, config_updates=None):
+    """Main function with configuration override support"""
+    if config_updates:
+        apply_config_overrides(config_updates)
+    
+    # Run standard main function
+    main(create_csv=create_csv)
+
+
+def main_math_csv_with_config(config_updates=None):
+    """Mathematics and CSV only with configuration override support"""
+    if config_updates:
+        apply_config_overrides(config_updates)
+    
+    # Run math-only mode
+    main_math_csv()
+
+
+def main_math_silent_with_config(config_updates=None):
+    """Silent mathematics and CSV with configuration override support"""
+    if config_updates:
+        apply_config_overrides(config_updates)
+    
+    # Run silent mode
+    main_math_silent()
 
 if __name__ == "__main__":
     import sys
@@ -319,19 +445,33 @@ if __name__ == "__main__":
     silent = "--silent" in args or "-s" in args
     show_help_flag = "--help" in args or "-h" in args
     
+    # Parse configuration overrides
+    config_updates = parse_config_args(args)
+    
+    # Show current configuration if overrides are provided
+    if config_updates:
+        print("🔧 CONFIGURATION OVERRIDES DETECTED:")
+        for key, value in config_updates.items():
+            print(f"   {key} = {value}")
+        print()
+    
     # Execute based on flags (priority order: help -> silent -> math -> csv -> standard)
     if show_help_flag:
         # Show command line usage help
         show_help()
     elif silent:
         # Silent mathematics and CSV only (minimal output)
-        main_math_silent()
+        main_math_silent_with_config(config_updates)
     elif math_only:
         # Mathematics and CSV only mode (no visualizations)
-        main_math_csv()
+        main_math_csv_with_config(config_updates)
     elif create_csv:
         # Full mode with CSV export
-        main(create_csv=True)
+        main_with_config_support(create_csv=True, config_updates=config_updates)
+    elif config_updates:
+        # If only config updates provided without other flags, create CSV
+        print("🎯 Configuration override mode: Creating CSV with custom settings")
+        create_csv_with_config(config_updates)
     else:
         # Standard full mode (visualizations only)
         main(create_csv=False)

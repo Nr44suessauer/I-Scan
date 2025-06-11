@@ -15,16 +15,10 @@ Version: 3.0 (Pure geometry implementation)
 
 import matplotlib.pyplot as plt
 import os
-from config import OUTPUT_DIR, ensure_output_dir
+import config
 
 
 def create_angle_progression_visualization(angles_data):
-    """
-    Creates angle progression visualization showing how geometric angles change
-    across scanner movement points.
-    
-    Args:
-        angles_data: List of angle calculation dictionaries    """
     fig = plt.figure(figsize=(14, 10))
     fig.patch.set_facecolor('white')
     
@@ -62,8 +56,8 @@ All angles measured from Y-axis"""
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
 
     plt.tight_layout()
-    ensure_output_dir()
-    output_path = os.path.join(OUTPUT_DIR, '02_angle_progression.png')
+    config.ensure_output_dir()
+    output_path = os.path.join(config.OUTPUT_DIR, '02_angle_progression.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none', pad_inches=0.2)
     print(f"📊 Angle progression visualization saved: {output_path}")

@@ -19,13 +19,7 @@ Version: 1.0 (Servo interpolation implementation - corrected 180° rotation)
 """
 
 import math
-from config import (
-    TARGET_CENTER_X, TARGET_CENTER_Y, 
-    SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS,
-    SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, SERVO_NEUTRAL_ANGLE, SERVO_ROTATION_OFFSET,
-    COORD_MIN_ANGLE, COORD_MAX_ANGLE, COORD_NEUTRAL_ANGLE
-)
+import config
 from calculations import calculate_geometric_angles
 
 
@@ -46,7 +40,7 @@ def calculate_servo_interpolation():
         
         # Convert geometric angle to servo coordinate system
         # The servo is rotated 45° from the Y-axis, then 180° (total transformation)
-        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
+        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -58,8 +52,8 @@ def calculate_servo_interpolation():
         original_servo_coordinate_angle = servo_coordinate_angle
         
         # Check if angle is in reachable range (-135° to -45°)
-        is_reachable = (servo_coordinate_angle >= COORD_MAX_ANGLE and 
-                       servo_coordinate_angle <= COORD_MIN_ANGLE)
+        is_reachable = (servo_coordinate_angle >= config.COORD_MAX_ANGLE and 
+                       servo_coordinate_angle <= config.COORD_MIN_ANGLE)
         
         # Always perform interpolation, regardless of reachability
         # Map from coordinate system to servo range using original angle
@@ -68,23 +62,23 @@ def calculate_servo_interpolation():
         # For interpolation, we use the original coordinate angle
         # Map from coordinate system (-135° to -45°) to servo range (0° to 90°)
         # Linear interpolation: -135° → 0°, -45° → 90°
-        servo_range = COORD_MIN_ANGLE - COORD_MAX_ANGLE  # 90°
-        physical_range = SERVO_MAX_ANGLE - SERVO_MIN_ANGLE  # 90°
+        servo_range = config.COORD_MIN_ANGLE - config.COORD_MAX_ANGLE  # 90°
+        physical_range = config.SERVO_MAX_ANGLE - config.SERVO_MIN_ANGLE  # 90°
         
         # Normalize coordinate angle to 0-1 range (using original angle)
-        normalized_angle = (original_servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
+        normalized_angle = (original_servo_coordinate_angle - config.COORD_MAX_ANGLE) / servo_range
         
         # Map to physical servo range
-        servo_angle = SERVO_MIN_ANGLE + (normalized_angle * physical_range)
+        servo_angle = config.SERVO_MIN_ANGLE + (normalized_angle * physical_range)
         
         # Clamp servo angle to physical limits (0° to 90°) only for safety
-        if servo_angle < SERVO_MIN_ANGLE:
-            servo_angle = SERVO_MIN_ANGLE
-        elif servo_angle > SERVO_MAX_ANGLE:
-            servo_angle = SERVO_MAX_ANGLE
+        if servo_angle < config.SERVO_MIN_ANGLE:
+            servo_angle = config.SERVO_MIN_ANGLE
+        elif servo_angle > config.SERVO_MAX_ANGLE:
+            servo_angle = config.SERVO_MAX_ANGLE
           # Calculate cone boundaries for visualization
-        cone_angle_1 = COORD_MAX_ANGLE  # -135° (upper limit)
-        cone_angle_2 = COORD_MIN_ANGLE  # -45° (lower limit)
+        cone_angle_1 = config.COORD_MAX_ANGLE  # -135° (upper limit)
+        cone_angle_2 = config.COORD_MIN_ANGLE  # -45° (lower limit)
         
         servo_data.append({
             'point': angle_data['point'],
@@ -114,10 +108,10 @@ def print_servo_interpolation_explanation():
     
     print("🔧 SERVO CONFIGURATION:")
     print("   The servo motor is mounted with specific constraints:")
-    print(f"   • At {SERVO_NEUTRAL_ANGLE}°: perpendicular to Y-axis, parallel to X-axis")
-    print(f"   • Physical range: {SERVO_MIN_ANGLE}° to {SERVO_MAX_ANGLE}°")
-    print(f"   • Coordinate system range: {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
-    print(f"   • Neutral position in coordinate system: {COORD_NEUTRAL_ANGLE}° (center of cone)")
+    print(f"   • At {config.SERVO_NEUTRAL_ANGLE}°: perpendicular to Y-axis, parallel to X-axis")
+    print(f"   • Physical range: {config.SERVO_MIN_ANGLE}° to {config.SERVO_MAX_ANGLE}°")
+    print(f"   • Coordinate system range: {config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°")
+    print(f"   • Neutral position in coordinate system: {config.COORD_NEUTRAL_ANGLE}° (center of cone)")
     print("   • This creates a cone of possible servo positions")
     print()
     
@@ -156,9 +150,9 @@ def print_servo_interpolation_explanation():
         
     print()
     print("🎯 SERVO CONE ANALYSIS:")
-    print(f"   • Servo cone spans from {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
-    print(f"   • Neutral position at {COORD_NEUTRAL_ANGLE}° (center of cone)")
-    print(f"   • This is a {COORD_MIN_ANGLE - COORD_MAX_ANGLE}° cone centered around the servo axis")
+    print(f"   • Servo cone spans from {config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°")
+    print(f"   • Neutral position at {config.COORD_NEUTRAL_ANGLE}° (center of cone)")
+    print(f"   • This is a {config.COORD_MIN_ANGLE - config.COORD_MAX_ANGLE}° cone centered around the servo axis")
     print("   • Points outside this cone cannot be reached by the servo")
     print()
     print("✅ SERVO INTERPOLATION COMPLETED!")
@@ -177,7 +171,7 @@ def get_servo_cone_boundaries(z_module_pos):
     Returns:
         tuple: (angle1, angle2) representing the cone boundaries
     """
-    return (COORD_MAX_ANGLE, COORD_MIN_ANGLE)
+    return (config.COORD_MAX_ANGLE, config.COORD_MIN_ANGLE)
 
 
 def map_geometric_to_servo_angle(geometric_angle):
@@ -190,7 +184,7 @@ def map_geometric_to_servo_angle(geometric_angle):
     Returns:
         dict: Servo angle data
     """    # Convert to servo coordinate system
-    servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
+    servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
       # Normalize angle to -180° to +180° range
     while servo_coordinate_angle > 180.0:
         servo_coordinate_angle -= 360.0
@@ -201,21 +195,21 @@ def map_geometric_to_servo_angle(geometric_angle):
     original_servo_coordinate_angle = servo_coordinate_angle
     
     # Check if angle is in reachable range (-135° to -45°)
-    is_reachable = (servo_coordinate_angle >= COORD_MAX_ANGLE and 
-                   servo_coordinate_angle <= COORD_MIN_ANGLE)
+    is_reachable = (servo_coordinate_angle >= config.COORD_MAX_ANGLE and 
+                   servo_coordinate_angle <= config.COORD_MIN_ANGLE)
     
     # Always perform interpolation using original angle
     # Map to physical servo range (-135° → 0°, -45° → 90°)
-    servo_range = COORD_MIN_ANGLE - COORD_MAX_ANGLE  # 90°
-    physical_range = SERVO_MAX_ANGLE - SERVO_MIN_ANGLE  # 90°
-    normalized_angle = (original_servo_coordinate_angle - COORD_MAX_ANGLE) / servo_range
-    servo_angle = SERVO_MIN_ANGLE + (normalized_angle * physical_range)
+    servo_range = config.COORD_MIN_ANGLE - config.COORD_MAX_ANGLE  # 90°
+    physical_range = config.SERVO_MAX_ANGLE - config.SERVO_MIN_ANGLE  # 90°
+    normalized_angle = (original_servo_coordinate_angle - config.COORD_MAX_ANGLE) / servo_range
+    servo_angle = config.SERVO_MIN_ANGLE + (normalized_angle * physical_range)
     
     # Clamp servo angle to physical limits (0° to 90°) only for safety
-    if servo_angle < SERVO_MIN_ANGLE:
-        servo_angle = SERVO_MIN_ANGLE
-    elif servo_angle > SERVO_MAX_ANGLE:
-        servo_angle = SERVO_MAX_ANGLE
+    if servo_angle < config.SERVO_MIN_ANGLE:
+        servo_angle = config.SERVO_MIN_ANGLE
+    elif servo_angle > config.SERVO_MAX_ANGLE:
+        servo_angle = config.SERVO_MAX_ANGLE
     
     return {
         'geometric_angle': geometric_angle,
@@ -251,8 +245,8 @@ def print_detailed_reachability_table():
     
     for data in servo_data:
         # Calculate angle from each scanner position to target
-        dx = TARGET_CENTER_X - SCANNER_MODULE_X
-        dy = TARGET_CENTER_Y - data['y_pos']
+        dx = config.TARGET_CENTER_X - config.SCANNER_MODULE_X
+        dy = config.TARGET_CENTER_Y - data['y_pos']
         target_angle = math.degrees(math.atan2(dx, dy))
         
         reach_symbol = "✅ YES" if data['is_reachable'] else "❌ NO"
@@ -285,7 +279,7 @@ def print_detailed_reachability_table():
         print()
         
         print("💡 EXPLANATION:")
-        print(f"   The servo cone spans from {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
+        print(f"   The servo cone spans from {config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°")
         print(f"   Target angles outside this range cannot be reached")
         print(f"   Consider adjusting:")
         print("   - Target position")
@@ -310,15 +304,15 @@ def debug_servo_calculation():
     
     geometric_angles = calculate_geometric_angles()
     
-    print(f"COORD_MAX_ANGLE: {COORD_MAX_ANGLE}°")
-    print(f"COORD_MIN_ANGLE: {COORD_MIN_ANGLE}°")
-    print(f"COORD_NEUTRAL_ANGLE: {COORD_NEUTRAL_ANGLE}°")
+    print(f"config.COORD_MAX_ANGLE: {config.COORD_MAX_ANGLE}°")
+    print(f"config.COORD_MIN_ANGLE: {config.COORD_MIN_ANGLE}°")
+    print(f"config.COORD_NEUTRAL_ANGLE: {config.COORD_NEUTRAL_ANGLE}°")
     print()
     
     for i, angle_data in enumerate(geometric_angles):
         geometric_angle = angle_data['angle']
           # Convert geometric angle to servo coordinate system
-        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
+        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -327,15 +321,15 @@ def debug_servo_calculation():
             servo_coordinate_angle += 360.0
         
         # Check reachability with current logic
-        is_reachable_current = (servo_coordinate_angle >= COORD_MAX_ANGLE and 
-                               servo_coordinate_angle <= COORD_MIN_ANGLE)
+        is_reachable_current = (servo_coordinate_angle >= config.COORD_MAX_ANGLE and 
+                               servo_coordinate_angle <= config.COORD_MIN_ANGLE)
         
         print(f"Point {i+1}:")
         print(f"  Geometric angle: {geometric_angle:.2f}°")
         print(f"  Servo coord angle: {servo_coordinate_angle:.2f}°")
-        print(f"  Is in range [{COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°]? {is_reachable_current}")
-        print(f"  Check: {servo_coordinate_angle:.2f} >= {COORD_MAX_ANGLE} = {servo_coordinate_angle >= COORD_MAX_ANGLE}")
-        print(f"  Check: {servo_coordinate_angle:.2f} <= {COORD_MIN_ANGLE} = {servo_coordinate_angle <= COORD_MIN_ANGLE}")
+        print(f"  Is in range [{config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°]? {is_reachable_current}")
+        print(f"  Check: {servo_coordinate_angle:.2f} >= {config.COORD_MAX_ANGLE} = {servo_coordinate_angle >= config.COORD_MAX_ANGLE}")
+        print(f"  Check: {servo_coordinate_angle:.2f} <= {config.COORD_MIN_ANGLE} = {servo_coordinate_angle <= config.COORD_MIN_ANGLE}")
         print()
 
 def debug_target_angles():
@@ -349,11 +343,11 @@ def debug_target_angles():
     print("=" * 60)
     
     # Target position
-    target_x = TARGET_CENTER_X  # 50cm
-    target_y = TARGET_CENTER_Y  # 25cm
+    target_x = config.TARGET_CENTER_X  # 50cm
+    target_y = config.TARGET_CENTER_Y  # 25cm
     
     # Scanner position
-    scanner_x = SCANNER_MODULE_X  # 0cm
+    scanner_x = config.SCANNER_MODULE_X  # 0cm
     
     geometric_angles = calculate_geometric_angles()
     
@@ -396,7 +390,7 @@ def analyze_visual_cone():
     for i, angle_data in enumerate(geometric_angles):
         geometric_angle = angle_data['angle']
           # Current transformation
-        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
+        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:
@@ -411,13 +405,13 @@ def analyze_visual_cone():
     
     print()
     print(f"Current servo coordinate range: {min_angle:.2f}° to {max_angle:.2f}°")
-    print(f"Current config range: {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
+    print(f"Current config range: {config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°")
     print()
     
-    if min_angle < COORD_MAX_ANGLE or max_angle > COORD_MIN_ANGLE:
+    if min_angle < config.COORD_MAX_ANGLE or max_angle > config.COORD_MIN_ANGLE:
         print("❌ PROBLEM: Required range exceeds configured servo cone!")
         print(f"   Required: {min_angle:.2f}° to {max_angle:.2f}°")
-        print(f"   Configured: {COORD_MAX_ANGLE}° to {COORD_MIN_ANGLE}°")
+        print(f"   Configured: {config.COORD_MAX_ANGLE}° to {config.COORD_MIN_ANGLE}°")
         print()
         
         # Suggest new boundaries
@@ -426,8 +420,8 @@ def analyze_visual_cone():
         suggested_max = max_angle + margin
         
         print(f"💡 SUGGESTED SERVO CONE BOUNDARIES:")
-        print(f"   COORD_MAX_ANGLE = {suggested_min:.1f}°")
-        print(f"   COORD_MIN_ANGLE = {suggested_max:.1f}°")
+        print(f"   config.COORD_MAX_ANGLE = {suggested_min:.1f}°")
+        print(f"   config.COORD_MIN_ANGLE = {suggested_max:.1f}°")
     else:
         print("✅ All points fit within configured servo cone!")
 
@@ -447,8 +441,8 @@ def debug_visual_vs_calculation():
         y_pos = angle_data['y_pos']
         
         # Calculate actual angle from scanner to target in visual coordinates
-        dx = TARGET_CENTER_X - SCANNER_MODULE_X  # 50 - 0 = 50
-        dy = TARGET_CENTER_Y - y_pos  # 25 - y_pos
+        dx = config.TARGET_CENTER_X - config.SCANNER_MODULE_X  # 50 - 0 = 50
+        dy = config.TARGET_CENTER_Y - y_pos  # 25 - y_pos
         
         # Standard math angle (0° = +X, counterclockwise)
         visual_angle = math.degrees(math.atan2(dy, dx))
@@ -489,8 +483,8 @@ def calculate_corrected_servo_interpolation():
         y_pos = angle_data['y_pos']
         
         # Calculate target angle in standard coordinate system (0° = +X, 90° = +Y)
-        dx = TARGET_CENTER_X - SCANNER_MODULE_X  # 50
-        dy = TARGET_CENTER_Y - y_pos  # 25 - y_pos
+        dx = config.TARGET_CENTER_X - config.SCANNER_MODULE_X  # 50
+        dy = config.TARGET_CENTER_Y - y_pos  # 25 - y_pos
         target_coord_angle = math.degrees(math.atan2(dy, dx))
         
         # Normalize to -180° to +180° range (easier for cone check)
@@ -514,7 +508,7 @@ def calculate_corrected_servo_interpolation():
             else:
                 physical_servo_angle = 90.0
           # Keep original servo coordinate system for compatibility
-        servo_coordinate_angle = geometric_angle + SERVO_ROTATION_OFFSET + 180.0
+        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:

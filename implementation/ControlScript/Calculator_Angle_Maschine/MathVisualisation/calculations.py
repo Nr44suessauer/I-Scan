@@ -14,11 +14,7 @@ Version: 3.0 (Pure geometry implementation)
 """
 
 import math
-from config import (
-    TARGET_CENTER_X, TARGET_CENTER_Y, 
-    SCANNER_MODULE_X, SCANNER_MODULE_Y,
-    SCAN_DISTANCE, NUMBER_OF_MEASUREMENTS
-)
+import config
 
 
 def print_step_by_step_explanation():
@@ -38,19 +34,19 @@ def print_step_by_step_explanation():
     print()
     
     print("📊 SETUP:")
-    print(f"   • Scanner starts at: ({SCANNER_MODULE_X}, {SCANNER_MODULE_Y}) cm")
-    print(f"   • Target object is at: ({TARGET_CENTER_X}, {TARGET_CENTER_Y}) cm")
-    print(f"   • Scanner moves {SCAN_DISTANCE} cm vertically")
-    print(f"   • {NUMBER_OF_MEASUREMENTS} measurement points are calculated")
+    print(f"   • Scanner starts at: ({config.SCANNER_MODULE_X}, {config.SCANNER_MODULE_Y}) cm")
+    print(f"   • Target object is at: ({config.TARGET_CENTER_X}, {config.TARGET_CENTER_Y}) cm")
+    print(f"   • Scanner moves {config.SCAN_DISTANCE} cm vertically")
+    print(f"   • {config.NUMBER_OF_MEASUREMENTS} measurement points are calculated")
     print("   • Using pure trigonometric calculations")
     print()
     
     # Step 1: Calculate step size
-    step_size = SCAN_DISTANCE / (NUMBER_OF_MEASUREMENTS - 1)
+    step_size = config.SCAN_DISTANCE / (config.NUMBER_OF_MEASUREMENTS - 1)
     print("📏 STEP 1: Calculate step size")
     print("   " + "-" * 45)
     print(f"   Formula: Step size = Total distance ÷ (Number of measurements - 1)")
-    print(f"   Step size = {SCAN_DISTANCE} cm ÷ ({NUMBER_OF_MEASUREMENTS} - 1)")
+    print(f"   Step size = {config.SCAN_DISTANCE} cm ÷ ({config.NUMBER_OF_MEASUREMENTS} - 1)")
     print(f"   Step size = {step_size:.2f} cm")
     print(f"   → Each measurement point is {step_size:.2f} cm apart")
     print("   → This ensures the last measurement is at the full scan distance")
@@ -62,17 +58,17 @@ def print_step_by_step_explanation():
     print()
     
     angles = []
-    for i in range(NUMBER_OF_MEASUREMENTS):
+    for i in range(config.NUMBER_OF_MEASUREMENTS):
         y_position = i * step_size
         
         print(f"   📍 MEASUREMENT POINT {i+1} (Y = {y_position} cm):")
         print("   " + "~" * 35)
           # Calculate triangle sides
-        dx = TARGET_CENTER_X - SCANNER_MODULE_X
-        dy = TARGET_CENTER_Y - y_position  # Keep direction: positive when target is above scanner
+        dx = config.TARGET_CENTER_X - config.SCANNER_MODULE_X
+        dy = config.TARGET_CENTER_Y - y_position  # Keep direction: positive when target is above scanner
         
-        print(f"   • Horizontal distance (dx): {TARGET_CENTER_X} - {SCANNER_MODULE_X} = {dx} cm")
-        print(f"   • Vertical distance (dy): {TARGET_CENTER_Y} - {y_position} = {dy} cm")
+        print(f"   • Horizontal distance (dx): {config.TARGET_CENTER_X} - {config.SCANNER_MODULE_X} = {dx} cm")
+        print(f"   • Vertical distance (dy): {config.TARGET_CENTER_Y} - {y_position} = {dy} cm")
         
         # Geometric angle calculation using trigonometry
         if dx > 0.001 and abs(dy) > 0.001:  # Avoid division by zero
@@ -123,14 +119,14 @@ def calculate_geometric_angles():
     Performs geometric angle calculations without printing explanations.
     Returns the calculated angles data for programmatic use.
     """
-    step_size = SCAN_DISTANCE / (NUMBER_OF_MEASUREMENTS - 1)
+    step_size = config.SCAN_DISTANCE / (config.NUMBER_OF_MEASUREMENTS - 1)
     angles = []
     
-    for i in range(NUMBER_OF_MEASUREMENTS):
+    for i in range(config.NUMBER_OF_MEASUREMENTS):
         y_position = i * step_size
           # Calculate triangle sides
-        dx = TARGET_CENTER_X - SCANNER_MODULE_X
-        dy = TARGET_CENTER_Y - y_position  # Keep direction: positive when target is above scanner
+        dx = config.TARGET_CENTER_X - config.SCANNER_MODULE_X
+        dy = config.TARGET_CENTER_Y - y_position  # Keep direction: positive when target is above scanner
         
         # Geometric angle calculation using trigonometry
         if dx > 0.001 and abs(dy) > 0.001:  # Avoid division by zero
