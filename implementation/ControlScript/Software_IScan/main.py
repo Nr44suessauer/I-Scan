@@ -233,13 +233,18 @@ class ControlApp:
     def create_calculator_commands_panel(self, parent):
         """
         Erstellt das Calculator Commands Panel neben der Log-Konsole
+        Zeigt rechts neben der Scan-Konfiguration das Bild 06_servo_geometry_graph_only.png an
         """
         calc_panel = tk.LabelFrame(parent, text="Calculator Commands", font=("Arial", 10, "bold"))
         calc_panel.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
-        
-        # Parameter für beide Modi
-        params_frame = tk.Frame(calc_panel)
-        params_frame.pack(fill="x", padx=5, pady=5)
+
+        # Frame für Parameter und Bild nebeneinander
+        content_frame = tk.Frame(calc_panel)
+        content_frame.pack(fill="both", expand=True)
+
+        # Parameter für beide Modi (links)
+        params_frame = tk.Frame(content_frame)
+        params_frame.pack(side=tk.LEFT, fill="y", padx=5, pady=5)
         
         # CSV Name
         tk.Label(params_frame, text="CSV Name:", font=("Arial", 8)).grid(row=0, column=0, sticky="w", padx=2, pady=1)
@@ -272,38 +277,52 @@ class ControlApp:
         self.calc_measurements.grid(row=4, column=1, sticky="w", padx=2, pady=1)
         
         # Separator
-        separator = tk.Frame(calc_panel, height=2, bg="gray")
-        separator.pack(fill="x", padx=5, pady=8)
-        
+        separator = tk.Frame(params_frame, height=2, bg="gray")
+        separator.grid(row=5, column=0, columnspan=2, sticky="ew", pady=8)
+
         # Command Buttons
-        commands_frame = tk.LabelFrame(calc_panel, text="Execute Commands", font=("Arial", 8, "bold"))
-        commands_frame.pack(fill="x", padx=5, pady=5)
-        
-        # Visualisation Mode Button (früher CSV Mode)
+        commands_frame = tk.LabelFrame(params_frame, text="Execute Commands", font=("Arial", 8, "bold"))
+        commands_frame.grid(row=6, column=0, columnspan=2, sticky="ew", pady=2)
         visual_btn = tk.Button(commands_frame, text="Visualisation Mode\n(--visualize)", 
                               command=self.execute_visualisation_mode,
                               bg="#FFD700", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
         visual_btn.pack(fill="x", padx=2, pady=2)
-        
-        # Silent Mode Button  
         silent_btn = tk.Button(commands_frame, text="Silent Mode\n(--silent)", 
                               command=self.execute_silent_mode,
                               bg="#98FB98", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
         silent_btn.pack(fill="x", padx=2, pady=2)
-        
+
         # Current Command Display
-        current_cmd_frame = tk.LabelFrame(calc_panel, text="Current Command", font=("Arial", 8, "bold"))
-        current_cmd_frame.pack(fill="x", padx=5, pady=5)
-        
+        current_cmd_frame = tk.LabelFrame(params_frame, text="Current Command", font=("Arial", 8, "bold"))
+        current_cmd_frame.grid(row=7, column=0, columnspan=2, sticky="ew", pady=5)
         self.current_command_label = tk.Label(current_cmd_frame, 
                                              text="python main.py --visualize --csv-name original_iscan --target-x 33 --target-y 50 --scan-distance 80 --measurements 7",
                                              wraplength=200, justify="left", font=("Arial", 7), fg="blue")
         self.current_command_label.pack(padx=2, pady=2)
-        
-        # Bind events to update command display
-        for widget in [self.calc_csv_name, self.calc_target_x, self.calc_target_y, self.calc_scan_distance, self.calc_measurements]:
-            widget.bind('<KeyRelease>', self.update_command_display)
-    
+
+        # Bildanzeige (rechts)
+        image_frame = tk.Frame(content_frame)
+        image_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
+        try:
+            import os
+            from PIL import Image, ImageTk
+            # Absoluter Pfad zum Bild
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            img_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
+            img_path = os.path.normpath(img_path)
+            if os.path.exists(img_path):
+                img = Image.open(img_path)
+                img = img.resize((220, 180), Image.LANCZOS)
+                self.servo_graph_img = ImageTk.PhotoImage(img)
+                self.servo_graph_img_label = tk.Label(image_frame, image=self.servo_graph_img)
+                self.servo_graph_img_label.pack()
+            else:
+                self.servo_graph_img_label = tk.Label(image_frame, text=f"Bild nicht gefunden:\n{img_path}", fg="red")
+                self.servo_graph_img_label.pack()
+        except Exception as e:
+            self.servo_graph_img_label = tk.Label(image_frame, text=f"Fehler beim Laden des Bildes: {e}", fg="red")
+            self.servo_graph_img_label.pack()
+
     def create_webcam_frame(self):
         """
         Erstellt den Rahmen für die Webcam-Anzeige und die Steuerelemente
@@ -968,10 +987,11 @@ class ControlApp:
 
             def run_command():
                 try:
-                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True)
+                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True, encoding="utf-8")
                     if result.returncode == 0:
                         self.logger.log(f"✅ Visualisation Mode erfolgreich abgeschlossen")
                         self.logger.log("📊 Visualisierungen wurden im Calculator_Angle_Maschine/MathVisualisation/output/ Ordner gespeichert")
+                        self.update_servo_graph_image()
                     else:
                         self.logger.log(f"❌ Visualisation Mode fehlgeschlagen: {result.stderr}")
                 except Exception as e:
@@ -1009,7 +1029,7 @@ class ControlApp:
             
             def run_command():
                 try:
-                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True)
+                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True, encoding="utf-8")
                     if result.returncode == 0:
                         self.logger.log(f"✅ Silent Mode erfolgreich abgeschlossen")
                         # Suche nach der generierten CSV-Datei
@@ -1034,6 +1054,28 @@ class ControlApp:
         if hasattr(self, 'webcam'):
             self.webcam.stoppen()
         self.root.destroy()
+
+    def update_servo_graph_image(self):
+        """
+        Aktualisiert das Servo-Graph-Bild im Calculator Commands Panel
+        """
+        try:
+            import os
+            from PIL import Image, ImageTk
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            img_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
+            img_path = os.path.normpath(img_path)
+            if hasattr(self, 'servo_graph_img_label'):
+                if os.path.exists(img_path):
+                    img = Image.open(img_path)
+                    img = img.resize((220, 180), Image.LANCZOS)
+                    self.servo_graph_img = ImageTk.PhotoImage(img)
+                    self.servo_graph_img_label.config(image=self.servo_graph_img, text="")
+                else:
+                    self.servo_graph_img_label.config(image="", text=f"Bild nicht gefunden:\n{img_path}")
+        except Exception as e:
+            if hasattr(self, 'servo_graph_img_label'):
+                self.servo_graph_img_label.config(image="", text=f"Fehler beim Laden des Bildes: {e}")
 
 
 # Hauptausführungslogik
