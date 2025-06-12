@@ -18,6 +18,7 @@ import os
 import json
 import math
 from datetime import datetime
+import sys
 
 from config import (
     ENABLE_VISUALIZATIONS, VISUALIZATION_SETTINGS, ensure_output_dir,
@@ -53,7 +54,14 @@ try:
 except ImportError:
     TARGET_COORD_ADDON_AVAILABLE = False
     save_target_coord_angle_visualization = None
-    print("⚠️ Add-ons package not available - target coordinate explanation will be skipped")
+    print("[WARNUNG] Add-ons package not available - target coordinate explanation will be skipped")
+
+# Workaround: Setze Encoding auf UTF-8 für Windows-Konsolen, um Unicode-Fehler zu vermeiden
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 
 def main(create_csv=False, csv_name=None):

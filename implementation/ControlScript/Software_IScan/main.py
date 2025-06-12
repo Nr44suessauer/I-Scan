@@ -16,6 +16,7 @@ import threading
 import tkinter as tk
 from tkinter import scrolledtext, Label, filedialog, messagebox, StringVar, DoubleVar, IntVar, BooleanVar
 from PIL import Image, ImageTk
+import subprocess
 
 # Import eigener Module
 from api_client import ApiClient
@@ -23,6 +24,7 @@ from logger import Logger
 from device_control import DeviceControl
 from operation_queue import OperationQueue
 from webcam_helper import WebcamHelper
+from angle_calculator_commands import AngleCalculatorInterface, show_angle_calculator_dialog
 
 # Konstanten für Standardwerte und Berechnungen
 PI = 3.141592653589793
@@ -94,6 +96,9 @@ class ControlApp:
             self.servo_angle_var
         )
         
+        # Angle Calculator Interface initialisieren
+        self.angle_calculator = AngleCalculatorInterface(self.logger)
+        
         # Callback-Funktionen zuweisen
         self.assign_callbacks()
         
@@ -137,6 +142,9 @@ class ControlApp:
         
         # Home-Funktion
         self.create_home_frame()
+        
+        # Angle Calculator Commands
+        self.create_angle_calculator_frame()
         
         # Operationswarteschlange
         self.create_queue_frame()
@@ -205,11 +213,96 @@ class ControlApp:
     
     def create_output_display(self):
         """
-        Erstellt die Anzeige für Text mit Bildlauf
+        Erstellt die Anzeige für Text mit Bildlauf und das Calculator Command Panel
         Zeigt Protokollnachrichten und Operationsergebnisse an
         """
-        self.output = scrolledtext.ScrolledText(self.root, width=80, height=16, state='disabled')
-        self.output.pack(padx=10, pady=10, anchor='w')
+        # Hauptcontainer für Output und Calculator Commands
+        output_container = tk.Frame(self.root)
+        output_container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Log-Konsole (links)
+        log_frame = tk.Frame(output_container)
+        log_frame.pack(side=tk.LEFT, fill="both", expand=True)
+        
+        tk.Label(log_frame, text="Log-Konsole", font=("Arial", 10, "bold")).pack(anchor='w')
+        self.output = scrolledtext.ScrolledText(log_frame, width=60, height=16, state='disabled')
+        self.output.pack(fill="both", expand=True)
+          # Calculator Commands Panel (rechts)
+        self.create_calculator_commands_panel(output_container)
+    
+    def create_calculator_commands_panel(self, parent):
+        """
+        Erstellt das Calculator Commands Panel neben der Log-Konsole
+        """
+        calc_panel = tk.LabelFrame(parent, text="Calculator Commands", font=("Arial", 10, "bold"))
+        calc_panel.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
+        
+        # Parameter für beide Modi
+        params_frame = tk.Frame(calc_panel)
+        params_frame.pack(fill="x", padx=5, pady=5)
+        
+        # CSV Name
+        tk.Label(params_frame, text="CSV Name:", font=("Arial", 8)).grid(row=0, column=0, sticky="w", padx=2, pady=1)
+        self.calc_csv_name = tk.Entry(params_frame, width=18, font=("Arial", 8))
+        self.calc_csv_name.insert(0, "original_iscan")
+        self.calc_csv_name.grid(row=0, column=1, padx=2, pady=1)
+        
+        # Target X
+        tk.Label(params_frame, text="Target X (cm):", font=("Arial", 8)).grid(row=1, column=0, sticky="w", padx=2, pady=1)
+        self.calc_target_x = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_target_x.insert(0, "33")
+        self.calc_target_x.grid(row=1, column=1, sticky="w", padx=2, pady=1)
+        
+        # Target Y
+        tk.Label(params_frame, text="Target Y (cm):", font=("Arial", 8)).grid(row=2, column=0, sticky="w", padx=2, pady=1)
+        self.calc_target_y = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_target_y.insert(0, "50")
+        self.calc_target_y.grid(row=2, column=1, sticky="w", padx=2, pady=1)
+        
+        # Scan Distance
+        tk.Label(params_frame, text="Scan Distance (cm):", font=("Arial", 8)).grid(row=3, column=0, sticky="w", padx=2, pady=1)
+        self.calc_scan_distance = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_scan_distance.insert(0, "80")
+        self.calc_scan_distance.grid(row=3, column=1, sticky="w", padx=2, pady=1)
+        
+        # Measurements
+        tk.Label(params_frame, text="Measurements:", font=("Arial", 8)).grid(row=4, column=0, sticky="w", padx=2, pady=1)
+        self.calc_measurements = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_measurements.insert(0, "7")
+        self.calc_measurements.grid(row=4, column=1, sticky="w", padx=2, pady=1)
+        
+        # Separator
+        separator = tk.Frame(calc_panel, height=2, bg="gray")
+        separator.pack(fill="x", padx=5, pady=8)
+        
+        # Command Buttons
+        commands_frame = tk.LabelFrame(calc_panel, text="Execute Commands", font=("Arial", 8, "bold"))
+        commands_frame.pack(fill="x", padx=5, pady=5)
+        
+        # Visualisation Mode Button (früher CSV Mode)
+        visual_btn = tk.Button(commands_frame, text="Visualisation Mode\n(--visualize)", 
+                              command=self.execute_visualisation_mode,
+                              bg="#FFD700", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
+        visual_btn.pack(fill="x", padx=2, pady=2)
+        
+        # Silent Mode Button  
+        silent_btn = tk.Button(commands_frame, text="Silent Mode\n(--silent)", 
+                              command=self.execute_silent_mode,
+                              bg="#98FB98", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
+        silent_btn.pack(fill="x", padx=2, pady=2)
+        
+        # Current Command Display
+        current_cmd_frame = tk.LabelFrame(calc_panel, text="Current Command", font=("Arial", 8, "bold"))
+        current_cmd_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.current_command_label = tk.Label(current_cmd_frame, 
+                                             text="python main.py --visualize --csv-name original_iscan --target-x 33 --target-y 50 --scan-distance 80 --measurements 7",
+                                             wraplength=200, justify="left", font=("Arial", 7), fg="blue")
+        self.current_command_label.pack(padx=2, pady=2)
+        
+        # Bind events to update command display
+        for widget in [self.calc_csv_name, self.calc_target_x, self.calc_target_y, self.calc_scan_distance, self.calc_measurements]:
+            widget.bind('<KeyRelease>', self.update_command_display)
     
     def create_webcam_frame(self):
         """
@@ -358,6 +451,19 @@ class ControlApp:
                              bg="#b0c4de", fg="black", font=("Arial", 10, "bold"), width=3)
         self.home_add_btn.pack(side=tk.LEFT)
     
+    def create_angle_calculator_frame(self):
+        """
+        Erstellt den Rahmen für Calculator_Angle_Maschine Befehle
+        Ermöglicht CSV-Export und Visualisierungsgenerierung mit konfigurierbaren Parametern
+        """
+        calc_frame = tk.LabelFrame(self.root, text="Calculator_Angle_Maschine")
+        calc_frame.pack(fill="x", padx=10, pady=2)
+        
+        # Info label
+        info_label = tk.Label(calc_frame, text="3D Scanner Winkelberechnung mit konfigurierbaren Parametern", 
+                             font=("Arial", 9), fg="gray")
+        info_label.pack(anchor="w", padx=5, pady=(5, 0))
+    
     def create_queue_frame(self):
         """
         Erstellt den Rahmen für die Operationswarteschlange
@@ -434,8 +540,7 @@ class ControlApp:
         # Home-Callbacks - in einem separaten Thread ausführen, um die Benutzeroberfläche reaktionsfähig zu halten
         self.home_exec_btn.config(command=lambda: threading.Thread(target=self.device_control.home_func).start())
         self.home_add_btn.config(command=self.add_home_to_queue)
-        
-        # Warteschlangen-Callbacks
+          # Warteschlangen-Callbacks
         self.queue_exec_btn.config(command=self.execute_queue)
         self.queue_clear_btn.config(command=self.operation_queue.clear)
         self.queue_remove_btn.config(command=lambda: self.remove_selected_operation(self.queue_list.curselection()))
@@ -694,6 +799,236 @@ class ControlApp:
             self.logger.log(f"Ungültiger Delay-Wert: {e}")
             messagebox.showerror("Ungültiger Wert", f"Bitte geben Sie einen gültigen Delay-Wert ein.\nFehler: {e}")
     
+    def csv_silent_mode(self):
+        """
+        CSV Silent Mode - Generiert nur CSV mit konfigurierbaren Parametern
+        """
+        config = show_angle_calculator_dialog(self.root, "CSV Silent Mode Konfiguration")
+        if config is None:
+            return
+        
+        self.logger.log("🔇 Starte CSV Silent Mode...")
+        
+        def on_completion(csv_path):
+            if csv_path:
+                self.logger.log(f"✅ CSV erfolgreich generiert: {csv_path}")
+                # Ask if user wants to import immediately
+                if messagebox.askyesno("CSV Import", "CSV wurde erfolgreich generiert. Soll die CSV-Datei sofort in die Warteschlange importiert werden?"):
+                    self.import_specific_csv(csv_path)
+            else:
+                self.logger.log("❌ CSV-Generierung fehlgeschlagen")
+        
+        # Run asynchronously to keep GUI responsive
+        self.angle_calculator.generate_csv_silent_async(callback=on_completion, **config)
+    
+    def full_analysis_mode(self):
+        """
+        Vollanalyse Mode - Generiert Visualisierungen UND CSV
+        """
+        config = show_angle_calculator_dialog(self.root, "Vollanalyse Konfiguration")
+        if config is None:
+            return
+        
+        self.logger.log("🎨 Starte Vollanalyse Mode...")
+        self.logger.log("⏳ Bitte warten - Visualisierungen werden erstellt...")
+        
+        def on_completion(csv_path):
+            if csv_path:
+                self.logger.log(f"✅ Vollanalyse erfolgreich abgeschlossen: {csv_path}")
+                self.logger.log("📊 Visualisierungen wurden im Calculator_Angle_Maschine/MathVisualisation/output/ Ordner gespeichert")
+                # Ask if user wants to import immediately
+                if messagebox.askyesno("CSV Import", "Vollanalyse wurde erfolgreich abgeschlossen. Soll die CSV-Datei sofort in die Warteschlange importiert werden?"):
+                    self.import_specific_csv(csv_path)
+            else:
+                self.logger.log("❌ Vollanalyse fehlgeschlagen")
+        
+        # Run asynchronously to keep GUI responsive
+        self.angle_calculator.generate_full_analysis_async(callback=on_completion, **config)
+    
+    def import_calculator_csv(self):
+        """
+        Importiert CSV-Datei vom Calculator_Angle_Maschine
+        """
+        # Default to the Calculator_Angle_Maschine output directory
+        initial_dir = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 
+            "Calculator_Angle_Maschine", 
+            "MathVisualisation", 
+            "output"
+        )
+        
+        file_path = filedialog.askopenfilename(
+            title="Calculator_Angle_Maschine CSV importieren",
+            initialdir=initial_dir if os.path.exists(initial_dir) else None,
+            filetypes=[("CSV-Dateien", "*.csv"), ("Alle Dateien", "*.*")]
+        )
+        
+        if file_path:
+            self.import_specific_csv(file_path)
+
+    def import_specific_csv(self, file_path):
+        """
+        Importiert eine spezifische CSV-Datei in die Warteschlange
+        
+        Args:
+            file_path (str): Pfad zur CSV-Datei
+        """
+        try:
+            import csv
+            import json
+            with open(file_path, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.operation_queue.clear()
+                imported_count = 0
+                for row in reader:
+                    op_type = row['type']
+                    params = json.loads(row['params'])
+                    description = row['description']
+                    self.operation_queue.add(op_type, params, description)
+                    imported_count += 1
+            self.logger.log(f"✅ CSV erfolgreich importiert: {os.path.basename(file_path)}")
+            self.logger.log(f"📋 {imported_count} Operationen zur Warteschlange hinzugefügt")
+            messagebox.showinfo("Import erfolgreich", f"CSV wurde erfolgreich importiert!\n{imported_count} Operationen hinzugefügt.")
+        except Exception as e:
+            self.logger.log(f"❌ Fehler beim CSV-Import: {str(e)}")
+            messagebox.showerror("Import Fehler", f"Fehler beim Importieren der CSV-Datei:\n{str(e)}")
+
+    def set_original_preset(self):
+        """
+        Setzt die Parameter für das Original I-Scan Setup
+        """
+        self.calc_csv_name.delete(0, tk.END)
+        self.calc_csv_name.insert(0, "original_iscan")
+        self.calc_target_x.delete(0, tk.END)
+        self.calc_target_x.insert(0, "33")
+        self.calc_target_y.delete(0, tk.END)
+        self.calc_target_y.insert(0, "50")
+        self.calc_scan_distance.delete(0, tk.END)
+        self.calc_scan_distance.insert(0, "80")
+        self.calc_measurements.delete(0, tk.END)
+        self.calc_measurements.insert(0, "7")
+        self.update_command_display()
+        self.logger.log("📋 Original I-Scan Preset geladen")
+    
+    def set_production_preset(self):
+        """
+        Setzt die Parameter für das Produktions-Scan Setup
+        """
+        self.calc_csv_name.delete(0, tk.END)
+        self.calc_csv_name.insert(0, "produktions_scan")
+        self.calc_target_x.delete(0, tk.END)
+        self.calc_target_x.insert(0, "40")
+        self.calc_target_y.delete(0, tk.END)
+        self.calc_target_y.insert(0, "60")
+        self.calc_scan_distance.delete(0, tk.END)
+        self.calc_scan_distance.insert(0, "80")
+        self.calc_measurements.delete(0, tk.END)
+        self.calc_measurements.insert(0, "5")
+        self.update_command_display()
+        self.logger.log("📋 Produktions-Scan Preset geladen")
+    
+    def update_command_display(self, event=None):
+        """
+        Aktualisiert die Anzeige des aktuellen Befehls
+        """
+        try:
+            csv_name = self.calc_csv_name.get()
+            target_x = self.calc_target_x.get()
+            target_y = self.calc_target_y.get()
+            scan_distance = self.calc_scan_distance.get()
+            measurements = self.calc_measurements.get()
+            
+            command = f"python main.py --visualize --csv-name {csv_name} --target-x {target_x} --target-y {target_y} --scan-distance {scan_distance} --measurements {measurements}"
+            self.current_command_label.config(text=command)
+        except Exception:
+            pass
+    
+    def execute_visualisation_mode(self):
+        """
+        Führt den Visualisation Mode mit den aktuellen Parametern aus
+        """
+        try:
+            csv_name = self.calc_csv_name.get()
+            target_x = float(self.calc_target_x.get())
+            target_y = float(self.calc_target_y.get())
+            scan_distance = float(self.calc_scan_distance.get())
+            measurements = int(self.calc_measurements.get())
+            self.logger.log(f"🖼️ Starte Visualisation Mode: {csv_name}")
+            self.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
+
+            calc_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Calculator_Angle_Maschine", "MathVisualisation")
+            command = [
+                "python", "main.py", "--visualize",
+                "--csv-name", csv_name,
+                "--target-x", str(target_x),
+                "--target-y", str(target_y),
+                "--scan-distance", str(scan_distance),
+                "--measurements", str(measurements)
+            ]
+
+            def run_command():
+                try:
+                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        self.logger.log(f"✅ Visualisation Mode erfolgreich abgeschlossen")
+                        self.logger.log("📊 Visualisierungen wurden im Calculator_Angle_Maschine/MathVisualisation/output/ Ordner gespeichert")
+                    else:
+                        self.logger.log(f"❌ Visualisation Mode fehlgeschlagen: {result.stderr}")
+                except Exception as e:
+                    self.logger.log(f"❌ Fehler bei Visualisation Mode: {e}")
+
+            threading.Thread(target=run_command).start()
+
+        except Exception as e:
+            self.logger.log(f"❌ Fehler bei Visualisation Mode: {e}")
+            messagebox.showerror("Fehler", f"Fehler bei der Visualisation Mode Ausführung:\n{e}")
+    
+    def execute_silent_mode(self):
+        """
+        Führt den Silent Mode mit den aktuellen Parametern aus
+        """
+        try:
+            csv_name = self.calc_csv_name.get()
+            target_x = float(self.calc_target_x.get())
+            target_y = float(self.calc_target_y.get())
+            scan_distance = float(self.calc_scan_distance.get())
+            measurements = int(self.calc_measurements.get())
+            
+            self.logger.log(f"🔇 Starte Silent Mode: {csv_name}")
+            self.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
+            
+            calc_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Calculator_Angle_Maschine", "MathVisualisation")
+            command = [
+                "python", "main.py", "--silent",
+                "--csv-name", csv_name,
+                "--target-x", str(target_x),
+                "--target-y", str(target_y),
+                "--scan-distance", str(scan_distance),
+                "--measurements", str(measurements)
+            ]
+            
+            def run_command():
+                try:
+                    result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        self.logger.log(f"✅ Silent Mode erfolgreich abgeschlossen")
+                        # Suche nach der generierten CSV-Datei
+                        output_dir = os.path.join(calc_dir, "output")
+                        csv_file = os.path.join(output_dir, f"{csv_name}.csv")
+                        if os.path.exists(csv_file):
+                            if messagebox.askyesno("CSV Import", "CSV wurde erfolgreich generiert. Soll die CSV-Datei sofort in die Warteschlange importiert werden?"):
+                                self.import_specific_csv(csv_file)
+                    else:
+                        self.logger.log(f"❌ Silent Mode fehlgeschlagen: {result.stderr}")
+                except Exception as e:
+                    self.logger.log(f"❌ Fehler bei Silent Mode: {e}")
+            
+            threading.Thread(target=run_command).start()
+            
+        except Exception as e:
+            self.logger.log(f"❌ Fehler bei Silent Mode: {e}")
+            messagebox.showerror("Fehler", f"Fehler bei der Silent Mode Ausführung:\n{e}")
+
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
         if hasattr(self, 'webcam'):

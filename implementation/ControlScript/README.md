@@ -70,6 +70,40 @@ cd Software_IScan
 python main.py
 ```
 
+## 🔗 NEW: Calculator_Angle_Maschine Integration with Software_IScan
+
+Two powerful commands are now available in Software_IScan for seamless angle calculation:
+
+### 🔇 CSV Silent Mode
+```bash
+# Direct integration in Software_IScan GUI - no command line needed
+Button: "CSV Silent Mode" → Configure parameters → Generate CSV → Auto-import
+```
+
+### 🎨 Full Visualization Mode  
+```bash
+# Complete analysis with visualizations + CSV
+Button: "Vollanalyse + CSV" → Configure parameters → Generate all files
+```
+
+**📋 See `SOFTWARE_ISCAN_INTEGRATION.md` for complete integration documentation.**
+
+---
+
+## 🚀 Command Line Usage (Advanced)
+
+### Calculator_Angle_Maschine Direct Commands:
+```bash
+python Calculator_Angle_Maschine/MathVisualisation/main.py --csv --csv-name custom_name --target-x 50 --target-y 50 --scan-distance 80 --measurements 5
+python Calculator_Angle_Maschine/MathVisualisation/main.py --visualize --target-x 40 --target-y 30 --measurements 20
+```
+
+### Software_IScan Direct Commands:
+```bash
+python Software_IScan/main.py --angle-calculation --csv-output
+python Software_IScan/main.py --angle-calculation --visualization-output
+```
+
 ## 📊 Key Configuration
 
 ```python
