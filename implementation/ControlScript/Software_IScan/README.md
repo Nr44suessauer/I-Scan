@@ -1,159 +1,180 @@
-# Software IScan - Main GUI Application
+# Software_IScan – Modern 3D Scanner Control GUI
 
-The complete I-Scan hardware control application with GUI interface for 3D scanning operations. This application provides comprehensive control over all scanner hardware components through a user-friendly interface.
-
-**Author:** Marc Nauendorf  
+**Author:**
+- Marc Nauendorf  
 **Email:** marc.nauendorf@hs-heilbronn.de  
 **Website:** deadlinedriven.dev
 
-## Core Application - `main.py`
+---
 
-### Primary Features
-- **Hardware Control GUI**: Complete graphical interface for all scanner components
-- **Real-time Camera Integration**: Live webcam feed with photo capture capabilities  
-- **Operation Queue System**: Batch operation management with CSV import
-- **Device Communication**: REST API integration for hardware control
-- **Position Tracking**: Real-time position monitoring and logging
+## Overview
+Software_IScan is a comprehensive, extensible GUI application for controlling the I-Scan 3D scanner hardware. Designed for research, industrial, and educational use, it provides a robust, user-friendly interface for all scanning operations, including live hardware control, batch operation management, and advanced angle calculation/visualization integration. The project is modular and ready for large-scale extension.
 
-### Hardware Components Supported
+---
 
-#### Servo Motor Control
-- Angle adjustment (0-90°)
-- Real-time angle feedback
-- Queue-based operation support
+## Project Structure
 
-#### Stepper Motor Control  
-- Precise distance-based movement (cm input)
-- Direction control (forward/backward)
-- Speed adjustment
-- Automatic step calculation for 28BYJ-48 stepper motor
+```
+ControlScript/
+├── Software_IScan/                  # Main GUI and control logic
+│   ├── main.py                      # Main GUI application
+│   ├── angle_calculator_commands.py # Calculator_Angle_Maschine integration
+│   ├── device_control.py            # Hardware abstraction and control
+│   ├── operation_queue.py           # Operation queue and batch execution
+│   ├── logger.py                    # Logging utilities
+│   ├── api_client.py                # REST API communication
+│   ├── webcam_helper.py             # Camera integration
+│   └── ... (other modules)
+│
+├── Calculator_Angle_Maschine/       # Advanced calculation engine
+│   └── MathVisualisation/
+│       ├── main.py                  # Angle calculation & visualization
+│       ├── calculations.py          # Core math logic
+│       ├── config.py                # Calculation config
+│       ├── output/                  # Generated images/CSVs
+│       └── visualizations/          # Modular visualization components
+│
+├── output/                          # Scan and calculation results
+└── ... (integration, docs, etc.)
+```
 
-#### LED Lighting System
-- Hex color selection (#RRGGBB)
-- Brightness control (0-100%)
-- Real-time color preview
+---
 
-#### Camera System
-- Live webcam streaming
-- Photo capture with timestamping
-- Automatic focus delay configuration
+## Architecture & Extensibility
 
-## Module Architecture
+```
++-------------------+        REST API        +-------------------+
+|   Software_IScan  | <-------------------> |   Scanner HW/API  |
++-------------------+                       +-------------------+
+|  main.py (GUI)    |
+|  device_control   |
+|  operation_queue  |
+|  logger           |
+|  angle_calculator |
++-------------------+
+        |
+        |  (subprocess)
+        v
++-------------------------------+
+| Calculator_Angle_Maschine     |
+|   (MathVisualisation/main.py) |
++-------------------------------+
+```
+- **Modular GUI**: All panels/components are easily extendable in `main.py`.
+- **Device Abstraction**: Add new hardware by extending `device_control.py` and updating the API client.
+- **Operation Queue**: Supports new command types and batch logic in `operation_queue.py`.
+- **Calculation Engine**: Extend `angle_calculator_commands.py` and the MathVisualisation package for new math/visualization features.
+- **Logging**: Centralized, extensible logging in `logger.py`.
 
-### `api_client.py` - Hardware Communication
-- REST API client for device communication
-- HTTP request management with error handling
-- Connection status monitoring
+---
 
-### `device_control.py` - Hardware Interface
-- Unified device control layer
-- Position calculation and tracking
-- Hardware state management
+## GUI Layout
 
-### `operation_queue.py` - Batch Operations
-- CSV operation file import
-- Sequential operation execution
-- Queue management with pause/resume
+```
++-------------------------------------------------------------------+
+| [Calculator Commands] [Home] [Queue] [Scan Config]                |
++-------------------+-------------------+--------------------------+
+|                   |                                      |       |
+|  Scan Config/     |      Dynamic Image Preview            |       |
+|  Command Panel    |  (servo geometry, updates after scan) |       |
+|                   |                                      |       |
++-------------------+-------------------+--------------------------+
+|                        Log Console (live, scrollable)            |
++------------------------------------------------------------------+
+```
+- **Calculator Commands**: Configure and execute angle calculations, generate CSVs, and run full visualizations.
+- **Scan Config/Command Panel**: Set all scan parameters, view and edit the live command, and execute scans.
+- **Dynamic Image Preview**: Shows the latest servo geometry visualization after each scan.
+- **Log Console**: Displays all actions, errors, and system messages in real time.
 
-### `webcam_helper.py` - Camera Integration
-- OpenCV-based camera interface
-- Image capture and processing
-- Tkinter GUI integration
+---
 
-### `logger.py` - System Logging
-- Real-time operation logging
-- GUI output integration
-- Status monitoring
+## Key Features
 
-## Installation & Setup
+- **Unified Hardware Control**: Servo, stepper, and LED management from a single interface.
+- **Live Command Display**: See the exact command line that will be executed as you change parameters.
+- **Dynamic Image Preview**: Automatically updates with the latest scan geometry after each operation.
+- **Calculator_Angle_Maschine Integration**: Run advanced angle calculations and visualizations directly from the GUI.
+- **Robust Logging & Error Handling**: All actions and errors are logged in the GUI for transparency and troubleshooting.
+- **Compact, Balanced Layout**: Grid-based layout ensures equal space for configuration, image, and logs.
+- **Batch Operation Support**: Queue and execute complex scan sequences, import/export CSVs.
+- **Extensible API Layer**: REST-based, easily adapted for new hardware endpoints.
+- **Async/Threaded Operations**: Non-blocking UI, responsive even during long calculations or scans.
+
+---
+
+## Calculator_Angle_Maschine Integration
+
+- **CSV Silent Mode**: Generate a CSV of scan commands with custom parameters for batch operation.
+- **Full Visualization Mode**: Generate all visualizations and CSV in one step; image preview updates automatically.
+- **Import CSV**: Load generated CSVs directly into the operation queue.
+- **All actions are non-blocking and provide progress feedback in the log.**
+- **Presets and Validation**: Use quick presets or custom parameters, with input validation.
+
+---
+
+## API & Extension Points
+
+- **REST API Communication**: All hardware control is performed via REST endpoints (servo, stepper, LED, home, etc.).
+- **Modular Design**: Add new hardware or features by extending `device_control.py` and updating the GUI in `main.py`.
+- **Operation Queue**: Extendable for new command types; supports batch execution and custom CSV formats.
+- **Calculator Integration**: Extend `angle_calculator_commands.py` to add new calculation modes or presets.
+- **Visualization Output**: Add new image types or output formats in MathVisualisation.
+- **Logging**: Add new log sinks or formats in `logger.py`.
+
+---
+
+## Usage
 
 ### Requirements
 ```bash
 pip install tkinter pillow opencv-python requests numpy
 ```
 
-### Quick Start
+### Start the Application
 ```bash
-# Using batch file (Windows)
-start.bat
-
-# Or directly with Python
+cd Software_IScan
 python main.py
 ```
 
-### Configuration
-- **Default API URL**: `http://192.168.137.7`
-- **Default Stepper Parameters**: 28mm diameter, 80 speed
-- **Camera**: Index 0, 320x240 resolution
+### Typical Workflow
+1. Set scan parameters in the Calculator Commands and Scan Config panels.
+2. Use Calculator Commands to generate CSVs or run full visualizations as needed.
+3. Execute scans; the image preview and log update automatically.
+4. Review logs and images for results and troubleshooting.
+5. Extend or automate as needed for your research or production workflow.
 
-## Operation Modes
+---
 
-### Manual Control
-Direct hardware control through GUI buttons and input fields.
+## Example: Live Command Display
 
-### CSV Batch Operations
-Import operation sequences from Calculator_Angle_Maschine:
-```csv
-type,params,description
-servo,"{\"angle\": 45}","Set servo angle"
-photo,"{}","Take photograph"  
-stepper,"{\"steps\": 100, \"direction\": 1, \"speed\": 80}","Move stepper"
+As you adjust parameters, the GUI shows the exact command that will be run, e.g.:
+```
+python ..\Calculator_Angle_Maschine\MathVisualisation\main.py --csv --csv-name scan1 --target-x 50 --target-y 50 --scan-distance 80 --measurements 5
 ```
 
-### Queue Repeat Mode
-Automatic repetition of loaded operation sequences for multiple scan runs.
+---
 
-## API Integration
+## Troubleshooting & Support
+- All errors and actions are logged in the GUI log console.
+- For advanced integration or calculation details, see the integration and calculation documentation in the parent directory.
+- For support, contact the authors or open an issue.
 
-The application communicates with hardware through REST endpoints:
-- `/servo` - Servo motor control
-- `/stepper` - Stepper motor control  
-- `/led` - LED lighting control
-- `/home` - Return to home position
+---
 
-## File Output
+## Extending the Application
+- Add new hardware: Implement in `device_control.py`, expose controls in `main.py`.
+- Add new scan commands: Extend `operation_queue.py` and update the command panel.
+- Add new calculation modes: Extend `angle_calculator_commands.py` and update the Calculator Commands panel.
+- Add new visualizations: Extend MathVisualisation and update the image preview logic.
+- Add new log outputs: Extend `logger.py` for new sinks or formats.
 
-- **Photos**: Saved as `foto_YYYYMMDD_HHMMSS.jpg`
-- **Logs**: Real-time operation logging in GUI
-- **Position Data**: Automatic position tracking
-- **Button-Abfrage** - Status-Monitoring
+---
 
-### Kamera-Integration:
-- **Live-Vorschau** - Webcam-Feed in der GUI
-- **Foto-Aufnahme** - Automatische Speicherung mit konfigurierbarem Delay
-- **Multi-Kamera-Unterstützung** - Verschiedene Device-Indices
+## Contributors / Authors
+- Marc Nauendorf (lead developer)
+- [YOUR NAME HERE] (contributor)
 
-### Warteschlangen-System:
-- **Operation Queue** - Sequenzielle Ausführung von Befehlen
-- **CSV-Import/Export** - Speichern und Laden von Befehlssequenzen
-- **Wiederholung** - Automatische Wiederholung der gesamten Warteschlange
+---
 
-### API-Konfiguration:
-- **Flexible URL** - Anpassbare API-Endpunkt-Adresse
-- **Fehlerbehandlung** - Robuste Fehlerbehandlung und Logging
-- **Threading** - Nicht-blockierende UI durch Hintergrund-Operationen
-
-## Konfiguration:
-
-### Standard-Einstellungen:
-- **API-URL**: `http://192.168.137.7`
-- **Zahnraddurchmesser**: 28mm
-- **Schrittmotor-Geschwindigkeit**: 80
-- **LED-Farbe**: #B00B69
-- **LED-Helligkeit**: 69%
-
-### Anpassungen:
-Standardwerte können direkt in `main.py` in den `DEFAULT_*` Konstanten geändert werden.
-
-## Troubleshooting:
-
-### Häufige Probleme:
-1. **Kamera nicht erkannt**: Device-Index in den Kamera-Einstellungen ändern
-2. **API-Verbindung fehlgeschlagen**: URL-Adresse und Netzwerkverbindung prüfen
-3. **Import-Fehler**: Alle Python-Abhängigkeiten installieren
-
-### Logs:
-Alle Aktivitäten werden im Ausgabebereich der GUI protokolliert.
-
-## Support:
-Bei Problemen siehe `Doc.md` für detaillierte Anleitungen.
+**This README replaces all previous documentation for Software_IScan. Remove or ignore any outdated references to CSV quick presets, legacy batch modes, or obsolete troubleshooting/configuration steps.**

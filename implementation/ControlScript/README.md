@@ -1,3 +1,89 @@
+# I-Scan Control Script System – Top-Level Documentation
+
+**Authors:**
+- Marc Nauendorf
+- [Please add your name here]
+
+**Project Start:** 2023–2025
+
+---
+
+## Overview & Architecture
+
+The I-Scan Control Script System is a modular, extensible platform for controlling, automating, and mathematically analyzing 3D scanner hardware. It consists of two tightly integrated main projects:
+
+### 1. Software_IScan (GUI & Hardware Control)
+- **Path:** `Software_IScan/`
+- **Purpose:** Provides a modern, user-friendly graphical interface for controlling all hardware components (servo, stepper, LED, camera, etc.) via a REST API.
+- **Features:**
+  - Live control and status display
+  - Batch operations (queue)
+  - Integration of mathematical calculations and visualizations
+  - Logging, error handling, image preview
+
+### 2. Calculator_Angle_Maschine (Mathematical Engine)
+- **Path:** `Calculator_Angle_Maschine/MathVisualisation/`
+- **Purpose:** Performs all mathematical calculations for optimal scanner control, generates CSV command lists, and creates visualizations (PNG).
+- **Features:**
+  - Linear and trigonometric angle calculation
+  - Generation of CSV files for automated scans
+  - Graphical analysis and visualization of scan geometry
+  - Flexible configuration and presets
+
+---
+
+## Project Interaction
+
+```
++-------------------+        REST API        +-------------------+
+|   Software_IScan  | <-------------------> |   Scanner HW/API  |
++-------------------+                       +-------------------+
+|  main.py (GUI)    |
+|  device_control   |
+|  operation_queue  |
+|  logger           |
+|  angle_calculator |
++-------------------+
+        |
+        |  (subprocess call)
+        v
++-------------------------------+
+| Calculator_Angle_Maschine     |
+|   (MathVisualisation/main.py) |
++-------------------------------+
+```
+
+- **Software_IScan** calls the mathematical engine (`Calculator_Angle_Maschine`) as a subprocess to generate optimal scan commands and visualizations for the current configuration.
+- The generated **CSV files** are directly imported into the GUI queue and can be executed immediately.
+- The **visualizations** (e.g., servo geometry) are automatically updated after each scan and displayed in the GUI.
+- Changes to parameters in the GUI immediately update the displayed commands, enabling seamless integration of mathematics and hardware control.
+
+---
+
+## Target Audience & Extensibility
+
+- **Research & Development:** Rapid adaptation to new hardware, experimentation with scan strategies and mathematical models.
+- **Production & Automation:** Robust, repeatable workflows through batch operations and automated command generation.
+- **Education & Demonstration:** Visualization and documentation of all mathematical and technical processes.
+
+The system is designed so that new hardware, mathematical methods, or visualizations can be easily added (see the respective README.md in the subprojects).
+
+---
+
+## Getting Started & Documentation
+
+- **Software_IScan/README.md:** Details on the GUI, hardware control, and extension
+- **Calculator_Angle_Maschine/MathVisualisation/README.md:** Details on mathematical methods, parameters, and visualizations
+- **BEFEHLE_UND_PARAMETER.md:** Overview of all available commands and parameters
+- **SOFTWARE_ISCAN_INTEGRATION.md:** Technical details on the integration of both systems
+
+---
+
+**Note:**
+This file is the central entry point documentation for the entire I-Scan Control Script System. For details on individual modules, please refer to the respective sub-README.md files.
+
+---
+
 # I-Scan Control Script System
 
 # Hands on control script

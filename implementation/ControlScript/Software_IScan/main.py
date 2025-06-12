@@ -1,8 +1,8 @@
 """
-IScan-ControlScript - Hauptprogramm
-Eine GUI-Anwendung zur Steuerung von Hardware über eine API-Schnittstelle.
-Diese Anwendung stellt eine Benutzeroberfläche bereit, um mit Hardware-Komponenten
-wie Servomotoren, Schrittmotoren, LED-Leuchten und Buttons über eine REST-API zu interagieren.
+IScan-ControlScript - Main Program
+A GUI application for controlling hardware via an API interface.
+This application provides a user interface to interact with hardware components
+such as servo motors, stepper motors, LED lights, and buttons via a REST API.
 
 Author: Marc Nauendorf
 Email: marc.nauendorf@hs-heilbronn.de
@@ -39,15 +39,15 @@ DEFAULT_LED_BRIGHTNESS = "69"
 
 class ControlApp:
     """
-    Hauptanwendungsklasse für die Steueranwendung
-    Verwaltet die GUI, Benutzerinteraktionen und koordiniert die
-    verschiedenen Komponenten der Anwendung.
+    Main application class for the control application
+    Manages the GUI, user interactions, and coordinates the
+    various components of the application.
     """
     
     def __init__(self):
-        """Initialisiert die Steueranwendung und richtet die GUI ein"""
+        """Initializes the control application and sets up the GUI"""
         self.root = tk.Tk()
-        self.root.title("I-Scan ControlScript - Hardware-Steuerung")
+        self.root.title("I-Scan ControlScript - Hardware Control")
         
         # Statusvariablen
         self.position = tk.DoubleVar(value=0)
@@ -333,33 +333,33 @@ class ControlApp:
 
     def create_webcam_frame(self):
         """
-        Erstellt den Rahmen für die Webcam-Anzeige und die Steuerelemente
+        Creates the frame for the webcam display and the control elements
         """
-        webcam_frame = tk.LabelFrame(self.root, text="Kamera")
+        webcam_frame = tk.LabelFrame(self.root, text="Camera")
         webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
         
         # Rahmen für die Kameraanzeige
         camera_view_frame = tk.Frame(webcam_frame)
         camera_view_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Label für die Kameraanzeige
-        self.cam_label = tk.Label(camera_view_frame, text="Kein Kamerabild", 
+        # Label für Kameraanzeige
+        self.cam_label = tk.Label(camera_view_frame, text="No camera image", 
                           bg="black", fg="white", width=40, height=15)
         self.cam_label.pack(fill="both", expand=True)
         
         # Rahmen für die Kamera-Schaltflächen
         camera_control_frame = tk.Frame(webcam_frame)
         camera_control_frame.pack(fill="x", padx=5, pady=5)
-          # Schaltflächen für die Kamerabedienung
-        self.btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten", 
+        # Camera control buttons
+        self.btn_start_camera = tk.Button(camera_control_frame, text="Start Camera", 
                                 bg="#4CAF50", fg="white", width=15)
         self.btn_start_camera.pack(side=tk.LEFT, padx=2)
         
-        self.btn_stop_camera = tk.Button(camera_control_frame, text="Kamera stoppen", 
+        self.btn_stop_camera = tk.Button(camera_control_frame, text="Stop Camera", 
                                bg="#F44336", fg="white", width=15)
         self.btn_stop_camera.pack(side=tk.LEFT, padx=2)
         
-        self.btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen", 
+        self.btn_take_photo = tk.Button(camera_control_frame, text="Take Photo", 
                               bg="#2196F3", fg="white", width=15)
         self.btn_take_photo.pack(side=tk.LEFT, padx=2)
         
@@ -369,17 +369,17 @@ class ControlApp:
     
     def create_servo_frame(self):
         """
-        Erstellt den Rahmen für die Servo-Steuerung
-        Ermöglicht es dem Benutzer, den Servo-Winkel einzustellen
+        Creates the frame for servo control
+        Allows the user to set the servo angle
         """
-        servo_frame = tk.LabelFrame(self.root, text="Servo-Steuerung")
+        servo_frame = tk.LabelFrame(self.root, text="Servo Control")
         servo_frame.pack(fill="x", padx=10, pady=2)
-        tk.Label(servo_frame, text="Winkel (0-90):").pack(side=tk.LEFT)
+        tk.Label(servo_frame, text="Angle (0-90):").pack(side=tk.LEFT)
         self.servo_angle = tk.Entry(servo_frame, width=5)
         self.servo_angle.pack(side=tk.LEFT)
         
-        # Schaltflächen werden in assign_callbacks konfiguriert
-        self.servo_exec_btn = tk.Button(servo_frame, text="Servo ausführen")
+        # Buttons are configured in assign_callbacks
+        self.servo_exec_btn = tk.Button(servo_frame, text="Execute Servo")
         self.servo_exec_btn.pack(side=tk.LEFT, padx=5)
         self.servo_add_btn = tk.Button(servo_frame, text="+", 
                               bg="#b0c4de", fg="black", font=("Arial", 10, "bold"), width=3)
