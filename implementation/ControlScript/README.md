@@ -1,10 +1,9 @@
 # I-Scan Control Script System – Top-Level Documentation
 
-**Authors:**
-- Marc Nauendorf
-- [Please add your name here]
-
-**Project Start:** 2023–2025
+**Author:**
+- Marc Nauendorf  
+  Email: marc.nauendorf@hs-heilbronn.de  
+  Website: DeadlineDriven.dev
 
 ---
 

@@ -2,8 +2,8 @@
 
 **Author:**
 - Marc Nauendorf  
-**Email:** marc.nauendorf@hs-heilbronn.de  
-**Website:** deadlinedriven.dev
+  Email: marc.nauendorf@hs-heilbronn.de  
+  Website: DeadlineDriven.dev
 
 ---
 
@@ -173,7 +173,6 @@ python ..\Calculator_Angle_Maschine\MathVisualisation\main.py --csv --csv-name s
 
 ## Contributors / Authors
 - Marc Nauendorf (lead developer)
-- [YOUR NAME HERE] (contributor)
 
 ---
 

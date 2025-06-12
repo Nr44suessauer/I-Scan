@@ -1,7 +1,8 @@
 # Calculator_Angle_Maschine – Mathematical Engine & Visualization
 
 **Author:** Marc Nauendorf  
-**Project Start:** 2023–2025
+**Email:** marc.nauendorf@hs-heilbronn.de  
+**Website:** DeadlineDriven.dev
 
 ---
 
