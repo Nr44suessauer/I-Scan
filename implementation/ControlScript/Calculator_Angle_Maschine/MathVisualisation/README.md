@@ -1,6 +1,11 @@
 # 3D Scanner Geometric Angle Calculator 📐
 
-Compact mathematics engine for 3D scanner servo control with visualizations.
+**Author:** Marc Nauendorf  
+**Email:** marc.nauendorf@hs-heilbronn.de  
+**Website:** deadlinedriven.dev  
+**Version:** 4.0 - Complete Mathematics Engine with CSV Export
+
+Comprehensive mathematics engine for 3D scanner control with advanced visualizations and Software_IScan integration.
 
 ## 🚀 Quick Start Examples
 
@@ -113,10 +118,12 @@ python main.py --help
 ```
 📤 create_command_csv()        ← Software_IScan CSV Export
 🎯 Features:
-   • Timestamp-based naming    ← Prevents overwrites
-   • Only reachable points     ← Smart filtering
-   • Ready for import          ← Direct Software_IScan compatibility
-   • Command sequence          ← home → stepper → servo → photo
+   • Custom naming support    ← --csv-name parameter
+   • Timestamp-based naming   ← Default behavior
+   • Only reachable points    ← Smart filtering
+   • Ready for import         ← Direct Software_IScan compatibility
+   • Command sequence         ← home → stepper → servo → photo
+   • 28BYJ-48 stepper motor   ← Precise step calculations
 ```
 
 ### COORDINATOR: `main.py`
@@ -125,10 +132,10 @@ python main.py --help
 🔇 main_silent()             ← Visualizations Only (Silent processing)
 📊 get_servo_angles()        ← Return Data Only
 📤 main(create_csv=True)     ← Full Mode + CSV Export for Software_IScan
-🧮 main_math_csv()           ← NEW: Mathematics + CSV Only (No visualizations)
-🤫 main_math_silent()        ← NEW: Silent Math + CSV (Minimal output)
-❓ show_help()               ← NEW: Command line usage help
-⚙️  Configuration Override  ← NEW: Command line parameter override system
+🧮 main_math_csv()           ← Mathematics + CSV Only (No visualizations)
+🤫 main_math_silent()        ← Silent Math + CSV (Minimal output)
+❓ show_help()               ← Command line usage help
+⚙️  Configuration Override  ← Command line parameter override system
 
 Command Line Interface:
 python main.py              ← Standard full analysis
@@ -136,6 +143,7 @@ python main.py --csv/-c     ← Full analysis + CSV export
 python main.py --math/-m    ← Math + CSV only (fast)
 python main.py --silent/-s  ← Silent mode (automation)
 python main.py --help/-h    ← Usage help
+python main.py --csv-name   ← Custom CSV filename
 
 Configuration Override System:
 python main.py --target-x 33 --target-y 50 --scan-distance 80 --measurements 7  ← Original I-Scan Setup
@@ -154,20 +162,21 @@ VISUALIZATION MODULES (visualizations/)
 └── servo_interpolation.py ─► 06_servo_interpolation.png
                             └► 07_servo_cone_detail.png
 
-CSV EXPORT PIPELINE (NEW)
-└── export_commands.py ─────► iscan_commands_YYYY-MM-DD_HH-MM-SS.csv
+CSV EXPORT PIPELINE
+└── export_commands.py ─────► Custom or timestamp-based CSV files
     ├── Software_IScan compatible format
     ├── Only reachable points included
+    ├── Custom naming support (--csv-name parameter)
     └── Ready for direct import
 ```
 
 ### CSV Export System:
 ```
-📤 export_commands.py          ← Simple CSV Export for Software_IScan
+📤 export_commands.py          ← CSV Export for Software_IScan
 🎯 Command: python main.py --csv / python main.py -c
-📁 Naming: iscan_commands_YYYY-MM-DD_HH-MM-SS.csv
+📁 Naming: Custom (--csv-name) or iscan_commands_YYYY-MM-DD_HH-MM-SS.csv
 📊 Format: type,params,description (Software_IScan compatible)
-⚡ Features: Only reachable points, timestamp naming, direct import ready
+⚡ Features: Reachable points only, flexible naming, direct import ready
 ```
 
 ### Subfolder System:
@@ -178,12 +187,12 @@ output/
 ├── 05_calculation_table.png
 ├── 06_servo_interpolation.png
 ├── 07_servo_cone_detail.png
-├── iscan_commands_YYYY-MM-DD_HH-MM-SS.csv  ← Software_IScan Commands
-└── point_calculations/          ← NEW STRUCTURE
+├── [custom_name].csv or iscan_commands_YYYY-MM-DD_HH-MM-SS.csv  ← Software_IScan Commands
+└── point_calculations/          ← Detailed point analysis
     ├── 04_point_1_calculation.png
     ├── 04_point_2_calculation.png
     ├── ...
-    └── 04_point_7_calculation.png
+    └── 04_point_N_calculation.png
 ```
 
 ## 🔄 Data Flow Diagram
@@ -199,8 +208,7 @@ output/
     └─────────────┘    └──────────────────┘    └─────────────────┘
             │                    │                        │
             ▼                    ▼                        ▼
-    ┌─────────────────────────────────────────────────────────────┐
-    │                    MAIN COORDINATOR                         │
+    ┌─────────────────────────────────────────────────────────────┐                    │                    MAIN COORDINATOR                         │
     │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
     │  │    MATH     │  │    SERVO    │  │    VISUALIZATIONS   │  │
     │  │   ENGINE    │  │   ENGINE    │  │                     │  │
@@ -217,7 +225,7 @@ output/
                     │                 │
                     │ 📁 output/      │
                     │ ├─ 01-07.png    │
-                    │ ├─ iscan_*.csv  │ ← NEW: Software_IScan Commands
+                    │ ├─ [name].csv   │ ← Software_IScan Commands (custom or timestamp)
                     │ └─ point_calc/  │
                     │    └─ 04_X.png  │
                     └─────────────────┘
@@ -312,14 +320,17 @@ The command-line interface allows you to override default configuration values d
 - `--target-y Y`: Target Y coordinate (default: 50.0)  
 - `--scanner-x X`: Scanner X coordinate (default: 0.0)
 - `--scanner-y Y`: Scanner Y coordinate (default: 0.0)
-- `--scan-distance D`: Maximum scan distance (default: 70.71)
-- `--measurements N`: Number of measurements (default: 6)
+- `--scan-distance D`: Maximum scan distance (default: 100.0)
+- `--measurements N`: Number of measurements (default: 10)
 
 ### Servo Parameters
 - `--servo-min ANGLE`: Minimum servo angle in degrees (default: 0.0)
 - `--servo-max ANGLE`: Maximum servo angle in degrees (default: 90.0)
 - `--servo-neutral ANGLE`: Neutral servo angle in degrees (default: 45.0)
-- `--servo-offset ANGLE`: Servo rotation offset (default: same as neutral)
+- `--servo-offset ANGLE`: Servo rotation offset (default: 45.0)
+
+### Export Parameters
+- `--csv-name NAME`: Custom CSV filename without extension (default: timestamp-based)
 
 ### Real-World Examples
 
@@ -400,7 +411,8 @@ photo,"{""delay"": 2.0}",Point 3: Capture photo
 
 ### Key Features:
 - ✅ **Only reachable points** included (unreachable points skipped)
-- ✅ **Timestamp-based naming** prevents overwrites
+- ✅ **Custom naming support** with --csv-name parameter
+- ✅ **Timestamp-based naming** as default fallback
 - ✅ **Software_IScan compatible** format
 - ✅ **Direct import ready** for operation queue
 - ✅ **Intelligent command sequence** (home → stepper → servo → photo)
@@ -419,7 +431,7 @@ ENABLE_VISUALIZATIONS = {
 }
 ```
 
-**Current Status: SCAN_DISTANCE=80cm, 7 Points, 71.4% reachable, Subfolder active** ✅
+**Current Status: Mathematics Engine v4.0 - Complete with CSV Export and Custom Naming** ✅
 
 ## 📤 CSV Export Technical Details
 
@@ -443,16 +455,44 @@ For 13.33cm movement: 6209 steps
 
 ### File Naming Convention:
 ```
-Pattern: iscan_commands_YYYY-MM-DD_HH-MM-SS.csv
-Example: iscan_commands_2025-06-11_11-28-03.csv
+Custom naming: [custom_name].csv (with --csv-name parameter)
+Timestamp naming: iscan_commands_YYYY-MM-DD_HH-MM-SS.csv (default)
+Example custom: production_scan.csv
+Example timestamp: iscan_commands_2025-06-12_14-30-15.csv
 Location: output/ directory
 ```
 
 ### Integration with Software_IScan:
-1. Export CSV using `python main.py --csv`
+1. Export CSV using `python main.py --csv` or `python main.py --csv --csv-name [name]`
 2. Import in Software_IScan operation queue
 3. Execute automated 3D scanning sequence
 4. Photos saved with automatic timestamps
+
+## 📋 System Features
+
+### Core Capabilities
+- **Geometric angle calculation** using trigonometric functions
+- **Servo interpolation** with reachability analysis
+- **Advanced visualizations** with subfolder organization
+- **CSV export** for direct Software_IScan integration
+- **Command-line interface** with parameter override
+- **Custom naming support** for organized project management
+
+### Visualization Suite
+- Geometric representation diagrams
+- Angle progression charts
+- Individual point calculation details
+- Servo interpolation visualizations
+- Calculation result tables
+- Servo cone analysis diagrams
+
+### Export & Integration
+- Software_IScan compatible CSV format
+- Custom filename support
+- Automatic old file cleanup
+- Reachability filtering
+- Stepper motor calculations
+- Direct import compatibility
 
 ## 🎓 ADD-ONS: `addons/`
 
@@ -481,4 +521,7 @@ angle_data = {
 }
 ```
 
-**Compact mathematics engine for precise 3D scanner servo control** 🎯
+---
+
+**Comprehensive mathematics engine for precise 3D scanner servo control**  
+*Developed by Marc Nauendorf - Hochschule Heilbronn* 🎯
