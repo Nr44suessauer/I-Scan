@@ -15,14 +15,36 @@ import csv
 import os
 import json
 import math
+import glob
 from datetime import datetime
 import config
 from servo_interpolation import calculate_servo_interpolation
 
 
+def delete_old_csv_files():
+    """Delete all existing CSV files in the output directory"""
+    output_dir = config.OUTPUT_DIR
+    csv_pattern = os.path.join(output_dir, "iscan_commands_*.csv")
+    
+    old_csv_files = glob.glob(csv_pattern)
+    
+    for old_file in old_csv_files:
+        try:
+            os.remove(old_file)
+            print(f"🗑️ Deleted old CSV: {os.path.basename(old_file)}")
+        except OSError as e:
+            print(f"⚠️ Could not delete {os.path.basename(old_file)}: {e}")
+    
+    if old_csv_files:
+        print(f"✅ Cleaned up {len(old_csv_files)} old CSV file(s)")
+
+
 def create_command_csv():
     """Creates a simple command CSV file for Software_IScan import"""
     print("🚀 Creating Software_IScan command CSV...")
+    
+    # Delete old CSV files first
+    delete_old_csv_files()
     
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

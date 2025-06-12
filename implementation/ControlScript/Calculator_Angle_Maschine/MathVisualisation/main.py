@@ -4,15 +4,7 @@
 MAIN COORDINATOR MODULE WITH CSV EXPORT
 =======================================
 
-M    
-    print(f"\n✅ COMPLETE ANALYSIS FINISHED! ({visualization_count} visualizations created)")
-    print("   • Mathematical calculation explained")
-    print("   • Servo interpolation calculated")
-    if TARGET_COORD_ADDON_AVAILABLE and ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
-        print("   • Target coordinate angle explanation included (Add-on)")
-    print("   • Geometric angles and servo interpolation ready for implementation")
-    print(f"   • Configuration: {sum(ENABLE_VISUALIZATIONS.values())}/{len(ENABLE_VISUALIZATIONS)} visualizations enabled")
-    print("\n" + "="*80) point providing multiple interfaces for the 3D scanner servo angle calculation
+Main entry point providing multiple interfaces for the 3D scanner servo angle calculation
 with integrated simple CSV export functionality.
 
 Author: Marc Nauendorf
@@ -98,54 +90,59 @@ def main(create_csv=False):
         visualization_count += 1
         print("📊 Geometric visualization saved: output\\01_geometric_representation.png")
         print("   ✅ 01_geometric_representation.png")
-    
+
     if ENABLE_VISUALIZATIONS['angle_progression']:
         create_angle_progression_visualization(angles_data)
         visualization_count += 1
         print("📊 Angle progression visualization saved: output\\02_angle_progression.png")
-        print("   ✅ 02_angle_progression.png")
-    
-    if ENABLE_VISUALIZATIONS['point_calculations'] and VISUALIZATION_SETTINGS['save_individual_point_calculations']:
-        for i, point_data in enumerate(angles_data):
-            create_point_calculation_visualization(point_data, i + 1)
-            visualization_count += 1
-        print("📊 Point calculation visualizations saved: output\\point_calculations\\04_point_X_calculation.png")
-        print("   ✅ 04_point_1-10_calculation.png (in point_calculations subfolder)")
-    
+        print("   ✅ 02_angle_progression.png")    # Point-specific calculations (04_point_X_calculation.png)
+    if ENABLE_VISUALIZATIONS['point_calculations']:
+        # Create individual point calculation visualizations
+        print("📊 Creating individual point calculation visualizations...")
+        count = 0
+        for i, point in enumerate(angles_data, 1):
+            create_point_calculation_visualization(point, i)
+            count += 1
+        visualization_count += count
+        print(f"📊 Individual point calculation visualizations saved: output\\point_calculations\\")
+        print(f"   ✅ {count} point calculation diagrams (04_point_X_calculation.png)")
+
+    # Calculation table visualization (05)
     if ENABLE_VISUALIZATIONS['calculation_table']:
         create_calculation_table_visualization(angles_data)
         visualization_count += 1
         print("📊 Calculation table visualization saved: output\\05_calculation_table.png")
         print("   ✅ 05_calculation_table.png")
-    
+
+    # Servo interpolation visualization (06)
     if ENABLE_VISUALIZATIONS['servo_interpolation']:
         save_servo_interpolation_visualization()
         visualization_count += 1
-        print("🎨 Creating servo interpolation visualization...")
-        print("✅ Servo interpolation visualization saved: output/06_servo_interpolation.png")
+        print("📊 Servo interpolation visualization saved: output\\06_servo_interpolation.png")
         print("   ✅ 06_servo_interpolation.png")
-    
+
+    # Servo cone detail visualization (07)
     if ENABLE_VISUALIZATIONS['servo_cone_detail']:
         save_servo_cone_detail()
         visualization_count += 1
-        print("🎨 Creating servo cone detail visualization...")
-        print("✅ Servo cone detail visualization saved: output/07_servo_cone_detail.png")
+        print("📊 Servo cone detail visualization saved: output\\07_servo_cone_detail.png")
         print("   ✅ 07_servo_cone_detail.png")
-      # Add-on features (08+)
-    if ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
-        if TARGET_COORD_ADDON_AVAILABLE and save_target_coord_angle_visualization:
+
+    # Optional add-on visualization (if available)
+    if TARGET_COORD_ADDON_AVAILABLE and ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
+        if save_target_coord_angle_visualization:
             save_target_coord_angle_visualization()
             visualization_count += 1
-            print("   ✅ 08_target_coord_angle_explanation.png (Add-on)")
-        else:
-            print("   ⚠️ 08_target_coord_angle_explanation.png (Add-on not available)")
-    
-    # Step 4: Create CSV if requested
+            print("📊 Target coord angle explanation saved: output\\target_coord_angle_explanation.png")
+            print("   ✅ target_coord_angle_explanation.png (Add-on)")
+
+    # Step 4: Optional CSV export for Software_IScan import
     if create_csv:
-        print("\n📊 CREATING SOFTWARE_ISCAN CSV FILE...")
+        print("\n📤 CREATING SOFTWARE_ISCAN IMPORT CSV...")
         from export_commands import create_command_csv
         create_command_csv()
-    
+
+    # Final summary
     print(f"\n✅ COMPLETE ANALYSIS FINISHED! ({visualization_count} visualizations created)")
     print("   • Mathematical calculation explained")
     print("   • Servo interpolation calculated")
@@ -156,130 +153,61 @@ def main(create_csv=False):
     print("\n" + "="*80)
 
 
-def main_silent():
-    """
-    Silent version of main function - only creates visualizations without explanation text
-    """
-    from calculations import calculate_geometric_angles
-    
-    print("🎨 Creating geometric angle and servo interpolation visualizations...")
-    
-    # Ensure fresh output directory (delete old files and create new directory)
-    ensure_output_dir()
-    
-    # Calculate angles without explanations
-    angles_data = calculate_geometric_angles()
-    servo_data = calculate_servo_interpolation()
-    
-    # Create visualizations based on configuration
-    visualization_count = 0
-    
-    if ENABLE_VISUALIZATIONS['geometric_representation']:
-        create_geometric_visualization(angles_data)
-        visualization_count += 1
-    
-    if ENABLE_VISUALIZATIONS['angle_progression']:
-        create_angle_progression_visualization(angles_data)
-        visualization_count += 1
-        
-    if ENABLE_VISUALIZATIONS['point_calculations'] and VISUALIZATION_SETTINGS['save_individual_point_calculations']:
-        for i, point_data in enumerate(angles_data):
-            create_point_calculation_visualization(point_data, i + 1)
-            visualization_count += 1
-    
-    if ENABLE_VISUALIZATIONS['calculation_table']:
-        create_calculation_table_visualization(angles_data)
-        visualization_count += 1
-    
-    if ENABLE_VISUALIZATIONS['servo_interpolation']:
-        save_servo_interpolation_visualization()
-        visualization_count += 1
-    
-    if ENABLE_VISUALIZATIONS['servo_cone_detail']:
-        save_servo_cone_detail()
-        visualization_count += 1
-    
-    # Add-on features
-    if ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
-        if TARGET_COORD_ADDON_AVAILABLE and save_target_coord_angle_visualization:
-            save_target_coord_angle_visualization()
-            visualization_count += 1
-    
-    print(f"✅ {visualization_count} visualizations created successfully!")
-
-
-def get_servo_angles():
-    """
-    Returns only the calculated servo angles as a list - no console output or file generation
-    """
-    from calculations import calculate_geometric_angles
-    
-    # Calculate and return only the angles
-    angles_data = calculate_geometric_angles()
-    return angles_data
-
-
 def main_math_csv():
     """
-    Mathematics and CSV only - executes calculations and exports CSV without visualizations
-    Optimized for fast CSV generation without GUI overhead
+    Mathematics and CSV only - no visualizations
+    
+    Creates mathematical explanation, servo interpolation calculation 
+    and CSV export without any visualizations.
     """
-    print("\n🧮 STARTING MATHEMATICS-ONLY MODE WITH CSV EXPORT...\n")
+    print("\n🧮 STARTING MATHEMATICS + CSV MODE (no visualizations)...\n")
     
     # Step 1: Mathematical explanation for geometric angles
-    print("🔢 Calculating geometric angles...")
     angles_data = print_step_by_step_explanation()
     
     # Step 2: Servo interpolation explanation
     print("\n" + "="*80)
-    print("⚙️ Calculating servo interpolation...")
     servo_data = print_servo_interpolation_explanation()
     
     # Step 2.5: Detailed reachability analysis
     print("\n" + "="*80)
-    print("📋 Analyzing target reachability...")
     print_detailed_reachability_table()
     
-    # Ensure output directory exists (but don't clear it for visualizations)
-    ensure_output_dir()
-    
-    # Step 3: Create CSV file for Software_IScan
-    print("\n📤 CREATING SOFTWARE_ISCAN CSV FILE...")
+    # Step 3: CSV export for Software_IScan import
+    print("\n📤 CREATING SOFTWARE_ISCAN IMPORT CSV...")
     from export_commands import create_command_csv
     create_command_csv()
     
-    print(f"\n✅ MATHEMATICS AND CSV EXPORT COMPLETED!")
+    # Final summary
+    print("\n✅ MATHEMATICS + CSV COMPLETED!")
     print("   • Mathematical calculation explained")
     print("   • Servo interpolation calculated")
-    print("   • Target reachability analyzed")
-    print("   • CSV file ready for Software_IScan import")
-    print("   • No visualizations created (math-only mode)")
+    print("   • CSV export ready for Software_IScan import")
+    print("   • No visualizations created (use --csv for full mode)")
     print("\n" + "="*80)
+    
+    return angles_data, servo_data
 
 
 def main_math_silent():
     """
-    Silent mathematics and CSV only - minimal output, fast execution
-    For automated processing or when only CSV output is needed
+    Silent mathematics and CSV only - minimal output
     """
-    from calculations import calculate_geometric_angles
-    from servo_interpolation import calculate_servo_interpolation
+    print("🔇 Silent mode: Mathematics + CSV...")
     
-    print("🔄 Silent math mode: Calculating...")
+    # Step 1: Mathematical calculation (silent)
+    angles_data = print_step_by_step_explanation()
     
-    # Calculate without explanations
-    angles_data = calculate_geometric_angles()
-    servo_data = calculate_servo_interpolation()
+    # Step 2: Servo interpolation (silent)
+    servo_data = print_servo_interpolation_explanation()
     
-    # Ensure output directory exists
-    ensure_output_dir()
-    
-    # Create CSV file
+    # Step 3: CSV export
     from export_commands import create_command_csv
     create_command_csv()
     
     print("✅ Silent math + CSV completed!")
     return angles_data, servo_data
+
 
 def show_help():
     """Show usage help for command line options"""
@@ -291,6 +219,7 @@ def show_help():
     print("OPTIONS:")
     print("  (no flags)     Full analysis with visualizations")
     print("  --csv, -c      Full analysis + CSV export")
+    print("  --visualize, -v  Create all visualizations (with custom config)")
     print("  --math, -m     Mathematics + CSV only (no visualizations)")
     print("  --silent, -s   Silent math + CSV (minimal output)")
     print("  --servo-graph, -g  Save only servo geometry graph")
@@ -310,6 +239,7 @@ def show_help():
     print()
     print("EXAMPLES:")
     print("  python main.py --csv")
+    print("  python main.py --visualize --target-x 90 --target-y 50 --scan-distance 80 --measurements 30")
     print("  python main.py --silent --target-x 100 --target-y 75")
     print("  python main.py --math --servo-min 10 --servo-max 80")
     print("  python main.py --csv --scan-distance 80 --measurements 7")
@@ -351,9 +281,9 @@ def parse_config_args(args):
                     if config_params[arg] == 'NUMBER_OF_MEASUREMENTS':
                         value = int(value)
                     config_updates[config_params[arg]] = value
-                    i += 2  # Skip the value argument
-                except ValueError:
-                    print(f"⚠️ Invalid value for {arg}: {args[i + 1]}")
+                    i += 2  # Skip the next argument as it's the value
+                except (ValueError, IndexError):
+                    print(f"⚠️ Invalid value for {arg}")
                     i += 1
             else:
                 print(f"⚠️ Missing value for {arg}")
@@ -368,32 +298,12 @@ def apply_config_overrides(config_updates):
     """Apply configuration overrides to the config module"""
     import config
     
-    # Update basic configuration values
     for key, value in config_updates.items():
         if hasattr(config, key):
-            old_value = getattr(config, key)
             setattr(config, key, value)
-            print(f"🔧 Config override: {key} = {value} (was {old_value})")
-    
-    # Recalculate derived servo values if any servo parameters changed
-    servo_params = ['SERVO_MIN_ANGLE', 'SERVO_MAX_ANGLE', 'SERVO_NEUTRAL_ANGLE', 'SERVO_ROTATION_OFFSET']
-    if any(param in config_updates for param in servo_params):
-        print("🔄 Recalculating derived servo coordinate values...")
-        
-        # Recalculate derived values
-        config.COORD_MAX_ANGLE = config._normalize_angle(
-            config.SERVO_MIN_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
-        )
-        config.COORD_MIN_ANGLE = config._normalize_angle(
-            config.SERVO_MAX_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
-        )
-        config.COORD_NEUTRAL_ANGLE = config._normalize_angle(
-            config.SERVO_NEUTRAL_ANGLE + config.SERVO_ROTATION_OFFSET + 180.0
-        )
-        
-        print(f"   COORD_MAX_ANGLE = {config.COORD_MAX_ANGLE}°")
-        print(f"   COORD_MIN_ANGLE = {config.COORD_MIN_ANGLE}°")
-        print(f"   COORD_NEUTRAL_ANGLE = {config.COORD_NEUTRAL_ANGLE}°")
+            print(f"   ✅ {key} updated to {value}")
+        else:
+            print(f"   ⚠️ Unknown configuration key: {key}")
 
 
 def create_csv_with_config(config_updates=None):
@@ -444,13 +354,16 @@ def save_servo_graph_only_with_config(config_updates=None):
     from visualizations.servo_interpolation import save_servo_geometry_graph_only
     return save_servo_geometry_graph_only()
 
+
 if __name__ == "__main__":
     import sys
     
     # Parse command line arguments
     args = sys.argv[1:]  # Remove script name
-      # Check for flags
+    
+    # Check for flags
     create_csv = "--csv" in args or "-c" in args
+    visualize_only = "--visualize" in args or "-v" in args
     math_only = "--math" in args or "-m" in args
     silent = "--silent" in args or "-s" in args
     show_help_flag = "--help" in args or "-h" in args
@@ -465,7 +378,8 @@ if __name__ == "__main__":
         for key, value in config_updates.items():
             print(f"   {key} = {value}")
         print()
-      # Execute based on flags (priority order: help -> servo-graph -> silent -> math -> csv -> standard)
+    
+    # Execute based on flags (priority order: help -> servo-graph -> visualize -> silent -> math -> csv -> standard)
     if show_help_flag:
         # Show command line usage help
         show_help()
@@ -474,6 +388,10 @@ if __name__ == "__main__":
         print("🎯 Creating servo geometry graph only...")
         output_path = save_servo_graph_only_with_config(config_updates)
         print(f"✅ Servo geometry graph saved: {output_path}")
+    elif visualize_only:
+        # Create all visualizations with custom configuration (no CSV)
+        print("🎨 Creating all visualizations with custom configuration...")
+        main_with_config_support(create_csv=False, config_updates=config_updates)
     elif silent:
         # Silent mathematics and CSV only (minimal output)
         main_math_silent_with_config(config_updates)

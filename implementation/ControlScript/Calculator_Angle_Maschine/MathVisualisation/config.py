@@ -30,7 +30,7 @@ NUMBER_OF_MEASUREMENTS = 10 # Number of measurement points
 # Servo interpolation parameters for 3D scanner
 SERVO_MIN_ANGLE = 0.0      # Minimum servo angle (degrees)
 SERVO_MAX_ANGLE = 90.0     # Maximum servo angle (degrees)
-SERVO_NEUTRAL_ANGLE = 45.0 # Servo neutral position at 45° physical angle
+SERVO_NEUTRAL_ANGLE = 135.0 # Servo neutral position at 30° physical angle
 SERVO_ROTATION_OFFSET = SERVO_NEUTRAL_ANGLE  # Servo rotation offset from Y-axis (degrees)
 
 # Coordinate system mapping (automatically calculated from servo parameters)
@@ -53,7 +53,7 @@ COORD_NEUTRAL_ANGLE = _normalize_angle(SERVO_NEUTRAL_ANGLE + SERVO_ROTATION_OFFS
 ENABLE_VISUALIZATIONS = {
     # CORE FEATURES (01-07) - Main functionality
     'geometric_representation': True,    # 01_geometric_representation.png
-    'angle_progression': True,          # 02_angle_progression.png  
+    'angle_progression': False,         # 02_angle_progression.png (DISABLED)
     'point_calculations': True,         # 04_point_X_calculation.png (all points)
     'calculation_table': True,          # 05_calculation_table.png
     'servo_interpolation': True,        # 06_servo_interpolation.png

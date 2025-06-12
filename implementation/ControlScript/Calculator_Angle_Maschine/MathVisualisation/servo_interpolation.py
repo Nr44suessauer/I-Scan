@@ -466,12 +466,12 @@ def calculate_corrected_servo_interpolation():
     Calculate servo angles with corrected physical servo mapping
     
     SERVO SYSTEM EXPLANATION:
-    - Servo cone zeigt in Richtung Target Object (180° Drehung vom ursprünglichen 2./3. Quadrant)
-    - Cone ist im 1./4. Quadranten: -45° bis +45° (oder 315° bis 45°)
-    - 45° Rotation bedeutet: 0° Target-Richtung = 45° Servo-Position
-    - Servo 0° → -45° coordinate (4. Quadrant)
-    - Servo 45° → 0° coordinate (positive X-Achse, Target-Richtung)  
-    - Servo 90° → +45° coordinate (1. Quadrant)
+    - Servo neutral angle: configurable via SERVO_NEUTRAL_ANGLE
+    - Servo coordinate range: COORD_MAX_ANGLE to COORD_MIN_ANGLE
+    - Physical servo range: 0° to 90°
+    - Servo cone rotates with the configured neutral angle
+    - Servo 0° → COORD_MAX_ANGLE coordinate
+    - Servo 90° → COORD_MIN_ANGLE coordinate
     """
     # Get geometric angles
     geometric_angles = calculate_geometric_angles()
@@ -492,18 +492,19 @@ def calculate_corrected_servo_interpolation():
             target_coord_angle -= 360.0
         while target_coord_angle < -180.0:
             target_coord_angle += 360.0
-        
-        # Check if target is within servo cone (-45° to +45° in coordinate system)
-        is_reachable = (-45.0 <= target_coord_angle <= 45.0)
+          # Check if target is within servo cone (using actual configured boundaries)
+        is_reachable = (config.COORD_MAX_ANGLE <= target_coord_angle <= config.COORD_MIN_ANGLE)
         
         # PHYSICAL SERVO CALCULATION:
-        # Map coordinate angle (-45° to +45°) to servo angle (0° to 90°)
+        # Map coordinate angle (COORD_MAX_ANGLE to COORD_MIN_ANGLE) to servo angle (0° to 90°)
+        coord_range = config.COORD_MIN_ANGLE - config.COORD_MAX_ANGLE  # 90°
         if is_reachable:
-            # Linear mapping: -45° → 0°, +45° → 90°
-            physical_servo_angle = (target_coord_angle + 45.0) * (90.0 / 90.0)
+            # Linear mapping: COORD_MAX_ANGLE → 0°, COORD_MIN_ANGLE → 90°
+            normalized = (target_coord_angle - config.COORD_MAX_ANGLE) / coord_range
+            physical_servo_angle = normalized * 90.0
         else:
             # Clamp to nearest boundary
-            if target_coord_angle < -45.0:
+            if target_coord_angle < config.COORD_MAX_ANGLE:
                 physical_servo_angle = 0.0
             else:
                 physical_servo_angle = 90.0
@@ -525,9 +526,8 @@ def calculate_corrected_servo_interpolation():
             'servo_angle': physical_servo_angle,  # CORRECTED: actual servo control angle
             'visual_angle': visual_angle,  # Angle relative to Y-axis
             'target_coord_angle': target_coord_angle,  # Target angle in coordinate system
-            'is_reachable': is_reachable,
-            'cone_angle_1': -45.0,  # 4th quadrant boundary
-            'cone_angle_2': 45.0,   # 1st quadrant boundary
+            'is_reachable': is_reachable,            'cone_angle_1': config.COORD_MAX_ANGLE,  # Actual minimum boundary
+            'cone_angle_2': config.COORD_MIN_ANGLE,   # Actual maximum boundary
             'dx': angle_data['dx'],
             'dy': angle_data['dy'],
             'hypotenuse': angle_data['hypotenuse']

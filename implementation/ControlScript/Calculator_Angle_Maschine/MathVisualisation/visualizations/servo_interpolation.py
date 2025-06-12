@@ -53,9 +53,10 @@ def create_servo_interpolation_visualization():
         cone_center_x = config.SCANNER_MODULE_X
         cone_center_y = data['y_pos']
         cone_radius = 25  # Visual radius for cone display
-          # Servo cone points toward Target: 1st/4th Quadrants (-45° to +45°)
-        coord_min = -45.0  # 4th quadrant boundary
-        coord_max = 45.0   # 1st quadrant boundary
+        
+        # Servo cone uses actual configured boundaries from config
+        coord_min = config.COORD_MAX_ANGLE  # Actual minimum coordinate angle
+        coord_max = config.COORD_MIN_ANGLE  # Actual maximum coordinate angle
         
         # Convert coordinate angles to radians for display
         angle1_rad = math.radians(coord_min)  # -45°
@@ -183,11 +184,10 @@ def create_servo_cone_detail():
       # Draw servo position
     servo_x, servo_y = 0, 0
     ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')
-    
-    # Draw servo cone (points toward Target: 1st/4th Quadrants -45° to +45°)
+      # Draw servo cone using actual configured boundaries from config
     cone_radius = 5
-    coord_min = -45.0  # 4th quadrant boundary
-    coord_max = 45.0   # 1st quadrant boundary
+    coord_min = config.COORD_MAX_ANGLE  # Actual minimum coordinate angle
+    coord_max = config.COORD_MIN_ANGLE  # Actual maximum coordinate angle
     
     # Convert coordinate angles to radians
     angle1_rad = math.radians(coord_min)  # -45°
@@ -288,10 +288,9 @@ def create_servo_geometry_graph_only():
         cone_center_x = config.SCANNER_MODULE_X
         cone_center_y = data['y_pos']
         cone_radius = 25  # Visual radius for cone display
-        
-        # Servo cone points toward Target: 1st/4th Quadrants (-45° to +45°)
-        coord_min = -45.0  # 4th quadrant boundary
-        coord_max = 45.0   # 1st quadrant boundary
+          # Servo cone uses actual configured boundaries from config
+        coord_min = config.COORD_MAX_ANGLE  # Actual minimum coordinate angle
+        coord_max = config.COORD_MIN_ANGLE  # Actual maximum coordinate angle
         
         # Convert coordinate angles to radians for display
         angle1_rad = math.radians(coord_min)  # -45°
