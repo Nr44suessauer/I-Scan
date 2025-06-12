@@ -39,16 +39,25 @@ def delete_old_csv_files():
         print(f"✅ Cleaned up {len(old_csv_files)} old CSV file(s)")
 
 
-def create_command_csv():
-    """Creates a simple command CSV file for Software_IScan import"""
+def create_command_csv(custom_name=None):
+    """Creates a simple command CSV file for Software_IScan import
+    
+    Args:
+        custom_name (str, optional): Custom name for the CSV file (without extension)
+    """
     print("🚀 Creating Software_IScan command CSV...")
     
     # Delete old CSV files first
     delete_old_csv_files()
     
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"iscan_commands_{timestamp}.csv"
+    # Generate filename
+    if custom_name:
+        filename = f"{custom_name}.csv"
+        print(f"📝 Using custom filename: {filename}")
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"iscan_commands_{timestamp}.csv"
+    
     filepath = os.path.join(config.OUTPUT_DIR, filename)
     
     # Ensure output directory exists

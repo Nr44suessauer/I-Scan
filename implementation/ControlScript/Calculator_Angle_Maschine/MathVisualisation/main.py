@@ -55,12 +55,13 @@ except ImportError:
     print("⚠️ Add-ons package not available - target coordinate explanation will be skipped")
 
 
-def main(create_csv=False):
+def main(create_csv=False, csv_name=None):
     """
     Main function - executes complete explanation and visualization including servo interpolation
     
     Args:
         create_csv (bool): If True, also creates a CSV file for Software_IScan import
+        csv_name (str, optional): Custom name for the CSV file (without extension)
     """
     print("\n🚀 STARTING COMPLETE GEOMETRIC ANGLE AND SERVO INTERPOLATION EXPLANATION...\n")
     
@@ -134,13 +135,11 @@ def main(create_csv=False):
             save_target_coord_angle_visualization()
             visualization_count += 1
             print("📊 Target coord angle explanation saved: output\\target_coord_angle_explanation.png")
-            print("   ✅ target_coord_angle_explanation.png (Add-on)")
-
-    # Step 4: Optional CSV export for Software_IScan import
+            print("   ✅ target_coord_angle_explanation.png (Add-on)")    # Step 4: Optional CSV export for Software_IScan import
     if create_csv:
         print("\n📤 CREATING SOFTWARE_ISCAN IMPORT CSV...")
         from export_commands import create_command_csv
-        create_command_csv()
+        create_command_csv(custom_name=csv_name)
 
     # Final summary
     print(f"\n✅ COMPLETE ANALYSIS FINISHED! ({visualization_count} visualizations created)")
@@ -153,12 +152,15 @@ def main(create_csv=False):
     print("\n" + "="*80)
 
 
-def main_math_csv():
+def main_math_csv(csv_name=None):
     """
     Mathematics and CSV only - no visualizations
     
     Creates mathematical explanation, servo interpolation calculation 
     and CSV export without any visualizations.
+    
+    Args:
+        csv_name (str, optional): Custom name for the CSV file (without extension)
     """
     print("\n🧮 STARTING MATHEMATICS + CSV MODE (no visualizations)...\n")
     
@@ -172,11 +174,10 @@ def main_math_csv():
     # Step 2.5: Detailed reachability analysis
     print("\n" + "="*80)
     print_detailed_reachability_table()
-    
-    # Step 3: CSV export for Software_IScan import
+      # Step 3: CSV export for Software_IScan import
     print("\n📤 CREATING SOFTWARE_ISCAN IMPORT CSV...")
     from export_commands import create_command_csv
-    create_command_csv()
+    create_command_csv(custom_name=csv_name)
     
     # Final summary
     print("\n✅ MATHEMATICS + CSV COMPLETED!")
@@ -189,9 +190,12 @@ def main_math_csv():
     return angles_data, servo_data
 
 
-def main_math_silent():
+def main_math_silent(csv_name=None):
     """
     Silent mathematics and CSV only - minimal output
+    
+    Args:
+        csv_name (str, optional): Custom name for the CSV file (without extension)
     """
     print("🔇 Silent mode: Mathematics + CSV...")
     
@@ -200,10 +204,9 @@ def main_math_silent():
     
     # Step 2: Servo interpolation (silent)
     servo_data = print_servo_interpolation_explanation()
-    
-    # Step 3: CSV export
+      # Step 3: CSV export
     from export_commands import create_command_csv
-    create_command_csv()
+    create_command_csv(custom_name=csv_name)
     
     print("✅ Silent math + CSV completed!")
     return angles_data, servo_data
@@ -236,13 +239,16 @@ def show_help():
     print("  --servo-max VALUE      Set servo maximum angle (°) [default: 90.0]")
     print("  --servo-neutral VALUE  Set servo neutral angle (°) [default: 45.0]")
     print("  --servo-offset VALUE   Set servo rotation offset (°) [default: 45.0]")
+    print("  --csv-name VALUE       Set custom CSV filename (without extension) [default: timestamp]")
     print()
     print("EXAMPLES:")
     print("  python main.py --csv")
+    print("  python main.py --csv --csv-name custom_scan_results")
     print("  python main.py --visualize --target-x 90 --target-y 50 --scan-distance 80 --measurements 30")
     print("  python main.py --silent --target-x 100 --target-y 75")
     print("  python main.py --math --servo-min 10 --servo-max 80")
     print("  python main.py --csv --scan-distance 80 --measurements 7")
+    print("  python main.py --csv --csv-name my_3d_scan --target-x 30 --target-y 50 --scan-distance 80 --measurements 5")
     print()
     print("OUTPUT:")
     print("  📁 output/")
@@ -273,7 +279,15 @@ def parse_config_args(args):
             '--servo-offset': 'SERVO_ROTATION_OFFSET'
         }
         
-        if arg in config_params:
+        # Special string parameter for CSV name
+        if arg == '--csv-name':
+            if i + 1 < len(args):
+                config_updates['CSV_NAME'] = args[i + 1]
+                i += 2  # Skip the next argument as it's the value
+            else:
+                print(f"⚠️ Missing value for {arg}")
+                i += 1
+        elif arg in config_params:
             if i + 1 < len(args):
                 try:
                     value = float(args[i + 1])
@@ -308,41 +322,53 @@ def apply_config_overrides(config_updates):
 
 def create_csv_with_config(config_updates=None):
     """Create CSV with optional configuration overrides"""
+    csv_name = None
     if config_updates:
+        # Extract CSV name if provided
+        csv_name = config_updates.pop('CSV_NAME', None)
         apply_config_overrides(config_updates)
     
     # Import after potential config changes
     from export_commands import create_command_csv
     
     print("📤 CREATING SOFTWARE_ISCAN CSV WITH CUSTOM CONFIGURATION...")
-    create_command_csv()
+    create_command_csv(custom_name=csv_name)
 
 
 def main_with_config_support(create_csv=False, config_updates=None):
     """Main function with configuration override support"""
+    csv_name = None
     if config_updates:
+        # Extract CSV name if provided
+        csv_name = config_updates.pop('CSV_NAME', None)
         apply_config_overrides(config_updates)
     
     # Run standard main function
-    main(create_csv=create_csv)
+    main(create_csv=create_csv, csv_name=csv_name)
 
 
 def main_math_csv_with_config(config_updates=None):
     """Mathematics and CSV only with configuration override support"""
+    csv_name = None
     if config_updates:
+        # Extract CSV name if provided
+        csv_name = config_updates.pop('CSV_NAME', None)
         apply_config_overrides(config_updates)
     
-    # Run math-only mode
-    main_math_csv()
+    # Run math-only mode with CSV name
+    main_math_csv(csv_name=csv_name)
 
 
 def main_math_silent_with_config(config_updates=None):
     """Silent mathematics and CSV with configuration override support"""
+    csv_name = None
     if config_updates:
+        # Extract CSV name if provided
+        csv_name = config_updates.pop('CSV_NAME', None)
         apply_config_overrides(config_updates)
     
-    # Run silent mode
-    main_math_silent()
+    # Run silent mode with CSV name
+    main_math_silent(csv_name=csv_name)
 
 
 def save_servo_graph_only_with_config(config_updates=None):

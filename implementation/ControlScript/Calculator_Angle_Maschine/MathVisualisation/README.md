@@ -2,6 +2,53 @@
 
 Compact mathematics engine for 3D scanner servo control with visualizations.
 
+## 🚀 Quick Start Examples
+
+### Basic Usage
+```bash
+# Standard analysis with visualizations
+python main.py
+
+# Full analysis + CSV export for Software_IScan
+python main.py --csv
+
+# Mathematics + CSV only (no visualizations, faster)
+python main.py --math
+
+# Silent mode for automation
+python main.py --silent
+```
+
+### Custom CSV Naming
+```bash
+# Custom CSV filename
+python main.py --csv --csv-name my_scan_results
+
+# Math mode with custom name
+python main.py --math --csv-name production_scan
+
+# Silent mode with custom name  
+python main.py --silent --csv-name automated_scan
+```
+
+### Configuration Override Examples
+```bash
+# Original I-Scan setup recreation
+python main.py --csv --target-x 33 --target-y 50 --scan-distance 80 --measurements 7
+
+# Custom target with CSV export
+python main.py --csv --csv-name custom_target --target-x 30 --target-y 50 --scan-distance 80 --measurements 5
+
+# Quick custom scan
+python main.py --math --target-x 100 --target-y 75 --measurements 5
+
+# Custom servo parameters
+python main.py --silent --servo-min 10 --servo-max 80 --servo-neutral 45
+
+# Help and usage information
+python main.py --help
+```
+
 ## 🎯 System Concept
 
 ```
