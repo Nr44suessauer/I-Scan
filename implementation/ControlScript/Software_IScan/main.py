@@ -219,24 +219,32 @@ class ControlApp:
         # Hauptcontainer für Output und Calculator Commands
         output_container = tk.Frame(self.root)
         output_container.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
+        # Grid-Layout für gleichmäßige Aufteilung
+        output_container.columnconfigure(0, weight=1, minsize=350)  # Log-Konsole schmaler
+        output_container.columnconfigure(1, weight=1, minsize=350)  # Scan-Konfiguration + Bild
+        output_container.rowconfigure(0, weight=1)
+
         # Log-Konsole (links)
         log_frame = tk.Frame(output_container)
-        log_frame.pack(side=tk.LEFT, fill="both", expand=True)
-        
+        log_frame.grid(row=0, column=0, sticky="nsew")
         tk.Label(log_frame, text="Log-Konsole", font=("Arial", 10, "bold")).pack(anchor='w')
-        self.output = scrolledtext.ScrolledText(log_frame, width=60, height=16, state='disabled')
+        self.output = scrolledtext.ScrolledText(log_frame, width=45, height=16, state='disabled')
         self.output.pack(fill="both", expand=True)
-          # Calculator Commands Panel (rechts)
-        self.create_calculator_commands_panel(output_container)
+
+        # Calculator Commands Panel (rechts)
+        self.create_calculator_commands_panel(output_container, grid_mode=True)
     
-    def create_calculator_commands_panel(self, parent):
+    def create_calculator_commands_panel(self, parent, grid_mode=False):
         """
         Erstellt das Calculator Commands Panel neben der Log-Konsole
         Zeigt rechts neben der Scan-Konfiguration das Bild 06_servo_geometry_graph_only.png an
         """
         calc_panel = tk.LabelFrame(parent, text="Calculator Commands", font=("Arial", 10, "bold"))
-        calc_panel.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
+        if grid_mode:
+            calc_panel.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        else:
+            calc_panel.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
 
         # Frame für Parameter und Bild nebeneinander
         content_frame = tk.Frame(calc_panel)
@@ -244,7 +252,7 @@ class ControlApp:
 
         # Parameter für beide Modi (links)
         params_frame = tk.Frame(content_frame)
-        params_frame.pack(side=tk.LEFT, fill="y", padx=5, pady=5)
+        params_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
         
         # CSV Name
         tk.Label(params_frame, text="CSV Name:", font=("Arial", 8)).grid(row=0, column=0, sticky="w", padx=2, pady=1)
@@ -312,7 +320,7 @@ class ControlApp:
             img_path = os.path.normpath(img_path)
             if os.path.exists(img_path):
                 img = Image.open(img_path)
-                img = img.resize((220, 180), Image.LANCZOS)
+                img = img.resize((400, 320), Image.LANCZOS)
                 self.servo_graph_img = ImageTk.PhotoImage(img)
                 self.servo_graph_img_label = tk.Label(image_frame, image=self.servo_graph_img)
                 self.servo_graph_img_label.pack()
@@ -1060,7 +1068,6 @@ class ControlApp:
         Aktualisiert das Servo-Graph-Bild im Calculator Commands Panel
         """
         try:
-            import os
             from PIL import Image, ImageTk
             script_dir = os.path.dirname(os.path.abspath(__file__))
             img_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
@@ -1068,7 +1075,7 @@ class ControlApp:
             if hasattr(self, 'servo_graph_img_label'):
                 if os.path.exists(img_path):
                     img = Image.open(img_path)
-                    img = img.resize((220, 180), Image.LANCZOS)
+                    img = img.resize((400, 320), Image.LANCZOS)
                     self.servo_graph_img = ImageTk.PhotoImage(img)
                     self.servo_graph_img_label.config(image=self.servo_graph_img, text="")
                 else:
