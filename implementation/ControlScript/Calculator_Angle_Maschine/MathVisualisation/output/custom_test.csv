@@ -1,8 +1,0 @@
-type,params,description
-home,{},Execute home function
-stepper,"{""steps"": 18626, ""direction"": 1, ""speed"": 80}",Move 40.00cm forward (18626 steps)
-servo,"{""angle"": 63}",Point 2: Set servo to 63° (Y=40.0cm)
-photo,"{""delay"": 2.0}",Point 2: Capture photo
-stepper,"{""steps"": 18626, ""direction"": 1, ""speed"": 80}",Move 40.00cm forward (18626 steps)
-servo,"{""angle"": 0}",Point 3: Set servo to 0° (Y=80.0cm)
-photo,"{""delay"": 2.0}",Point 3: Capture photo
