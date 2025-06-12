@@ -1,5 +1,12 @@
 # I-Scan Control Script System
 
+# Hands on control script
+python Calculator_Angle_Maschine\MathVisualisation\main.py --csv --csv-name custom_name --target-x 50 --target-y 50 --scan-distance 80 --measurements 5
+
+python Calculator_Angle_Maschine\MathVisualisation\main.py --visualize --target-x 40 --target-y 30 --measurements 20
+
+--- 
+
 Clean, modern servo angle calculation system for the I-Scan 3D scanner.
 
 **Author:** Marc Nauendorf  

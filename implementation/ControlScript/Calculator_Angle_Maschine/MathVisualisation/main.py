@@ -32,7 +32,8 @@ from servo_interpolation import (
 )
 from visualizations.servo_interpolation import (
     save_servo_interpolation_visualization,
-    save_servo_cone_detail
+    save_servo_cone_detail,
+    save_servo_geometry_graph_only
 )
 
 from visualizations import (
@@ -113,14 +114,18 @@ def main(create_csv=False, csv_name=None):
         create_calculation_table_visualization(angles_data)
         visualization_count += 1
         print("📊 Calculation table visualization saved: output\\05_calculation_table.png")
-        print("   ✅ 05_calculation_table.png")
-
-    # Servo interpolation visualization (06)
+        print("   ✅ 05_calculation_table.png")    # Servo interpolation visualization (06)
     if ENABLE_VISUALIZATIONS['servo_interpolation']:
         save_servo_interpolation_visualization()
         visualization_count += 1
         print("📊 Servo interpolation visualization saved: output\\06_servo_interpolation.png")
         print("   ✅ 06_servo_interpolation.png")
+        
+        # Also create separate geometry graph (06_servo_geometry_graph_only)
+        save_servo_geometry_graph_only()
+        visualization_count += 1
+        print("📊 Servo geometry graph (separate) saved: output\\06_servo_geometry_graph_only.png")
+        print("   ✅ 06_servo_geometry_graph_only.png")
 
     # Servo cone detail visualization (07)
     if ENABLE_VISUALIZATIONS['servo_cone_detail']:
