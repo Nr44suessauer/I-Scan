@@ -47,7 +47,24 @@ class ControlApp:
     def __init__(self):
         """Initializes the control application and sets up the GUI"""
         self.root = tk.Tk()
-        self.root.title("I-Scan ControlScript - Hardware Control")
+        self.root.title("I-Scan Wizard")
+        
+        # Set the window icon
+        try:
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(script_dir, "wizard_icon.png")
+            
+            if os.path.exists(icon_path):
+                # Load and set the icon
+                icon = tk.PhotoImage(file=icon_path)
+                self.root.iconphoto(True, icon)
+                # Keep a reference to prevent garbage collection
+                self.root.icon_image = icon
+            else:
+                print("Warning: Wizard icon not found at", icon_path)
+        except Exception as e:
+            print(f"Warning: Could not load wizard icon: {e}")
         
         # Statusvariablen
         self.position = tk.DoubleVar(value=0)

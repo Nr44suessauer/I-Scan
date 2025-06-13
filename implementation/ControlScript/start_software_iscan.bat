@@ -1,6 +1,6 @@
 @echo off
 echo ====================================================
-echo  I-SCAN SOFTWARE STARTUP SCRIPT
+echo  I-SCAN WIZARD STARTUP SCRIPT
 echo ====================================================
 echo.
 
@@ -82,7 +82,7 @@ echo ✓ Cleanup completed
 echo.
 
 REM Navigate to Software_IScan directory and start the application
-echo 🚀 Starting Software_IScan GUI...
+echo 🚀 Starting I-Scan Wizard GUI...
 cd Software_IScan
 python main.py
 
