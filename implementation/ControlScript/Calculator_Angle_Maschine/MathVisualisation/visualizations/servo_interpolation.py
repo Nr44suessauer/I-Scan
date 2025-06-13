@@ -174,63 +174,109 @@ def save_servo_interpolation_visualization():
 
 def create_servo_cone_detail():
     """
-    Create a detailed visualization of the servo cone concept
+    Create a detailed visualization of the servo cone concept using actual servo parameters
     """
-    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
     
     # Draw coordinate system
     ax.axhline(y=0, color='black', linewidth=1, alpha=0.5)
     ax.axvline(x=0, color='black', linewidth=1, alpha=0.5)
-      # Draw servo position
+    
+    # Draw servo position
     servo_x, servo_y = 0, 0
-    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position')
-      # Draw servo cone using actual configured boundaries from config
+    ax.plot(servo_x, servo_y, 'ko', markersize=12, label='Servo Position (Scanner)')
+    
+    # Draw servo cone using actual servo parameters (not coordinate system angles)
     cone_radius = 5
-    coord_min = config.COORD_MAX_ANGLE  # Actual minimum coordinate angle
-    coord_max = config.COORD_MIN_ANGLE  # Actual maximum coordinate angle
     
-    # Convert coordinate angles to radians
-    angle1_rad = math.radians(coord_min)  # -45°
-    angle2_rad = math.radians(coord_max)  # +45°
-      # Cone boundaries
-    cone_x1 = servo_x + cone_radius * math.cos(angle1_rad)
-    cone_y1 = servo_y + cone_radius * math.sin(angle1_rad)
-    cone_x2 = servo_x + cone_radius * math.cos(angle2_rad)
-    cone_y2 = servo_y + cone_radius * math.sin(angle2_rad)
+    # Use actual servo parameters from config
+    servo_min = config.SERVO_MIN_ANGLE
+    servo_max = config.SERVO_MAX_ANGLE
+    servo_neutral = config.SERVO_NEUTRAL_ANGLE
     
-    ax.plot([servo_x, cone_x1], [servo_y, cone_y1], 'purple', linewidth=3, label='-45° Limit (4th Quadrant)')
-    ax.plot([servo_x, cone_x2], [servo_y, cone_y2], 'purple', linewidth=3, label='+45° Limit (1st Quadrant)')
+    # Convert servo angles to visualization angles
+    # In the coordinate system: servo angle 0° = facing right (+X direction)
+    # Servo angles are measured from neutral position (typically 45° physical)
+    # The visualization shows the actual servo range
     
-    # Fill cone (1st and 4th Quadrant)
-    theta = np.linspace(angle1_rad, angle2_rad, 50)
+    # Calculate the actual angles for visualization
+    # The servo rotates around Z-axis, with 0° being the reference direction
+    angle_min_rad = math.radians(servo_min)
+    angle_max_rad = math.radians(servo_max)  
+    angle_neutral_rad = math.radians(servo_neutral)
+    
+    # Cone boundaries (showing the actual servo range)
+    cone_x_min = servo_x + cone_radius * math.cos(angle_min_rad)
+    cone_y_min = servo_y + cone_radius * math.sin(angle_min_rad)
+    cone_x_max = servo_x + cone_radius * math.cos(angle_max_rad)
+    cone_y_max = servo_y + cone_radius * math.sin(angle_max_rad)
+    
+    # Draw servo range boundaries
+    ax.plot([servo_x, cone_x_min], [servo_y, cone_y_min], 'red', linewidth=3, 
+            label=f'Servo Min ({servo_min:.1f}°)')
+    ax.plot([servo_x, cone_x_max], [servo_y, cone_y_max], 'red', linewidth=3, 
+            label=f'Servo Max ({servo_max:.1f}°)')
+    
+    # Fill servo cone (actual servo range)
+    if servo_max > servo_min:  # Normal case
+        theta = np.linspace(angle_min_rad, angle_max_rad, 50)
+    else:  # Handle wrap-around case
+        theta1 = np.linspace(angle_min_rad, 2*math.pi, 25)
+        theta2 = np.linspace(0, angle_max_rad, 25)
+        theta = np.concatenate([theta1, theta2])
+    
     cone_x = servo_x + cone_radius * np.cos(theta)
     cone_y = servo_y + cone_radius * np.sin(theta)
     cone_x = np.append([servo_x], cone_x)
     cone_y = np.append([servo_y], cone_y)
-    ax.fill(cone_x, cone_y, color='purple', alpha=0.3, label='Servo Reachable Cone (Target Direction)')
-      # Draw neutral position (0° = positive X-axis, Target Direction)
-    neutral_rad = math.radians(0)  # Positive X-Axis = 0° (Servo 45° position)
-    neutral_x = servo_x + cone_radius * 0.7 * math.cos(neutral_rad)
-    neutral_y = servo_y + cone_radius * 0.7 * math.sin(neutral_rad)
-    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=3, linestyle='--', label='Neutral Position (0°, Target Direction)')
+    ax.fill(cone_x, cone_y, color='red', alpha=0.2, label='Servo Reachable Range')
+    
+    # Draw neutral position
+    neutral_x = servo_x + cone_radius * 0.8 * math.cos(angle_neutral_rad)
+    neutral_y = servo_y + cone_radius * 0.8 * math.sin(angle_neutral_rad)
+    ax.plot([servo_x, neutral_x], [servo_y, neutral_y], 'orange', linewidth=4, 
+            linestyle='--', label=f'Servo Neutral ({servo_neutral:.1f}°)')
     
     # Add angle annotations
-    ax.annotate('-45°', xy=(cone_x1, cone_y1), xytext=(cone_x1+0.5, cone_y1-0.5),
-                fontsize=12, fontweight='bold', color='purple')
-    ax.annotate('+45°', xy=(cone_x2, cone_y2), xytext=(cone_x2+0.5, cone_y2+0.5),
-                fontsize=12, fontweight='bold', color='purple')
-    ax.annotate('0°', xy=(neutral_x, neutral_y), xytext=(neutral_x+0.5, neutral_y-0.5),
-                fontsize=12, fontweight='bold', color='orange')
-      # Add coordinate system labels
+    ax.annotate(f'{servo_min:.1f}°', xy=(cone_x_min, cone_y_min), 
+                xytext=(cone_x_min+0.5, cone_y_min-0.3),
+                fontsize=12, fontweight='bold', color='red',
+                arrowprops=dict(arrowstyle='->', color='red', alpha=0.7))
+    ax.annotate(f'{servo_max:.1f}°', xy=(cone_x_max, cone_y_max), 
+                xytext=(cone_x_max+0.5, cone_y_max+0.3),
+                fontsize=12, fontweight='bold', color='red',
+                arrowprops=dict(arrowstyle='->', color='red', alpha=0.7))
+    ax.annotate(f'{servo_neutral:.1f}°', xy=(neutral_x, neutral_y), 
+                xytext=(neutral_x+0.7, neutral_y+0.2),
+                fontsize=12, fontweight='bold', color='orange',
+                arrowprops=dict(arrowstyle='->', color='orange', alpha=0.7))
+    
+    # Add coordinate system labels
     ax.text(6, 0.2, '+X', fontsize=12, fontweight='bold')
     ax.text(0.2, 6, '+Y', fontsize=12, fontweight='bold')
     
-    ax.set_xlim(-6, 6)
-    ax.set_ylim(-6, 6)
-    ax.set_xlabel('X Coordinate', fontweight='bold')
-    ax.set_ylabel('Y Coordinate', fontweight='bold')
+    # Add configuration information as text box
+    config_text = f"""Servo Configuration:
+• Min Angle: {servo_min:.1f}°
+• Max Angle: {servo_max:.1f}°  
+• Neutral: {servo_neutral:.1f}°
+• Range: {abs(servo_max - servo_min):.1f}°
+
+Calculated Coordinates:
+• COORD_MAX: {config.COORD_MAX_ANGLE:.1f}°
+• COORD_MIN: {config.COORD_MIN_ANGLE:.1f}°
+• COORD_NEUTRAL: {config.COORD_NEUTRAL_ANGLE:.1f}°"""
+    
+    ax.text(0.02, 0.98, config_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
+    
+    ax.set_xlim(-7, 7)
+    ax.set_ylim(-7, 7)
+    ax.set_xlabel('X Coordinate (cm)', fontweight='bold')
+    ax.set_ylabel('Y Coordinate (cm)', fontweight='bold')
+    ax.set_title('Servo Motor Cone Detail - Actual Servo Parameters', fontweight='bold', fontsize=14)
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    ax.legend(loc='lower right')
     ax.set_aspect('equal')
     
     return fig

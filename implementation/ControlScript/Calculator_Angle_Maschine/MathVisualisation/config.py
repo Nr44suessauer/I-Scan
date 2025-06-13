@@ -43,10 +43,32 @@ def _normalize_angle(angle):
         angle += 360
     return angle
 
-# Calculated coordinate system angles
-COORD_MAX_ANGLE = _normalize_angle(SERVO_MIN_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -135.0°
-COORD_MIN_ANGLE = _normalize_angle(SERVO_MAX_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -45.0°
-COORD_NEUTRAL_ANGLE = _normalize_angle(SERVO_NEUTRAL_ANGLE + SERVO_ROTATION_OFFSET + 180.0)  # -90.0°
+def calculate_coordinate_angles():
+    """Calculate coordinate system angles based on current servo parameters"""
+    return {
+        'COORD_MAX_ANGLE': _normalize_angle(SERVO_MIN_ANGLE + SERVO_ROTATION_OFFSET + 180.0),
+        'COORD_MIN_ANGLE': _normalize_angle(SERVO_MAX_ANGLE + SERVO_ROTATION_OFFSET + 180.0),
+        'COORD_NEUTRAL_ANGLE': _normalize_angle(SERVO_NEUTRAL_ANGLE + SERVO_ROTATION_OFFSET + 180.0)
+    }
+
+# Initial calculated coordinate system angles
+_coord_angles = calculate_coordinate_angles()
+COORD_MAX_ANGLE = _coord_angles['COORD_MAX_ANGLE']  # -135.0°
+COORD_MIN_ANGLE = _coord_angles['COORD_MIN_ANGLE']  # -45.0°
+COORD_NEUTRAL_ANGLE = _coord_angles['COORD_NEUTRAL_ANGLE']  # -90.0°
+
+def update_coordinate_angles():
+    """Update coordinate angles after servo parameter changes"""
+    global COORD_MAX_ANGLE, COORD_MIN_ANGLE, COORD_NEUTRAL_ANGLE, SERVO_ROTATION_OFFSET
+    
+    # Update rotation offset if neutral angle changed
+    SERVO_ROTATION_OFFSET = SERVO_NEUTRAL_ANGLE
+    
+    # Recalculate coordinate angles
+    _coord_angles = calculate_coordinate_angles()
+    COORD_MAX_ANGLE = _coord_angles['COORD_MAX_ANGLE']
+    COORD_MIN_ANGLE = _coord_angles['COORD_MIN_ANGLE']
+    COORD_NEUTRAL_ANGLE = _coord_angles['COORD_NEUTRAL_ANGLE']
 
 # === VISUALIZATION CONFIGURATION ===
 # Control which visualizations are generated when running main.py

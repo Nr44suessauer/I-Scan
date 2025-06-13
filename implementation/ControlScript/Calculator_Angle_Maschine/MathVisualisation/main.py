@@ -305,12 +305,26 @@ def apply_config_overrides(config_updates):
     """Apply configuration overrides to the config module"""
     import config
     
+    servo_params_changed = False
+    
     for key, value in config_updates.items():
         if hasattr(config, key):
             setattr(config, key, value)
             print(f"   ✅ {key} updated to {value}")
+            
+            # Check if servo parameters were changed
+            if key in ['SERVO_MIN_ANGLE', 'SERVO_MAX_ANGLE', 'SERVO_NEUTRAL_ANGLE']:
+                servo_params_changed = True
         else:
             print(f"   ⚠️ Unknown configuration key: {key}")
+    
+    # Update coordinate angles if servo parameters were changed
+    if servo_params_changed:
+        config.update_coordinate_angles()
+        print(f"   🔄 Coordinate angles recalculated:")
+        print(f"      → COORD_MAX_ANGLE: {config.COORD_MAX_ANGLE:.1f}°")
+        print(f"      → COORD_MIN_ANGLE: {config.COORD_MIN_ANGLE:.1f}°")
+        print(f"      → COORD_NEUTRAL_ANGLE: {config.COORD_NEUTRAL_ANGLE:.1f}°")
 
 
 def create_csv_with_config(config_updates=None):

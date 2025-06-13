@@ -301,8 +301,7 @@ class ControlApp:
         self.calc_scan_distance.grid(row=3, column=1, sticky="w", padx=2, pady=1)
         self.calc_scan_distance.bind('<KeyRelease>', self.update_command_display)
         self.calc_scan_distance.bind('<FocusOut>', self.update_command_display)
-        
-        # Measurements
+          # Measurements
         tk.Label(params_frame, text="Measurements:", font=("Arial", 8)).grid(row=4, column=0, sticky="w", padx=2, pady=1)
         self.calc_measurements = tk.Entry(params_frame, width=8, font=("Arial", 8))
         self.calc_measurements.insert(0, "7")
@@ -310,13 +309,40 @@ class ControlApp:
         self.calc_measurements.bind('<KeyRelease>', self.update_command_display)
         self.calc_measurements.bind('<FocusOut>', self.update_command_display)
         
+        # Servo Configuration Section Header
+        servo_header = tk.Label(params_frame, text="Servo Configuration:", font=("Arial", 8, "bold"), fg="darkblue")
+        servo_header.grid(row=5, column=0, columnspan=2, sticky="w", padx=2, pady=(8, 2))
+        
+        # Servo Min Angle
+        tk.Label(params_frame, text="Servo Min Angle:", font=("Arial", 8)).grid(row=6, column=0, sticky="w", padx=2, pady=1)
+        self.calc_servo_min = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_servo_min.insert(0, "0.0")
+        self.calc_servo_min.grid(row=6, column=1, sticky="w", padx=2, pady=1)
+        self.calc_servo_min.bind('<KeyRelease>', self.update_command_display)
+        self.calc_servo_min.bind('<FocusOut>', self.update_command_display)
+        
+        # Servo Max Angle
+        tk.Label(params_frame, text="Servo Max Angle:", font=("Arial", 8)).grid(row=7, column=0, sticky="w", padx=2, pady=1)
+        self.calc_servo_max = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_servo_max.insert(0, "90.0")
+        self.calc_servo_max.grid(row=7, column=1, sticky="w", padx=2, pady=1)
+        self.calc_servo_max.bind('<KeyRelease>', self.update_command_display)
+        self.calc_servo_max.bind('<FocusOut>', self.update_command_display)
+          # Servo Neutral Angle
+        tk.Label(params_frame, text="Servo Neutral Angle:", font=("Arial", 8)).grid(row=8, column=0, sticky="w", padx=2, pady=1)
+        self.calc_servo_neutral = tk.Entry(params_frame, width=8, font=("Arial", 8))
+        self.calc_servo_neutral.insert(0, "135.0")
+        self.calc_servo_neutral.grid(row=8, column=1, sticky="w", padx=2, pady=1)
+        self.calc_servo_neutral.bind('<KeyRelease>', self.update_command_display)
+        self.calc_servo_neutral.bind('<FocusOut>', self.update_command_display)
+        
         # Separator
         separator = tk.Frame(params_frame, height=2, bg="gray")
-        separator.grid(row=5, column=0, columnspan=2, sticky="ew", pady=8)
+        separator.grid(row=9, column=0, columnspan=2, sticky="ew", pady=8)
 
         # Command Buttons
         commands_frame = tk.LabelFrame(params_frame, text="Execute Commands", font=("Arial", 8, "bold"))
-        commands_frame.grid(row=6, column=0, columnspan=2, sticky="ew", pady=2)
+        commands_frame.grid(row=10, column=0, columnspan=2, sticky="ew", pady=2)
         visual_btn = tk.Button(commands_frame, text="Visualisation Mode\n(--visualize)", 
                               command=self.execute_visualisation_mode,
                               bg="#FFD700", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
@@ -328,7 +354,7 @@ class ControlApp:
 
         # Current Command Display
         current_cmd_frame = tk.LabelFrame(params_frame, text="Current Command", font=("Arial", 8, "bold"))
-        current_cmd_frame.grid(row=7, column=0, columnspan=2, sticky="ew", pady=5)
+        current_cmd_frame.grid(row=12, column=0, columnspan=2, sticky="ew", pady=5)
         self.current_command_label = tk.Label(current_cmd_frame, 
                                              text="python main.py --visualize --csv-name original_iscan --target-x 33 --target-y 50 --scan-distance 80 --measurements 7",
                                              wraplength=200, justify="left", font=("Arial", 7), fg="blue")
@@ -925,8 +951,7 @@ class ControlApp:
     def import_specific_csv(self, file_path):
         """
         Importiert eine spezifische CSV-Datei in die Warteschlange
-        
-        Args:
+          Args:
             file_path (str): Pfad zur CSV-Datei
         """
         try:
@@ -949,40 +974,6 @@ class ControlApp:
             self.logger.log(f"❌ Fehler beim CSV-Import: {str(e)}")
             messagebox.showerror("Import Fehler", f"Fehler beim Importieren der CSV-Datei:\n{str(e)}")
 
-    def set_original_preset(self):
-        """
-        Setzt die Parameter für das Original I-Scan Setup
-        """
-        self.calc_csv_name.delete(0, tk.END)
-        self.calc_csv_name.insert(0, "original_iscan")
-        self.calc_target_x.delete(0, tk.END)
-        self.calc_target_x.insert(0, "33")
-        self.calc_target_y.delete(0, tk.END)
-        self.calc_target_y.insert(0, "50")
-        self.calc_scan_distance.delete(0, tk.END)
-        self.calc_scan_distance.insert(0, "80")
-        self.calc_measurements.delete(0, tk.END)
-        self.calc_measurements.insert(0, "7")
-        self.update_command_display()
-        self.logger.log("📋 Original I-Scan Preset geladen")
-    
-    def set_production_preset(self):
-        """
-        Setzt die Parameter für das Produktions-Scan Setup
-        """
-        self.calc_csv_name.delete(0, tk.END)
-        self.calc_csv_name.insert(0, "produktions_scan")
-        self.calc_target_x.delete(0, tk.END)
-        self.calc_target_x.insert(0, "40")
-        self.calc_target_y.delete(0, tk.END)
-        self.calc_target_y.insert(0, "60")
-        self.calc_scan_distance.delete(0, tk.END)
-        self.calc_scan_distance.insert(0, "80")
-        self.calc_measurements.delete(0, tk.END)
-        self.calc_measurements.insert(0, "5")
-        self.update_command_display()
-        self.logger.log("📋 Produktions-Scan Preset geladen")
-    
     def update_command_display(self, event=None):
         """
         Aktualisiert die Anzeige des aktuellen Befehls
@@ -993,11 +984,13 @@ class ControlApp:
             target_y = self.calc_target_y.get()
             scan_distance = self.calc_scan_distance.get()
             measurements = self.calc_measurements.get()
+            servo_min = self.calc_servo_min.get()
+            servo_max = self.calc_servo_max.get()
+            servo_neutral = self.calc_servo_neutral.get()
             
-            command = f"python main.py --visualize --csv-name {csv_name} --target-x {target_x} --target-y {target_y} --scan-distance {scan_distance} --measurements {measurements}"
+            command = f"python main.py --visualize --csv-name {csv_name} --target-x {target_x} --target-y {target_y} --scan-distance {scan_distance} --measurements {measurements} --servo-min {servo_min} --servo-max {servo_max} --servo-neutral {servo_neutral}"
             self.current_command_label.config(text=command)
-        except Exception:
-            pass
+        except Exception:            pass
     
     def execute_visualisation_mode(self):
         """
@@ -1009,8 +1002,13 @@ class ControlApp:
             target_y = float(self.calc_target_y.get())
             scan_distance = float(self.calc_scan_distance.get())
             measurements = int(self.calc_measurements.get())
+            servo_min = float(self.calc_servo_min.get())
+            servo_max = float(self.calc_servo_max.get())
+            servo_neutral = float(self.calc_servo_neutral.get())
+            
             self.logger.log(f"🖼️ Starte Visualisation Mode: {csv_name}")
             self.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
+            self.logger.log(f"🔧 Servo: Min={servo_min}°, Max={servo_max}°, Neutral={servo_neutral}°")
 
             calc_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Calculator_Angle_Maschine", "MathVisualisation")
             command = [
@@ -1019,7 +1017,10 @@ class ControlApp:
                 "--target-x", str(target_x),
                 "--target-y", str(target_y),
                 "--scan-distance", str(scan_distance),
-                "--measurements", str(measurements)
+                "--measurements", str(measurements),
+                "--servo-min", str(servo_min),
+                "--servo-max", str(servo_max),
+                "--servo-neutral", str(servo_neutral)
             ]
 
             def run_command():
@@ -1050,9 +1051,13 @@ class ControlApp:
             target_y = float(self.calc_target_y.get())
             scan_distance = float(self.calc_scan_distance.get())
             measurements = int(self.calc_measurements.get())
+            servo_min = float(self.calc_servo_min.get())
+            servo_max = float(self.calc_servo_max.get())
+            servo_neutral = float(self.calc_servo_neutral.get())
             
             self.logger.log(f"🔇 Starte Silent Mode: {csv_name}")
             self.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
+            self.logger.log(f"🔧 Servo: Min={servo_min}°, Max={servo_max}°, Neutral={servo_neutral}°")
             
             calc_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Calculator_Angle_Maschine", "MathVisualisation")
             command = [
@@ -1061,7 +1066,10 @@ class ControlApp:
                 "--target-x", str(target_x),
                 "--target-y", str(target_y),
                 "--scan-distance", str(scan_distance),
-                "--measurements", str(measurements)
+                "--measurements", str(measurements),
+                "--servo-min", str(servo_min),
+                "--servo-max", str(servo_max),
+                "--servo-neutral", str(servo_neutral)
             ]
             
             def run_command():
