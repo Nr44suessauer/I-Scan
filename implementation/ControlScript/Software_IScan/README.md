@@ -5,10 +5,18 @@
   Email: marc.nauendorf@hs-heilbronn.de  
   Website: DeadlineDriven.dev
 
+**Version:** 3.0 - Enhanced User Experience & Visual Integration
+
 ---
 
 ## Overview
-Software_IScan is a comprehensive, extensible GUI application for controlling the I-Scan 3D scanner hardware. Designed for research, industrial, and educational use, it provides a robust, user-friendly interface for all scanning operations, including live hardware control, batch operation management, and advanced angle calculation/visualization integration. The project is modular and ready for large-scale extension.
+Software_IScan is a comprehensive, extensible GUI application for controlling the I-Scan 3D scanner hardware. Designed for research, industrial, and educational use, it provides a robust, user-friendly interface for all scanning operations, including live hardware control, batch operation management, and advanced angle calculation/visualization integration. 
+
+### Features
+- **User-Configurable Servo Parameters:** Direct control over min, max, and neutral servo angles
+- **Enhanced Image Viewer:** Tabbed interface with proportional scaling for multiple visualizations
+- **Real-Time Command Display:** Live preview of exact commands as parameters change
+- **Streamlined Interface:** Cleaner design with optimized workflow
 
 ---
 
@@ -74,12 +82,17 @@ ControlScript/
 +-------------------------------------------------------------------+
 | [Calculator Commands] [Home] [Queue] [Scan Config]                |
 +-------------------+-------------------+--------------------------+
-|                   |                                      |       |
-|  Scan Config/     |      Dynamic Image Preview            |       |
-|  Command Panel    |  (servo geometry, updates after scan) |       |
-|                   |                                      |       |
+| Servo Parameters  |    Tabbed Image Viewer                |       |
+| • Min Angle       |  ┌─[Servo Graph]─[Cone Detail]─┐    |       |
+| • Max Angle       |  │                              │    |       |
+| • Neutral Angle   |  │     [Visualization Area]     │    |       |
+| • Target X/Y      |  │   (Proportional Scaling)     │    |       |
+| • Scan Distance   |  └──────────────────────────────┘    |       |
+| • Measurements    |                                      |       |
 +-------------------+-------------------+--------------------------+
-|                        Log Console (live, scrollable)            |
+|                Live Command Display & Execution                   |
++-------------------+-------------------+--------------------------+
+|                     Log Console (live, scrollable)               |
 +------------------------------------------------------------------+
 ```
 - **Calculator Commands**: Configure and execute angle calculations, generate CSVs, and run full visualizations.
@@ -91,89 +104,116 @@ ControlScript/
 
 ## Key Features
 
-- **Unified Hardware Control**: Servo, stepper, and LED management from a single interface.
-- **Live Command Display**: See the exact command line that will be executed as you change parameters.
-- **Dynamic Image Preview**: Automatically updates with the latest scan geometry after each operation.
-- **Calculator_Angle_Maschine Integration**: Run advanced angle calculations and visualizations directly from the GUI.
-- **Robust Logging & Error Handling**: All actions and errors are logged in the GUI for transparency and troubleshooting.
-- **Compact, Balanced Layout**: Grid-based layout ensures equal space for configuration, image, and logs.
-- **Batch Operation Support**: Queue and execute complex scan sequences, import/export CSVs.
-- **Extensible API Layer**: REST-based, easily adapted for new hardware endpoints.
-- **Async/Threaded Operations**: Non-blocking UI, responsive even during long calculations or scans.
+### Hardware Control & Integration
+- **Unified Hardware Control**: Servo, stepper, and LED management from a single interface
+- **REST API Communication**: Robust communication with scanner hardware
+- **Real-Time Status Updates**: Live feedback from all connected devices
+- **Batch Operation Support**: Queue and execute complex scan sequences
+
+### User Interface Enhancements
+- **Tabbed Image Viewer**: Switch between "Servo Graph" and "Cone Detail" visualizations
+- **Fixed Image Scaling**: Images maintain aspect ratio with optimal size (no permanent window resize tracking)
+- **Live Command Display**: See the exact command line that will be executed as you change parameters
+- **Calculator Integration**: Run advanced angle calculations directly from the GUI
+
+### Servo Configuration System
+- **Min/Max/Neutral Angles**: Configure all servo parameters directly in the GUI
+- **Real-Time Updates**: Command display updates instantly when parameters change
+- **Intuitive Operation**: Simplified coordinate transformation for easier use
+- **Default Values**: Optimized defaults (min: 0°, max: 90°, neutral: 45°)
+
+### Advanced Features
+- **CSV Import/Export**: Seamless integration with calculation engine
+- **Robust Logging**: All actions and errors logged for transparency
+- **Camera Integration**: Live camera preview with configurable settings
+- **Error Handling**: Comprehensive error reporting and recovery
 
 ---
 
-## Calculator_Angle_Maschine Integration
+## GUI Layout & Workflow
 
-- **CSV Silent Mode**: Generate a CSV of scan commands with custom parameters for batch operation.
-- **Full Visualization Mode**: Generate all visualizations and CSV in one step; image preview updates automatically.
-- **Import CSV**: Load generated CSVs directly into the operation queue.
-- **All actions are non-blocking and provide progress feedback in the log.**
-- **Presets and Validation**: Use quick presets or custom parameters, with input validation.
-
----
-
-## API & Extension Points
-
-- **REST API Communication**: All hardware control is performed via REST endpoints (servo, stepper, LED, home, etc.).
-- **Modular Design**: Add new hardware or features by extending `device_control.py` and updating the GUI in `main.py`.
-- **Operation Queue**: Extendable for new command types; supports batch execution and custom CSV formats.
-- **Calculator Integration**: Extend `angle_calculator_commands.py` to add new calculation modes or presets.
-- **Visualization Output**: Add new image types or output formats in MathVisualisation.
-- **Logging**: Add new log sinks or formats in `logger.py`.
-
----
-
-## Usage
-
-### Requirements
-```bash
-pip install tkinter pillow opencv-python requests numpy
+```
++-------------------------------------------------------------------+
+| [Calculator Commands] [Home] [Queue] [Scan Config]                |
++-------------------+-------------------+--------------------------+
+| Servo Parameters  |    Tabbed Image Viewer                |       |
+| • Min Angle       |  ┌─[Servo Graph]─[Cone Detail]─┐    |       |
+| • Max Angle       |  │                              │    |       |
+| • Neutral Angle   |  │     [Visualization Area]     │    |       |
+| • Target X/Y      |  │   (Proportional Scaling)     │    |       |
+| • Scan Distance   |  └──────────────────────────────┘    |       |
+| • Measurements    |                                      |       |
++-------------------+-------------------+--------------------------+
+|                Live Command Display & Execution                   |
++-------------------+-------------------+--------------------------+
+|                     Log Console (live, scrollable)               |
++------------------------------------------------------------------+
 ```
 
-### Start the Application
+### Workflow
+1. **Configure Parameters**: Set servo angles, target position, scan distance
+2. **Preview Commands**: See live command updates as you change parameters
+3. **Generate Results**: Execute visualization or silent mode
+4. **View Results**: Switch between servo graph and cone detail in tabbed viewer
+5. **Execute Scan**: Import CSV to queue and run automated scan
+
+---
+
+## Configuration Parameters
+
+### Servo Motor Settings
+- **Servo Min Angle**: Minimum servo position (default: 0°)
+- **Servo Max Angle**: Maximum servo position (default: 90°)
+- **Servo Neutral Angle**: Neutral position for cone rotation (default: 45°)
+
+### Scan Configuration
+- **Target X/Y**: Target object position in coordinate system
+- **Scan Distance**: Total scanning distance
+- **Number of Measurements**: Points along scan path
+
+### Advanced Options
+- **CSV Name**: Custom name for generated command files
+- **Camera Settings**: Device index and autofocus delay
+- **Visualization Options**: Enable/disable specific graph types
+
+---
+
+## Getting Started
+
+### 1. Installation & Setup
 ```bash
+# Install required dependencies
+pip install tkinter pillow
+
+# Navigate to project directory
 cd Software_IScan
+```
+
+### 2. Launch Application
+```bash
 python main.py
 ```
 
-### Typical Workflow
-1. Set scan parameters in the Calculator Commands and Scan Config panels.
-2. Use Calculator Commands to generate CSVs or run full visualizations as needed.
-3. Execute scans; the image preview and log update automatically.
-4. Review logs and images for results and troubleshooting.
-5. Extend or automate as needed for your research or production workflow.
+### 3. Basic Configuration
+- Set servo parameters (min: 0°, max: 90°, neutral: 45°)
+- Configure target position and scan distance
+- Adjust number of measurement points
+
+### 4. Generate Scan Commands
+- Click "Execute Visualisation Mode" for full analysis with graphs
+- Click "Execute Silent Mode" for CSV generation only
+- View results in the tabbed image viewer
+
+### 5. Execute Scan
+- Import generated CSV into operation queue
+- Monitor execution in real-time log console
 
 ---
 
-## Example: Live Command Display
+## Integration with Calculator_Angle_Maschine
 
-As you adjust parameters, the GUI shows the exact command that will be run, e.g.:
+The GUI seamlessly integrates with the mathematical calculation engine:
+
 ```
-python ..\Calculator_Angle_Maschine\MathVisualisation\main.py --csv --csv-name scan1 --target-x 50 --target-y 50 --scan-distance 80 --measurements 5
+GUI Parameters → Calculator_Angle_Maschine → Generated CSV → Operation Queue
 ```
-
----
-
-## Troubleshooting & Support
-- All errors and actions are logged in the GUI log console.
-- For advanced integration or calculation details, see the integration and calculation documentation in the parent directory.
-- For support, contact the authors or open an issue.
-
----
-
-## Extending the Application
-- Add new hardware: Implement in `device_control.py`, expose controls in `main.py`.
-- Add new scan commands: Extend `operation_queue.py` and update the command panel.
-- Add new calculation modes: Extend `angle_calculator_commands.py` and update the Calculator Commands panel.
-- Add new visualizations: Extend MathVisualisation and update the image preview logic.
-- Add new log outputs: Extend `logger.py` for new sinks or formats.
-
----
-
-## Contributors / Authors
-- Marc Nauendorf (lead developer)
-
----
-
-**This README replaces all previous documentation for Software_IScan. Remove or ignore any outdated references to CSV quick presets, legacy batch modes, or obsolete troubleshooting/configuration steps.**

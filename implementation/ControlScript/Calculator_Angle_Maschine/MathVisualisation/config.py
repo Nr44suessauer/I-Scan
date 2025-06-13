@@ -81,7 +81,7 @@ ENABLE_VISUALIZATIONS = {
     # CORE FEATURES (01-07) - Main functionality
     'geometric_representation': True,    # 01_geometric_representation.png
     'angle_progression': False,         # 02_angle_progression.png (DISABLED)
-    'point_calculations': True,         # 04_point_X_calculation.png (all points)
+    'point_calculations': False,        # 04_point_X_calculation.png (all points) - DISABLED
     'calculation_table': True,          # 05_calculation_table.png
     'servo_interpolation': True,        # 06_servo_interpolation.png
     'servo_cone_detail': True,          # 07_servo_cone_detail.png
@@ -89,7 +89,7 @@ ENABLE_VISUALIZATIONS = {
 
 # Visualization settings
 VISUALIZATION_SETTINGS = {
-    'save_individual_point_calculations': True,  # Save individual point calculation images
+    'save_individual_point_calculations': False,  # Save individual point calculation images - DISABLED
 }
 
 

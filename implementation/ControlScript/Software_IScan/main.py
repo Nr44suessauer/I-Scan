@@ -14,7 +14,7 @@ import json
 import time
 import threading
 import tkinter as tk
-from tkinter import scrolledtext, Label, filedialog, messagebox, StringVar, DoubleVar, IntVar, BooleanVar
+from tkinter import ttk, scrolledtext, Label, filedialog, messagebox, StringVar, DoubleVar, IntVar, BooleanVar
 from PIL import Image, ImageTk
 import subprocess
 
@@ -331,7 +331,7 @@ class ControlApp:
           # Servo Neutral Angle
         tk.Label(params_frame, text="Servo Neutral Angle:", font=("Arial", 8)).grid(row=8, column=0, sticky="w", padx=2, pady=1)
         self.calc_servo_neutral = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        self.calc_servo_neutral.insert(0, "-45.0")
+        self.calc_servo_neutral.insert(0, "45.0")
         self.calc_servo_neutral.grid(row=8, column=1, sticky="w", padx=2, pady=1)
         self.calc_servo_neutral.bind('<KeyRelease>', self.update_command_display)
         self.calc_servo_neutral.bind('<FocusOut>', self.update_command_display)
@@ -358,30 +358,30 @@ class ControlApp:
         self.current_command_label = tk.Label(current_cmd_frame, 
                                              text="python main.py --visualize --csv-name original_iscan --target-x 33 --target-y 50 --scan-distance 80 --measurements 7",
                                              wraplength=200, justify="left", font=("Arial", 7), fg="blue")
-        self.current_command_label.pack(padx=2, pady=2)
-
-        # Bildanzeige (rechts)
+        self.current_command_label.pack(padx=2, pady=2)        # Bildanzeige mit Tabs (rechts)
         image_frame = tk.Frame(content_frame)
         image_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
-        try:
-            import os
-            from PIL import Image, ImageTk
-            # Absoluter Pfad zum Bild
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            img_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
-            img_path = os.path.normpath(img_path)
-            if os.path.exists(img_path):
-                img = Image.open(img_path)
-                img = img.resize((400, 320), Image.LANCZOS)
-                self.servo_graph_img = ImageTk.PhotoImage(img)
-                self.servo_graph_img_label = tk.Label(image_frame, image=self.servo_graph_img)
-                self.servo_graph_img_label.pack()
-            else:
-                self.servo_graph_img_label = tk.Label(image_frame, text=f"Bild nicht gefunden:\n{img_path}", fg="red")
-                self.servo_graph_img_label.pack()
-        except Exception as e:
-            self.servo_graph_img_label = tk.Label(image_frame, text=f"Fehler beim Laden des Bildes: {e}", fg="red")
-            self.servo_graph_img_label.pack()
+        
+        # Tab-Notebook für Bildwechsel
+        self.image_notebook = ttk.Notebook(image_frame)
+        self.image_notebook.pack(fill="both", expand=True)
+        
+        # Tab 1: Servo Geometry Graph
+        self.tab1_frame = tk.Frame(self.image_notebook)
+        self.image_notebook.add(self.tab1_frame, text="Servo Graph")
+        
+        # Tab 2: Servo Cone Detail
+        self.tab2_frame = tk.Frame(self.image_notebook)
+        self.image_notebook.add(self.tab2_frame, text="Cone Detail")
+          # Image Labels für beide Tabs
+        self.servo_graph_img_label = tk.Label(self.tab1_frame)
+        self.servo_graph_img_label.pack(fill="both", expand=True)
+        
+        self.servo_cone_img_label = tk.Label(self.tab2_frame)
+        self.servo_cone_img_label.pack(fill="both", expand=True)
+        
+        # Lade Bilder initial (ohne permanente Größenanpassung)
+        self.load_servo_images()
         
         # Initialize the command display with current values
         self.update_command_display()
@@ -1071,7 +1071,6 @@ class ControlApp:
                 "--servo-max", str(servo_max),
                 "--servo-neutral", str(servo_neutral)
             ]
-            
             def run_command():
                 try:
                     result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True, encoding="utf-8")
@@ -1104,24 +1103,92 @@ class ControlApp:
         """
         Aktualisiert das Servo-Graph-Bild im Calculator Commands Panel
         """
+        self.load_servo_images()
+
+    def load_servo_images(self):
+        """
+        Lädt beide Servo-Bilder (Graph und Cone Detail) mit fester Größe
+        """
         try:
-            from PIL import Image, ImageTk
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            img_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
-            img_path = os.path.normpath(img_path)
-            if hasattr(self, 'servo_graph_img_label'):
-                if os.path.exists(img_path):
-                    img = Image.open(img_path)
-                    img = img.resize((400, 320), Image.LANCZOS)
-                    self.servo_graph_img = ImageTk.PhotoImage(img)
-                    self.servo_graph_img_label.config(image=self.servo_graph_img, text="")
-                else:
-                    self.servo_graph_img_label.config(image="", text=f"Bild nicht gefunden:\n{img_path}")
+            
+            # Pfad zum Servo Graph
+            graph_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "06_servo_geometry_graph_only.png")
+            graph_path = os.path.normpath(graph_path)
+            
+            # Pfad zum Cone Detail
+            cone_path = os.path.join(script_dir, "..", "Calculator_Angle_Maschine", "MathVisualisation", "output", "07_servo_cone_detail.png")
+            cone_path = os.path.normpath(cone_path)
+            
+            # Feste Bildgröße verwenden (keine permanente Anpassung)
+            max_width, max_height = 500, 400
+            
+            # Lade Servo Graph mit gleichmäßiger Skalierung
+            if os.path.exists(graph_path):
+                img = Image.open(graph_path)
+                # Berechne gleichmäßige Skalierung (Aspect Ratio beibehalten)
+                img_width, img_height = img.size
+                scale_factor = min(max_width / img_width, max_height / img_height)
+                new_width = int(img_width * scale_factor)
+                new_height = int(img_height * scale_factor)
+                
+                img = img.resize((new_width, new_height), Image.LANCZOS)
+                self.servo_graph_img = ImageTk.PhotoImage(img)
+                self.servo_graph_img_label.config(image=self.servo_graph_img, text="")
+            else:
+                self.servo_graph_img_label.config(image="", text=f"Servo Graph nicht gefunden:\n{graph_path}")
+            
+            # Lade Cone Detail mit gleichmäßiger Skalierung
+            if os.path.exists(cone_path):
+                img = Image.open(cone_path)
+                # Berechne gleichmäßige Skalierung (Aspect Ratio beibehalten)
+                img_width, img_height = img.size
+                scale_factor = min(max_width / img_width, max_height / img_height)
+                new_width = int(img_width * scale_factor)
+                new_height = int(img_height * scale_factor)
+              # Lade Servo Graph mit gleichmäßiger Skalierung
+            if os.path.exists(graph_path):
+                img = Image.open(graph_path)
+                # Berechne gleichmäßige Skalierung (Aspect Ratio beibehalten)
+                img_width, img_height = img.size
+                scale_factor = min(max_width / img_width, max_height / img_height)
+                new_width = int(img_width * scale_factor)
+                new_height = int(img_height * scale_factor)
+                
+                img = img.resize((new_width, new_height), Image.LANCZOS)
+                self.servo_graph_img = ImageTk.PhotoImage(img)
+                self.servo_graph_img_label.config(image=self.servo_graph_img, text="")
+            else:
+                self.servo_graph_img_label.config(image="", text=f"Servo Graph nicht gefunden:\n{graph_path}")
+            
+            # Lade Cone Detail mit gleichmäßiger Skalierung
+            if os.path.exists(cone_path):
+                img = Image.open(cone_path)
+                # Berechne gleichmäßige Skalierung (Aspect Ratio beibehalten)
+                img_width, img_height = img.size
+                scale_factor = min(max_width / img_width, max_height / img_height)
+                new_width = int(img_width * scale_factor)
+                new_height = int(img_height * scale_factor)
+                
+                img = img.resize((new_width, new_height), Image.LANCZOS)
+                self.servo_cone_img = ImageTk.PhotoImage(img)
+                self.servo_cone_img_label.config(image=self.servo_cone_img, text="")
+            else:
+                self.servo_cone_img_label.config(image="", text=f"Cone Detail nicht gefunden:\n{cone_path}")
+                
         except Exception as e:
             if hasattr(self, 'servo_graph_img_label'):
-                self.servo_graph_img_label.config(image="", text=f"Fehler beim Laden des Bildes: {e}")
-
-
+                self.servo_graph_img_label.config(image="", text=f"Fehler beim Laden des Servo Graphs: {e}")
+            if hasattr(self, 'servo_cone_img_label'):
+                self.servo_cone_img_label.config(image="", text=f"Fehler beim Laden des Cone Details: {e}")
+            else:
+                self.servo_cone_img_label.config(image="", text=f"Cone Detail nicht gefunden:\n{cone_path}")
+                
+        except Exception as e:
+            if hasattr(self, 'servo_graph_img_label'):
+                self.servo_graph_img_label.config(image="", text=f"Fehler beim Laden des Servo Graphs: {e}")
+            if hasattr(self, 'servo_cone_img_label'):
+                self.servo_cone_img_label.config(image="", text=f"Fehler beim Laden des Cone Details: {e}")
 # Hauptausführungslogik
 if __name__ == "__main__":
     try:

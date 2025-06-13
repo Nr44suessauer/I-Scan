@@ -5,6 +5,8 @@
   Email: marc.nauendorf@hs-heilbronn.de  
   Website: DeadlineDriven.dev
 
+**Version:** 3.0 - Modernized & Unified System
+
 ---
 
 ## Overview & Architecture
@@ -15,10 +17,13 @@ The I-Scan Control Script System is a modular, extensible platform for controlli
 - **Path:** `Software_IScan/`
 - **Purpose:** Provides a modern, user-friendly graphical interface for controlling all hardware components (servo, stepper, LED, camera, etc.) via a REST API.
 - **Features:**
-  - Live control and status display
-  - Batch operations (queue)
+  - Live control and status display with real-time command preview
+  - Batch operations (queue) with CSV import/export
   - Integration of mathematical calculations and visualizations
-  - Logging, error handling, image preview
+  - Tabbed image viewer with automatic scaling
+  - Logging, error handling, camera preview
+  - **NEW:** User-configurable servo parameters (min, max, neutral angles)
+  - **NEW:** Real-time visualization updates with dual-image tabs
 
 ### 2. Calculator_Angle_Maschine (Mathematical Engine)
 - **Path:** `Calculator_Angle_Maschine/MathVisualisation/`
@@ -28,6 +33,59 @@ The I-Scan Control Script System is a modular, extensible platform for controlli
   - Generation of CSV files for automated scans
   - Graphical analysis and visualization of scan geometry
   - Flexible configuration and presets
+  - **NEW:** Simplified servo coordinate transformation
+  - **NEW:** Inverted neutral angle for intuitive operation
+  - **NEW:** Optimized visualization generation (point calculations optional)
+
+---
+
+## Recent Improvements (Version 3.0)
+
+### Servo Configuration System
+- **User-Configurable Parameters:** All servo angles (min, max, neutral) can now be set directly in the GUI
+- **Simplified Transformation:** New formula `servo_angle = geometric_angle - neutral_angle` for intuitive operation
+- **Real-Time Updates:** Command display updates instantly when parameters change
+- **Default Values:** Neutral angle defaults to 45° for optimal operation
+
+### Enhanced GUI Experience
+- **Tabbed Image Viewer:** Switch between "Servo Graph" and "Cone Detail" visualizations
+- **Proportional Scaling:** Images maintain aspect ratio and scale with window size
+- **Real-Time Preview:** Visualizations update automatically after calculations
+- **Streamlined Interface:** Removed preset buttons for cleaner, more flexible interface
+
+### Mathematical Engine Optimization
+- **Inverted Neutral Logic:** Entering -45° rotates cone by +45° (more intuitive)
+- **Performance Optimization:** Point calculation graphs can be disabled for faster processing
+- **Enhanced Documentation:** All functions and parameters fully documented in English
+- **CSV Integration:** Seamless export/import between calculator and GUI
+
+---
+
+## Quick Start
+
+### 1. Launch GUI Application
+```bash
+cd Software_IScan
+python main.py
+```
+
+### 2. Configure Scan Parameters
+- Set target position (X, Y coordinates)
+- Adjust scan distance and number of measurements
+- Configure servo angles (min: 0°, max: 90°, neutral: 45°)
+
+### 3. Generate Scan Commands
+- Click "Execute Visualisation Mode" to create visualizations
+- Click "Execute Silent Mode" to generate CSV only
+- Import generated CSV into operation queue
+
+### 4. Direct Calculator Access
+```bash
+cd Calculator_Angle_Maschine/MathVisualisation
+python main.py --help                    # Show all options
+python main.py --csv --csv-name scan_01  # Generate CSV
+python main.py --visualize               # Create visualizations
+```
 
 ---
 
