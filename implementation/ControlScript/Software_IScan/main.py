@@ -331,7 +331,7 @@ class ControlApp:
           # Servo Neutral Angle
         tk.Label(params_frame, text="Servo Neutral Angle:", font=("Arial", 8)).grid(row=8, column=0, sticky="w", padx=2, pady=1)
         self.calc_servo_neutral = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        self.calc_servo_neutral.insert(0, "135.0")
+        self.calc_servo_neutral.insert(0, "-45.0")
         self.calc_servo_neutral.grid(row=8, column=1, sticky="w", padx=2, pady=1)
         self.calc_servo_neutral.bind('<KeyRelease>', self.update_command_display)
         self.calc_servo_neutral.bind('<FocusOut>', self.update_command_display)

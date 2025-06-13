@@ -31,16 +31,13 @@ def calculate_servo_interpolation():
         list: List of dictionaries containing servo interpolation data
     """
     # Use the corrected calculation
-    return calculate_corrected_servo_interpolation()    # Get geometric angles
-    geometric_angles = calculate_geometric_angles()
+    return calculate_corrected_servo_interpolation()    # Get geometric angles    geometric_angles = calculate_geometric_angles()
     
     servo_data = []
     for angle_data in geometric_angles:
-        geometric_angle = angle_data['angle']
-        
-        # Convert geometric angle to servo coordinate system
-        # The servo is rotated 45° from the Y-axis, then 180° (total transformation)
-        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
+        geometric_angle = angle_data['angle']        # Convert geometric angle to servo coordinate system (direct with inverted neutral)
+        # SERVO_NEUTRAL_ANGLE is inverted: user enters -45°, we use +45° internally
+        servo_coordinate_angle = geometric_angle - config.SERVO_NEUTRAL_ANGLE
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -117,12 +114,11 @@ def print_servo_interpolation_explanation():
     
     print("📐 SERVO INTERPOLATION CONCEPT:")
     print("   1. Take geometric angle from pure trigonometric calculation")
-    print("   2. Rotate by 45° + 180° to match servo mounting orientation")
-    print("   3. Check if angle is within servo cone (-135° to -45°)")
+    print("   2. Apply offset based on servo neutral position (simplified)")
+    print("   3. Check if angle is within servo cone")
     print("   4. Map to physical servo range (0° to 90°)")
     print()
-    
-    # Get servo data
+      # Get servo data
     servo_data = calculate_servo_interpolation()
     
     print("🧮 SERVO ANGLE CALCULATIONS:")
@@ -133,7 +129,7 @@ def print_servo_interpolation_explanation():
         print(f"   📍 MEASUREMENT POINT {data['point']} (Y = {data['y_pos']} cm):")
         print("   " + "~" * 45)
         print(f"   • Geometric angle: {data['geometric_angle']:.2f}°")
-        print(f"   • Servo coordinate angle: {data['geometric_angle']:.2f}° + 45° + 180° = {data['servo_coordinate_angle']:.2f}°")
+        print(f"   • Servo coordinate angle: {data['geometric_angle']:.2f}° - {config.SERVO_NEUTRAL_ANGLE:.1f}° = {data['servo_coordinate_angle']:.2f}°")
         print(f"   • Physical servo angle: {data['servo_angle']:.2f}°")
         print(f"   • Reachable: {'✅ Yes' if data['is_reachable'] else '❌ No'}")
         print(f"   • Distance to target: {data['hypotenuse']:.2f} cm")
@@ -181,11 +177,11 @@ def map_geometric_to_servo_angle(geometric_angle):
     Args:
         geometric_angle: Angle from geometric calculation
     
-    Returns:
-        dict: Servo angle data
-    """    # Convert to servo coordinate system
-    servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
-      # Normalize angle to -180° to +180° range
+    Returns:        dict: Servo angle data
+    """    # Convert to servo coordinate system (direct with inverted neutral)
+    servo_coordinate_angle = geometric_angle - config.SERVO_NEUTRAL_ANGLE
+    
+    # Normalize angle to -180° to +180° range
     while servo_coordinate_angle > 180.0:
         servo_coordinate_angle -= 360.0
     while servo_coordinate_angle < -180.0:
@@ -310,9 +306,8 @@ def debug_servo_calculation():
     print()
     
     for i, angle_data in enumerate(geometric_angles):
-        geometric_angle = angle_data['angle']
-          # Convert geometric angle to servo coordinate system
-        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
+        geometric_angle = angle_data['angle']        # Convert geometric angle to servo coordinate system (direct with inverted neutral)
+        servo_coordinate_angle = geometric_angle - config.SERVO_NEUTRAL_ANGLE
         
         # Normalize angle to -180° to +180° range
         while servo_coordinate_angle > 180.0:
@@ -383,14 +378,12 @@ def analyze_visual_cone():
     print("=" * 60)
     
     geometric_angles = calculate_geometric_angles()
-    
-    # If all points should be reachable, what should the servo cone boundaries be?
+      # If all points should be reachable, what should the servo cone boundaries be?
     all_servo_angles = []
     
     for i, angle_data in enumerate(geometric_angles):
-        geometric_angle = angle_data['angle']
-          # Current transformation
-        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
+        geometric_angle = angle_data['angle']        # Current transformation (direct with inverted neutral)
+        servo_coordinate_angle = geometric_angle - config.SERVO_NEUTRAL_ANGLE
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:
@@ -502,14 +495,12 @@ def calculate_corrected_servo_interpolation():
             # Linear mapping: COORD_MAX_ANGLE → 0°, COORD_MIN_ANGLE → 90°
             normalized = (target_coord_angle - config.COORD_MAX_ANGLE) / coord_range
             physical_servo_angle = normalized * 90.0
-        else:
-            # Clamp to nearest boundary
+        else:            # Clamp to nearest boundary
             if target_coord_angle < config.COORD_MAX_ANGLE:
                 physical_servo_angle = 0.0
             else:
-                physical_servo_angle = 90.0
-          # Keep original servo coordinate system for compatibility
-        servo_coordinate_angle = geometric_angle + config.SERVO_ROTATION_OFFSET + 180.0
+                physical_servo_angle = 90.0        # Keep original servo coordinate system for compatibility (direct with inverted neutral)
+        servo_coordinate_angle = geometric_angle - config.SERVO_NEUTRAL_ANGLE
         while servo_coordinate_angle > 180.0:
             servo_coordinate_angle -= 360.0
         while servo_coordinate_angle < -180.0:
