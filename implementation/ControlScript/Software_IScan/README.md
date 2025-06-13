@@ -5,7 +5,29 @@
   Email: marc.nauendorf@hs-heilbronn.de  
   Website: DeadlineDriven.dev
 
-**Version:** 3.0 - Enhanced User Experience & Visual Integration
+**Version:** 4.0 - Modular Architecture & Enhanced Maintainability
+
+---
+
+## What's New in Version 4.0
+
+### 🏗️ Modular GUI Architecture
+- **Complete GUI Refactor:** All GUI components separated into individual, reusable modules
+- **Better Code Organization:** Clear separation of concerns and responsibilities
+- **Enhanced Maintainability:** Independent testing and modification of components
+- **Future-Proof Design:** Easy extension with new features and hardware support
+
+### 📁 New File Structure
+- **`main_modular.py`:** New recommended entry point with modular architecture
+- **`gui/` Module:** Complete set of specialized GUI components
+- **Component Isolation:** Each GUI element (servo, stepper, LED, etc.) in separate files
+- **Backward Compatibility:** Original `main.py` remains available for legacy support
+
+### 🔧 Technical Improvements
+- **Callback System:** Centralized callback management for better event handling
+- **Widget Access Management:** Structured widget dictionary for external access
+- **Error Handling:** Improved error handling and logging throughout components
+- **Documentation:** Comprehensive architecture documentation in `GUI_ARCHITECTURE.md`
 
 ---
 
@@ -25,7 +47,18 @@ Software_IScan is a comprehensive, extensible GUI application for controlling th
 ```
 ControlScript/
 ├── Software_IScan/                  # Main GUI and control logic
-│   ├── main.py                      # Main GUI application
+│   ├── main.py                      # Original monolithic GUI application
+│   ├── main_modular.py              # New modular GUI application (recommended)
+│   ├── gui/                         # Modular GUI components (NEW)
+│   │   ├── __init__.py              # GUI module initialization
+│   │   ├── main_window.py           # Main window coordinator
+│   │   ├── servo_controls.py        # Servo control interface
+│   │   ├── stepper_controls.py      # Stepper motor control interface
+│   │   ├── led_controls.py          # LED control interface
+│   │   ├── webcam_display.py        # Camera display and controls
+│   │   ├── angle_calculator_gui.py  # Angle calculator interface
+│   │   ├── queue_management.py      # Operation queue management
+│   │   └── status_display.py        # Status display and basic settings
 │   ├── angle_calculator_commands.py # Calculator_Angle_Maschine integration
 │   ├── device_control.py            # Hardware abstraction and control
 │   ├── operation_queue.py           # Operation queue and batch execution
@@ -180,40 +213,69 @@ ControlScript/
 
 ## Getting Started
 
-### 1. Installation & Setup
+### Option A: Modular Architecture (Recommended)
 ```bash
 # Install required dependencies
 pip install tkinter pillow
 
 # Navigate to project directory
 cd Software_IScan
+
+# Launch modular GUI application
+python main_modular.py
 ```
 
-### 2. Launch Application
+### Option B: Legacy Application
 ```bash
+# Navigate to project directory
+cd Software_IScan
+
+# Launch legacy GUI application
 python main.py
 ```
 
-### 3. Basic Configuration
-- Set servo parameters (min: 0°, max: 90°, neutral: 45°)
-- Configure target position and scan distance
-- Adjust number of measurement points
-
-### 4. Generate Scan Commands
-- Click "Execute Visualisation Mode" for full analysis with graphs
-- Click "Execute Silent Mode" for CSV generation only
-- View results in the tabbed image viewer
-
-### 5. Execute Scan
-- Import generated CSV into operation queue
-- Monitor execution in real-time log console
+### Quick Configuration
+1. **Set servo parameters** (min: 0°, max: 90°, neutral: 45°)
+2. **Configure target position** and scan distance
+3. **Adjust number of measurement points**
+4. **Generate scan commands** with visualizations
+5. **Execute scan** through operation queue
 
 ---
 
-## Integration with Calculator_Angle_Maschine
+## GUI Component Guide (Modular Architecture)
 
-The GUI seamlessly integrates with the mathematical calculation engine:
+When using `main_modular.py`, the interface is organized into specialized components:
 
-```
-GUI Parameters → Calculator_Angle_Maschine → Generated CSV → Operation Queue
-```
+### Servo Controls
+- Angle input field (0-90°)
+- Direct execution and queue addition
+- Real-time validation
+
+### Stepper Controls  
+- Distance, direction, and speed configuration
+- Flexible parameter input
+- Immediate or queued execution
+
+### LED Controls
+- Color selection with hex codes
+- Brightness control (0-100%)
+- Separate color and brightness frames
+
+### Camera Display
+- Live camera feed
+- Device selection and autofocus settings
+- Photo capture with queue integration
+
+### Angle Calculator Integration
+- Parameter input for all calculation variables
+- Real-time command preview
+- Tabbed image viewer for results
+- Direct visualization and silent mode execution
+
+### Queue Management
+- Visual operation queue with scrolling
+- Import/export CSV functionality
+- Batch execution with repeat option
+
+For detailed component documentation, see `GUI_ARCHITECTURE.md`.

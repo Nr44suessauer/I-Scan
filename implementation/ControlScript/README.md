@@ -52,6 +52,7 @@ The I-Scan Control Script System is a modular, extensible platform for controlli
 - **Proportional Scaling:** Images maintain aspect ratio and scale with window size
 - **Real-Time Preview:** Visualizations update automatically after calculations
 - **Streamlined Interface:** Removed preset buttons for cleaner, more flexible interface
+- **Modular Architecture:** GUI components separated into maintainable modules
 
 ### Mathematical Engine Optimization
 - **Inverted Neutral Logic:** Entering -45° rotates cone by +45° (more intuitive)
@@ -59,15 +60,41 @@ The I-Scan Control Script System is a modular, extensible platform for controlli
 - **Enhanced Documentation:** All functions and parameters fully documented in English
 - **CSV Integration:** Seamless export/import between calculator and GUI
 
+### GUI Architecture - Modular Design
+The Software_IScan GUI has been refactored with a modular architecture:
+
+- **`gui/main_window.py`:** Main window coordinator and component orchestrator
+- **`gui/servo_controls.py`:** Servo motor control interface
+- **`gui/stepper_controls.py`:** Stepper motor control interface  
+- **`gui/led_controls.py`:** LED color and brightness control
+- **`gui/webcam_display.py`:** Camera display and control interface
+- **`gui/angle_calculator_gui.py`:** Calculator integration with tabbed image viewer
+- **`gui/queue_management.py`:** Operation queue management interface
+- **`gui/status_display.py`:** Status information and basic settings
+
+**Benefits:**
+- Better maintainability and code organization
+- Reusable components for future development
+- Independent testing of GUI components
+- Easier extension with new features
+
 ---
 
 ## Quick Start
 
-### 1. Launch GUI Application
+### 1. Launch GUI Application (Classic)
 ```bash
 cd Software_IScan
 python main.py
 ```
+
+### 1. Launch GUI Application (Modular - Recommended)
+```bash
+cd Software_IScan
+python main_modular.py
+```
+
+**Note:** The modular version (`main_modular.py`) is recommended for new installations and provides the same functionality with better code organization and maintainability.
 
 ### 2. Configure Scan Parameters
 - Set target position (X, Y coordinates)
