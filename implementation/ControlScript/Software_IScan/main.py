@@ -270,36 +270,45 @@ class ControlApp:
         # Parameter für beide Modi (links)
         params_frame = tk.Frame(content_frame)
         params_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
-        
-        # CSV Name
+          # CSV Name
         tk.Label(params_frame, text="CSV Name:", font=("Arial", 8)).grid(row=0, column=0, sticky="w", padx=2, pady=1)
         self.calc_csv_name = tk.Entry(params_frame, width=18, font=("Arial", 8))
         self.calc_csv_name.insert(0, "original_iscan")
         self.calc_csv_name.grid(row=0, column=1, padx=2, pady=1)
+        self.calc_csv_name.bind('<KeyRelease>', self.update_command_display)
+        self.calc_csv_name.bind('<FocusOut>', self.update_command_display)
         
         # Target X
         tk.Label(params_frame, text="Target X (cm):", font=("Arial", 8)).grid(row=1, column=0, sticky="w", padx=2, pady=1)
         self.calc_target_x = tk.Entry(params_frame, width=8, font=("Arial", 8))
         self.calc_target_x.insert(0, "33")
         self.calc_target_x.grid(row=1, column=1, sticky="w", padx=2, pady=1)
+        self.calc_target_x.bind('<KeyRelease>', self.update_command_display)
+        self.calc_target_x.bind('<FocusOut>', self.update_command_display)
         
         # Target Y
         tk.Label(params_frame, text="Target Y (cm):", font=("Arial", 8)).grid(row=2, column=0, sticky="w", padx=2, pady=1)
         self.calc_target_y = tk.Entry(params_frame, width=8, font=("Arial", 8))
         self.calc_target_y.insert(0, "50")
         self.calc_target_y.grid(row=2, column=1, sticky="w", padx=2, pady=1)
+        self.calc_target_y.bind('<KeyRelease>', self.update_command_display)
+        self.calc_target_y.bind('<FocusOut>', self.update_command_display)
         
         # Scan Distance
         tk.Label(params_frame, text="Scan Distance (cm):", font=("Arial", 8)).grid(row=3, column=0, sticky="w", padx=2, pady=1)
         self.calc_scan_distance = tk.Entry(params_frame, width=8, font=("Arial", 8))
         self.calc_scan_distance.insert(0, "80")
         self.calc_scan_distance.grid(row=3, column=1, sticky="w", padx=2, pady=1)
+        self.calc_scan_distance.bind('<KeyRelease>', self.update_command_display)
+        self.calc_scan_distance.bind('<FocusOut>', self.update_command_display)
         
         # Measurements
         tk.Label(params_frame, text="Measurements:", font=("Arial", 8)).grid(row=4, column=0, sticky="w", padx=2, pady=1)
         self.calc_measurements = tk.Entry(params_frame, width=8, font=("Arial", 8))
         self.calc_measurements.insert(0, "7")
         self.calc_measurements.grid(row=4, column=1, sticky="w", padx=2, pady=1)
+        self.calc_measurements.bind('<KeyRelease>', self.update_command_display)
+        self.calc_measurements.bind('<FocusOut>', self.update_command_display)
         
         # Separator
         separator = tk.Frame(params_frame, height=2, bg="gray")
@@ -347,6 +356,9 @@ class ControlApp:
         except Exception as e:
             self.servo_graph_img_label = tk.Label(image_frame, text=f"Fehler beim Laden des Bildes: {e}", fg="red")
             self.servo_graph_img_label.pack()
+        
+        # Initialize the command display with current values
+        self.update_command_display()
 
     def create_webcam_frame(self):
         """

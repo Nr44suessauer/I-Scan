@@ -58,9 +58,6 @@ ENABLE_VISUALIZATIONS = {
     'calculation_table': True,          # 05_calculation_table.png
     'servo_interpolation': True,        # 06_servo_interpolation.png
     'servo_cone_detail': True,          # 07_servo_cone_detail.png
-    
-    # ADD-ON FEATURES (08+) - Optional educational extensions
-    'target_coord_angle_explanation': False,  # 08_target_coord_angle_explanation.png (Add-on)
 }
 
 # Visualization settings

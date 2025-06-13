@@ -44,17 +44,7 @@ from visualizations import (
     create_calculation_table_visualization,
 )
 
-# Optional add-on imports
-try:
-    from addons import TARGET_COORD_ADDON_AVAILABLE
-    if TARGET_COORD_ADDON_AVAILABLE:
-        from addons.target_coord_angle_explanation import save_target_coord_angle_visualization
-    else:
-        save_target_coord_angle_visualization = None
-except ImportError:
-    TARGET_COORD_ADDON_AVAILABLE = False
-    save_target_coord_angle_visualization = None
-    print("[WARNUNG] Add-ons package not available - target coordinate explanation will be skipped")
+# Removed unused addon imports - addon files have been deleted
 
 # Workaround: Setze Encoding auf UTF-8 für Windows-Konsolen, um Unicode-Fehler zu vermeiden
 if hasattr(sys.stdout, 'reconfigure'):
@@ -133,22 +123,14 @@ def main(create_csv=False, csv_name=None):
         save_servo_geometry_graph_only()
         visualization_count += 1
         print("📊 Servo geometry graph (separate) saved: output\\06_servo_geometry_graph_only.png")
-        print("   ✅ 06_servo_geometry_graph_only.png")
-
-    # Servo cone detail visualization (07)
+        print("   ✅ 06_servo_geometry_graph_only.png")    # Servo cone detail visualization (07)
     if ENABLE_VISUALIZATIONS['servo_cone_detail']:
         save_servo_cone_detail()
         visualization_count += 1
         print("📊 Servo cone detail visualization saved: output\\07_servo_cone_detail.png")
         print("   ✅ 07_servo_cone_detail.png")
 
-    # Optional add-on visualization (if available)
-    if TARGET_COORD_ADDON_AVAILABLE and ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
-        if save_target_coord_angle_visualization:
-            save_target_coord_angle_visualization()
-            visualization_count += 1
-            print("📊 Target coord angle explanation saved: output\\target_coord_angle_explanation.png")
-            print("   ✅ target_coord_angle_explanation.png (Add-on)")    # Step 4: Optional CSV export for Software_IScan import
+    # Step 4: Optional CSV export for Software_IScan import
     if create_csv:
         print("\n📤 CREATING SOFTWARE_ISCAN IMPORT CSV...")
         from export_commands import create_command_csv
@@ -158,8 +140,6 @@ def main(create_csv=False, csv_name=None):
     print(f"\n✅ COMPLETE ANALYSIS FINISHED! ({visualization_count} visualizations created)")
     print("   • Mathematical calculation explained")
     print("   • Servo interpolation calculated")
-    if TARGET_COORD_ADDON_AVAILABLE and ENABLE_VISUALIZATIONS['target_coord_angle_explanation']:
-        print("   • Target coordinate angle explanation included (Add-on)")
     print("   • Geometric angles and servo interpolation ready for implementation")
     print(f"   • Configuration: {sum(ENABLE_VISUALIZATIONS.values())}/{len(ENABLE_VISUALIZATIONS)} visualizations enabled")
     print("\n" + "="*80)
