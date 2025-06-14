@@ -53,8 +53,78 @@ class OperationQueue:
         """Löscht alle Operationen aus der Warteschlange"""
         self.operations.clear()
         self.update_display()
-        self.logger.log("Operationswarteschlange gelöscht")
+        self.logger.log("Warteschlange geleert")
     
+    def import_from_csv(self, file_path):
+        """
+        Importiert Operationen aus einer CSV-Datei in die Warteschlange
+        
+        Args:
+            file_path (str): Pfad zur CSV-Datei
+        """
+        try:
+            import csv
+            import json
+            import os
+            
+            with open(file_path, mode='r', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.clear()  # Warteschlange leeren vor Import
+                imported_count = 0
+                
+                for row in reader:
+                    op_type = row['type']
+                    params = json.loads(row['params'])
+                    description = row['description']
+                    self.add(op_type, params, description)
+                    imported_count += 1
+                    
+            self.logger.log(f"✅ CSV erfolgreich importiert: {os.path.basename(file_path)}")
+            self.logger.log(f"📋 {imported_count} Operationen zur Warteschlange hinzugefügt")
+            
+            # Optional: Show success message
+            from tkinter import messagebox
+            messagebox.showinfo("Import erfolgreich", f"CSV wurde erfolgreich importiert!\n{imported_count} Operationen hinzugefügt.")
+            
+        except Exception as e:
+            self.logger.log(f"❌ Fehler beim CSV-Import: {str(e)}")
+            from tkinter import messagebox
+            messagebox.showerror("Import Fehler", f"Fehler beim Importieren der CSV-Datei:\n{str(e)}")
+
+    def export_to_csv(self, file_path):
+        """
+        Exportiert die aktuelle Warteschlange als CSV-Datei
+        
+        Args:
+            file_path (str): Pfad zur zu erstellenden CSV-Datei
+        """
+        try:
+            import csv
+            import json
+            import os
+            
+            with open(file_path, mode='w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["type", "params", "description"])
+                
+                for op in self.operations:
+                    writer.writerow([
+                        op['type'],
+                        json.dumps(op['params']),
+                        op['description']
+                    ])
+                    
+            self.logger.log(f"✅ CSV erfolgreich exportiert: {os.path.basename(file_path)}")
+            
+            # Optional: Show success message
+            from tkinter import messagebox
+            messagebox.showinfo("Export erfolgreich", f"Warteschlange wurde als CSV gespeichert: {os.path.basename(file_path)}")
+            
+        except Exception as e:
+            self.logger.log(f"❌ Fehler beim CSV-Export: {str(e)}")
+            from tkinter import messagebox
+            messagebox.showerror("Export Fehler", f"Fehler beim Exportieren der CSV-Datei:\n{str(e)}")
+
     def remove(self, index):
         """
         Entfernt eine Operation aus der Warteschlange nach Index

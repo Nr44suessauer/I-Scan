@@ -57,9 +57,11 @@ class ControlApp:
         # Initialize helper classes
         self.event_handlers = EventHandlers(self)
         self.queue_ops = QueueOperations(self)
-        
-        # Assign all callbacks
+          # Assign all callbacks
         self.event_handlers.assign_all_callbacks()
+        
+        # Initialize calculator display and load images
+        self.initialize_calculator_display()
         
         # Setup close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -102,14 +104,19 @@ class ControlApp:
         
         # Diameter input
         self.diameter_frame, self.diameter_entry = GUIBuilder.create_diameter_frame(self.root)
-        
-        # Position display
+          # Position display
         (self.position_frame, self.position_label, 
          self.servo_angle_label) = GUIBuilder.create_position_display(
             self.root, self.position, self.servo_angle_var)
         
-        # Output display
-        self.output_frame, self.output = GUIBuilder.create_output_display(self.root)
+        # Output display with integrated calculator panel
+        (self.output_container, self.output, 
+         self.log_frame) = GUIBuilder.create_output_display(self.root)
+        
+        # Calculator Commands Panel (integrated with output display)
+        (self.calc_panel, self.calc_vars, 
+         self.calc_widgets) = GUIBuilder.create_calculator_commands_panel(
+            self.output_container, grid_mode=True)
         
         # Webcam display
         (self.webcam_frame, self.camera_label, self.btn_start_camera,
@@ -133,8 +140,7 @@ class ControlApp:
         # LED brightness controls
         (self.led_brightness_frame, self.led_bright, self.bright_exec_btn, 
          self.bright_add_btn) = GUIBuilder.create_led_brightness_frame(self.root)
-        
-        # Button status
+          # Button status
         (self.button_frame, self.button_exec_btn, 
          self.button_add_btn) = GUIBuilder.create_button_frame(self.root)
         
@@ -142,14 +148,11 @@ class ControlApp:
         (self.home_frame, self.home_exec_btn, 
          self.home_add_btn) = GUIBuilder.create_home_frame(self.root)
         
-        # Angle calculator
-        (self.angle_calc_frame, self.show_calc_btn, self.load_csv_btn, 
-         self.save_csv_btn) = GUIBuilder.create_angle_calculator_frame(self.root)
-        
         # Operation queue
-        (self.queue_frame, self.queue_list, self.queue_exec_btn,
-         self.queue_clear_btn, self.queue_remove_btn, self.queue_export_btn,
-         self.queue_import_btn, self.repeat_checkbox) = GUIBuilder.create_queue_frame(
+        (self.queue_frame, self.queue_list, self.queue_exec_btn, self.queue_pause_btn, 
+         self.queue_exec_selected_btn, self.queue_clear_btn, self.queue_remove_btn, 
+         self.queue_duplicate_btn, self.queue_edit_btn, self.queue_settings_btn, self.queue_move_up_btn, self.queue_move_down_btn,
+         self.queue_export_btn, self.queue_import_btn, self.repeat_checkbox) = GUIBuilder.create_queue_frame(
             self.root, self.repeat_queue)
     
     def init_backend_modules(self):
@@ -188,9 +191,16 @@ class ControlApp:
             self.position,
             self.servo_angle_var
         )
-        
-        # Angle calculator interface
+          # Angle calculator interface
         self.angle_calculator = AngleCalculatorInterface(self.logger)
+    
+    def initialize_calculator_display(self):
+        """Initialize the calculator display with current values and load images"""
+        if hasattr(self, 'event_handlers'):
+            # Update command display with initial values
+            self.event_handlers.update_command_display()
+            # Load initial servo images
+            self.event_handlers.load_servo_images()
     
     def update_position_label(self):
         """Update position and servo angle display"""
