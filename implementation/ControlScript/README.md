@@ -82,19 +82,25 @@ The Software_IScan GUI has been refactored with a modular architecture:
 
 ## Quick Start
 
-### 1. Launch GUI Application (Classic)
+### Option 1: Use Start Scripts (Recommended)
+- **For Original Version:** Double-click `start_original_version.bat`
+- **For Modular Version:** Double-click `start_modular_version.bat`
+
+### Option 2: Manual Launch
+
+#### Launch Original Version
 ```bash
 cd Software_IScan
 python main.py
 ```
 
-### 1. Launch GUI Application (Modular - Recommended)
+#### Launch Modular Version (Recommended)
 ```bash
-cd Software_IScan
+cd "Modular Version"
 python main_modular.py
 ```
 
-**Note:** The modular version (`main_modular.py`) is recommended for new installations and provides the same functionality with better code organization and maintainability.
+**Note:** The modular version provides the same functionality with better code organization and maintainability.
 
 ### 2. Configure Scan Parameters
 - Set target position (X, Y coordinates)
