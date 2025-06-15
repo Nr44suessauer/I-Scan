@@ -110,29 +110,14 @@ class GUIBuilder:
                 webcam_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
         else:
             webcam_frame.pack(fill="both", expand=True, padx=10, pady=5)
-        
-        # Main container for layout - compact design
+          # Main container for layout - compact design
         main_container = tk.Frame(webcam_frame)
         main_container.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Auto-stream control variable
+        # Auto-stream control variable (nur für interne Verwendung)
         auto_stream_var = tk.BooleanVar(value=True)
         
-        # Control section at top (compact)
-        control_section = tk.Frame(main_container)
-        control_section.pack(fill="x", pady=(0, 5))
-          # Auto-stream toggle
-        auto_stream_check = tk.Checkbutton(control_section, text="Auto-Stream", 
-                                          variable=auto_stream_var, font=("Arial", 8))
-        auto_stream_check.pack(side=tk.LEFT)
-        
-        # Current camera selection (compact)
-        tk.Label(control_section, text="Aktiv:", font=("Arial", 8)).pack(side=tk.LEFT, padx=(10, 2))
-        current_camera_var = tk.StringVar(value="0")
-        current_camera_combo = ttk.Combobox(control_section, textvariable=current_camera_var,
-                                           width=5, font=("Arial", 8), state="readonly")
-        current_camera_combo.pack(side=tk.LEFT, padx=(0, 10))
-          # Detect available cameras - use provided list or auto-detect
+        # Detect available cameras - use provided list or auto-detect
         if available_cameras is None:
             available_cameras = WebcamHelper.detect_available_cameras()
         
@@ -162,8 +147,7 @@ class GUIBuilder:
         for i, cam_index in enumerate(available_cameras):
             row = i // cols
             col = i % cols
-            
-            # Get camera info from webcams_dict if available
+              # Get camera info from webcams_dict if available
             cam_name = f"Cam {cam_index}"
             com_port = f"COM{cam_index + 1}"
             
@@ -172,8 +156,10 @@ class GUIBuilder:
                 if hasattr(webcam, 'model') and webcam.model:
                     cam_name = webcam.model
                 if hasattr(webcam, 'com_port') and webcam.com_port:
-                    com_port = webcam.com_port            # Individual camera frame - compact size, Indexnummer als Titel
-            camera_frame = tk.LabelFrame(grid_container, text=f"Cam {cam_index}", 
+                    com_port = webcam.com_port
+
+            # Individual camera frame - use model name from webcam if available
+            camera_frame = tk.LabelFrame(grid_container, text=cam_name, 
                                         font=("Arial", 8, "bold"), relief="ridge", bd=1)
             camera_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
             
@@ -192,29 +178,37 @@ class GUIBuilder:
             camera_frames[cam_index] = {
                 'frame': camera_frame,
                 'view_frame': camera_view_frame
-            }
-        
-        # Configure grid weights for responsive layout
+            }        # Configure grid weights for responsive layout
         for i in range(cols):
             grid_container.grid_columnconfigure(i, weight=1)
         for i in range(rows):
             grid_container.grid_rowconfigure(i, weight=1)
         
-        # Update camera combo values
-        current_camera_combo['values'] = [str(cam) for cam in available_cameras]
-        current_camera_combo.set(str(available_cameras[0]) if available_cameras else "0")
+        # Control buttons frame
+        control_frame = tk.Frame(main_container)
+        control_frame.pack(fill="x", pady=(5, 0))
         
-        # Hidden buttons for compatibility (not displayed in compact mode)
+        # Refresh cameras button
+        btn_refresh_cameras = tk.Button(control_frame, text="🔄 Kameras Neu Laden", 
+                                       font=("Arial", 9), bg="#4CAF50", fg="white")
+        btn_refresh_cameras.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Auto-stream toggle (moved here for better layout)
+        auto_stream_check = tk.Checkbutton(control_frame, text="Auto-Stream", 
+                                         variable=auto_stream_var, font=("Arial", 9))
+        auto_stream_check.pack(side=tk.LEFT)
+        
+        # Hidden elements for compatibility (not displayed - settings are in settings panel)
         btn_start_camera = tk.Button(webcam_frame)  # Hidden
         btn_stop_camera = tk.Button(webcam_frame)   # Hidden  
         btn_add_photo_to_queue = tk.Button(webcam_frame)  # Hidden
-          # Current camera info label
-        current_camera_label = tk.Label(control_section, text="Cam 0", font=("Arial", 7))
-        current_camera_label.pack(side=tk.RIGHT)
         
+        # Dummy variables for compatibility
+        current_camera_combo = None
+        current_camera_label = tk.Label(webcam_frame, text="")  # Hidden        
         return (webcam_frame, camera_labels, current_camera_combo, camera_frames,
                 btn_start_camera, btn_stop_camera, btn_add_photo_to_queue,
-                current_camera_label, available_cameras, auto_stream_var)
+                current_camera_label, available_cameras, auto_stream_var, btn_refresh_cameras)
     
     @staticmethod
     def create_servo_frame(parent):

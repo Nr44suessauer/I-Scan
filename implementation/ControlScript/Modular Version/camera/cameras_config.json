@@ -1,0 +1,33 @@
+{
+  "cameras": [
+    {
+      "index": 0,
+      "verbindung": "USB:1",
+      "beschreibung": "Hauptkamera USB Port 0",
+      "name": "Kamera 1",
+      "enabled": true,
+      "resolution": [
+        640,
+        480
+      ],
+      "fps": 30
+    },
+    {
+      "index": 1,
+      "verbindung": "USB:0",
+      "beschreibung": "Zweitkamera USB Port 1",
+      "name": "Kamera 2",
+      "enabled": true,
+      "resolution": [
+        640,
+        480
+      ],
+      "fps": 30
+    }
+  ],
+  "settings": {
+    "auto_start_streams": true,
+    "stream_timeout": 5,
+    "reconnect_attempts": 3
+  }
+}

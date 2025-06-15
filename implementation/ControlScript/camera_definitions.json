@@ -1,0 +1,22 @@
+{
+  "cameras": [
+    {
+      "camera_id": "usb_cam_0",
+      "name": "Hauptkamera",
+      "camera_type": "usb",
+      "connection_params": {
+        "device_index": 0
+      },
+      "description": "Erste USB-Kamera"
+    },
+    {
+      "camera_id": "usb_cam_1",
+      "name": "Zweitkamera",
+      "camera_type": "usb",
+      "connection_params": {
+        "device_index": 1
+      },
+      "description": "Zweite USB-Kamera"
+    }
+  ]
+}

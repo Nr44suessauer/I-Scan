@@ -20,11 +20,15 @@ class EventHandlers:
         if hasattr(self.app, 'set_camera_device_btn'):
             self.app.set_camera_device_btn.config(command=self.on_set_camera_device)
         if hasattr(self.app, 'set_delay_btn'):
-            self.app.set_delay_btn.config(command=self.on_set_delay)
-          # Camera callbacks        if hasattr(self.app, 'btn_start_camera'):
+            self.app.set_delay_btn.config(command=self.on_set_delay)        # Camera callbacks
+        if hasattr(self.app, 'btn_start_camera'):
             self.app.btn_start_camera.config(command=self.on_start_camera)
         if hasattr(self.app, 'btn_stop_camera'):
             self.app.btn_stop_camera.config(command=self.on_stop_camera)
+        
+        # Camera refresh button
+        if hasattr(self.app, 'btn_refresh_cameras'):
+            self.app.btn_refresh_cameras.config(command=self.on_refresh_cameras)
         
         # Photo controls from settings panel
         if hasattr(self.app, 'photo_exec_btn'):
@@ -41,9 +45,8 @@ class EventHandlers:
           # Camera tab selection callback
         if hasattr(self.app, 'camera_notebook'):
             self.app.camera_notebook.bind('<<NotebookTabChanged>>', self.on_camera_tab_changed)
-        
-        # Camera selection combobox callback
-        if hasattr(self.app, 'camera_combo'):
+          # Camera selection combobox callback
+        if hasattr(self.app, 'camera_combo') and self.app.camera_combo is not None:
             self.app.camera_combo.bind('<<ComboboxSelected>>', self.on_camera_selection_changed)
         
         # Bind calculator parameter events for real-time command update
@@ -125,7 +128,8 @@ class EventHandlers:
                 self.app.logger.log(f"Camera {self.app.current_camera_index} gestartet")
             else:
                 self.app.logger.log(f"Fehler beim Starten der Camera {self.app.current_camera_index}")
-        except Exception as e:            self.app.logger.log(f"Error starting camera: {str(e)}")
+        except Exception as e:
+            self.app.logger.log(f"Error starting camera: {str(e)}")
     
     def on_stop_camera(self):
         """Stop camera"""
@@ -135,6 +139,13 @@ class EventHandlers:
             self.app.current_camera_label.config(text="Kamera gestoppt")
         self.app.logger.log("Kamera gestoppt")
     
+    def on_refresh_cameras(self):
+        """Refresh all cameras"""
+        try:
+            self.app.refresh_cameras()
+        except Exception as e:
+            self.app.logger.log(f"❌ Fehler beim Refresh der Kameras: {e}")
+
     def on_take_photo(self):
         """Take photo from selected camera in settings panel"""
         try:

@@ -141,8 +141,7 @@ class WebcamHelper:
                     
                     # GUI-Update über after() für Thread-Sicherheit
                     panel.after(0, self._update_panel, panel, img_tk)
-                
-                # Kurz warten, um die gewünschte Framerate zu erreichen
+                  # Kurz warten, um die gewünschte Framerate zu erreichen
                 time.sleep(delay / 1000.0)
             except Exception as e:
                 print(f"Fehler im Stream-Loop: {e}")
@@ -154,11 +153,21 @@ class WebcamHelper:
         Wird vom Haupt-Thread ausgeführt
         """
         try:
-            if self.running:  # Nur updaten wenn Stream noch läuft
+            # Prüfe mehrere Bedingungen bevor Update
+            if (self.running and 
+                hasattr(panel, 'winfo_exists') and 
+                panel.winfo_exists() and
+                hasattr(panel, 'config')):
                 panel.config(image=img_tk)
                 panel.image = img_tk  # Referenz behalten, um Garbage Collection zu verhindern
         except Exception as e:
-            print(f"Fehler beim GUI-Update: {e}")
+            # Stream stoppen wenn Widget nicht mehr existiert oder ungültig ist
+            error_msg = str(e).lower()
+            if any(x in error_msg for x in ["invalid command name", "application has been destroyed", "bad window path"]):
+                self.running = False  # Stream stoppen
+            else:
+                print(f"Unerwarteter GUI-Update-Fehler: {e}")
+                self.running = False
 
     def stream_starten(self, panel):
         """
@@ -230,8 +239,7 @@ class WebcamHelper:
         
         # Quadratischen Hintergrund erstellen (schwarz)
         square_frame = np.zeros((min_target, min_target, 3), dtype=np.uint8)
-        
-        # Zentrierte Position berechnen
+          # Zentrierte Position berechnen
         start_x = (min_target - new_width) // 2
         start_y = (min_target - new_height) // 2
         
@@ -239,3 +247,20 @@ class WebcamHelper:
         square_frame[start_y:start_y + new_height, start_x:start_x + new_width] = resized_frame
         
         return square_frame
+    
+    def stop_stream(self):
+        """
+        Stoppe den Kamerastream sicher
+        """
+        self.running = False
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.0)  # Warte max 1 Sekunde
+    
+    def release(self):
+        """
+        Gib alle Kamera-Ressourcen frei
+        """
+        self.stop_stream()
+        if self.cap:
+            self.cap.release()
+            self.cap = None
