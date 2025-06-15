@@ -1,0 +1,6 @@
+type,params,description
+photo,"{""delay"": 0.5, ""camera_index"": 0}",Kamera 0: Foto aufnehmen (Delay: 0.5s)
+photo,"{""delay"": 1.0, ""camera_index"": 1}",Kamera 1: Foto aufnehmen (Delay: 1.0s)
+drive,"{""direction"": 1, ""distance"": 2.5, ""speed"": 80}",Servo: Fahren (2.5cm, Geschwindigkeit: 80, Richtung: 1)
+photo,"{""delay"": 0.5, ""camera_index"": 0}",Kamera 0: Foto aufnehmen (Delay: 0.5s)
+home,"{}",Home: Home-Funktion ausführen

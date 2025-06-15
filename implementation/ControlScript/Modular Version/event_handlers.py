@@ -21,17 +21,18 @@ class EventHandlers:
             self.app.set_camera_device_btn.config(command=self.on_set_camera_device)
         if hasattr(self.app, 'set_delay_btn'):
             self.app.set_delay_btn.config(command=self.on_set_delay)
-          # Camera callbacks
-        if hasattr(self.app, 'btn_start_camera'):
+          # Camera callbacks        if hasattr(self.app, 'btn_start_camera'):
             self.app.btn_start_camera.config(command=self.on_start_camera)
         if hasattr(self.app, 'btn_stop_camera'):
             self.app.btn_stop_camera.config(command=self.on_stop_camera)
-        if hasattr(self.app, 'btn_take_photo'):
-            self.app.btn_take_photo.config(command=self.on_take_photo)
-        if hasattr(self.app, 'btn_add_photo_to_queue'):
-            self.app.btn_add_photo_to_queue.config(command=self.on_add_photo_to_queue)
-        if hasattr(self.app, 'btn_camera_config'):
-            self.app.btn_camera_config.config(command=self.on_camera_config)
+        
+        # Photo controls from settings panel
+        if hasattr(self.app, 'photo_exec_btn'):
+            self.app.photo_exec_btn.config(command=self.on_take_photo)
+        if hasattr(self.app, 'photo_add_btn'):
+            self.app.photo_add_btn.config(command=self.on_add_photo_to_queue)
+        if hasattr(self.app, 'photo_config_btn'):
+            self.app.photo_config_btn.config(command=self.on_camera_config)
         
         # Calculator Commands Panel callbacks
         if hasattr(self.app, 'calc_widgets'):
@@ -135,12 +136,34 @@ class EventHandlers:
         self.app.logger.log("Kamera gestoppt")
     
     def on_take_photo(self):
-        """Take photo"""
-        success = self.app.webcam.foto_aufnehmen(delay=self.app.global_delay)
-        if success:
-            self.app.logger.log("Foto aufgenommen")
-        else:
-            self.app.logger.log("Fehler beim Aufnehmen des Fotos")
+        """Take photo from selected camera in settings panel"""
+        try:
+            # Get selected camera index from photo combo box
+            if hasattr(self.app, 'photo_camera_combo') and self.app.photo_camera_combo:
+                selected_camera = self.app.photo_camera_combo.get()
+                if selected_camera:
+                    camera_index = int(selected_camera)
+                    # Use the selected camera for taking photo
+                    if camera_index in self.app.webcams:
+                        webcam = self.app.webcams[camera_index]
+                        success = webcam.foto_aufnehmen(delay=self.app.global_delay)
+                        if success:
+                            self.app.logger.log(f"Foto aufgenommen von Kamera {camera_index}")
+                        else:
+                            self.app.logger.log(f"Fehler beim Aufnehmen des Fotos von Kamera {camera_index}")
+                    else:
+                        self.app.logger.log(f"Kamera {camera_index} nicht verfügbar")
+                else:
+                    self.app.logger.log("Keine Kamera ausgewählt")
+            else:
+                # Fallback to default behavior if no combo box available
+                success = self.app.webcam.foto_aufnehmen(delay=self.app.global_delay)
+                if success:
+                    self.app.logger.log("Foto aufgenommen")
+                else:
+                    self.app.logger.log("Fehler beim Aufnehmen des Fotos")
+        except Exception as e:
+            self.app.logger.log(f"Fehler beim Foto aufnehmen: {str(e)}")
     
     def on_add_photo_to_queue(self):
         """Add photo to queue"""

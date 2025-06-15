@@ -262,11 +262,52 @@ class OperationQueue:
 
             elif operation['type'] == 'photo':
                 delay = operation['params'].get('delay', 0.5)
-                foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
-                if foto_path:
-                    self.logger.log(f"Foto gespeichert: {foto_path}")
-                else:
-                    self.logger.log("Fehler beim Aufnehmen des Fotos")
+                camera_index = operation['params'].get('camera_index', 0)
+                
+                # Switch to the correct camera before taking photo
+                try:
+                    # Find the main app instance and switch camera
+                    if 'global_delay' in widgets and hasattr(widgets['global_delay'], 'switch_camera'):
+                        main_app = widgets['global_delay']
+                        
+                        self.logger.log(f"📷 Bereite Foto mit Kamera {camera_index} vor...")
+                        
+                        # Switch camera and ensure stream is running
+                        stream_success = main_app.switch_camera(camera_index)
+                        
+                        if stream_success:
+                            # Use the specific webcam for the selected camera index
+                            if camera_index in main_app.webcams:
+                                webcam = main_app.webcams[camera_index]
+                                self.logger.log(f"📸 Nehme Foto mit Kamera {camera_index} auf (Stream initialisiert)...")
+                                foto_path = webcam.foto_aufnehmen(delay=delay)
+                            else:
+                                self.logger.log(f"❌ Kamera {camera_index} nicht verfügbar")
+                                foto_path = None
+                        else:
+                            self.logger.log(f"❌ Kamera {camera_index} Stream konnte nicht gestartet werden")
+                            foto_path = None
+                    elif 'webcams' in widgets and camera_index in widgets['webcams']:
+                        # Direct camera access if switch fails
+                        webcam = widgets['webcams'][camera_index]
+                        foto_path = webcam.foto_aufnehmen(delay=delay)
+                    else:
+                        # Fallback to default webcam
+                        foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
+                        
+                    if foto_path:
+                        self.logger.log(f"✅ Foto gespeichert von Kamera {camera_index}: {foto_path}")
+                    else:
+                        self.logger.log(f"❌ Fehler beim Aufnehmen des Fotos von Kamera {camera_index}")
+                        
+                except Exception as e:
+                    self.logger.log(f"❌ Fehler bei Foto-Operation: {e}")
+                    # Fallback
+                    foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
+                    if foto_path:
+                        self.logger.log(f"✅ Foto gespeichert (Fallback): {foto_path}")
+                    else:
+                        self.logger.log(f"❌ Fehler beim Aufnehmen des Fotos (Fallback)")
 
             else:
                 self.logger.log(f"Unbekannter Operationstyp: {operation['type']}")

@@ -214,23 +214,33 @@ class ControlApp:
         
         # Row 0, Column 2: Operation Queue
         (self.queue_frame, self.queue_list, self.queue_exec_btn, self.queue_pause_btn, 
-         self.queue_exec_selected_btn, self.queue_clear_btn, self.queue_remove_btn, 
-         self.queue_duplicate_btn, self.queue_edit_btn, self.queue_settings_btn, 
-         self.queue_move_up_btn, self.queue_move_down_btn,         self.queue_export_btn, self.queue_import_btn, self.repeat_checkbox) = GUIBuilder.create_queue_frame(
-            self.main_container, self.repeat_queue, grid_mode=True)        # Row 1, Column 0: Camera Grid Display (left bottom)
+         self.queue_exec_selected_btn, self.queue_clear_btn, self.queue_remove_btn,         self.queue_duplicate_btn, self.queue_edit_btn, self.queue_settings_btn,
+         self.queue_move_up_btn, self.queue_move_down_btn,
+         self.queue_export_btn, self.queue_import_btn, self.repeat_checkbox) = GUIBuilder.create_queue_frame(
+            self.main_container, self.repeat_queue, grid_mode=True)
+            
+        # Row 1, Column 0: Camera Grid Display (left bottom)
         (self.webcam_frame, self.camera_labels, self.camera_combo, self.camera_frames,
-         self.btn_start_camera, self.btn_stop_camera, self.btn_take_photo, 
-         self.btn_add_photo_to_queue, self.btn_camera_config, self.current_camera_label, 
-         self.available_cameras_gui, self.auto_stream_var) = GUIBuilder.create_webcam_frame(
+         self.btn_start_camera, self.btn_stop_camera, self.btn_add_photo_to_queue, 
+         self.current_camera_label, self.available_cameras_gui, self.auto_stream_var) = GUIBuilder.create_webcam_frame(
              self.main_container, 
              available_cameras=self.available_cameras,
              webcams_dict=self.webcams,
-             grid_mode=True, 
-             position="bottom_left"         )        # Row 1, Column 2: Settings Panel (under Queue)
+             grid_mode=True,             position="bottom_left")
+             
+        # Row 1, Column 2: Settings Panel (under Queue)
         (self.settings_frame, self.home_exec_btn, self.home_add_btn,
          self.drive_up_distance, self.drive_up_speed, self.drive_up_exec_btn, self.drive_up_add_btn,
-         self.drive_down_distance, self.drive_down_speed, self.drive_down_exec_btn, self.drive_down_add_btn) = GUIBuilder.create_settings_panel(
+         self.drive_down_distance, self.drive_down_speed, self.drive_down_exec_btn, self.drive_down_add_btn,
+         self.photo_camera_combo, self.photo_exec_btn, self.photo_add_btn, self.photo_config_btn) = GUIBuilder.create_settings_panel(
             self.main_container, grid_mode=True)
+            
+        # Populate photo camera combo box with available cameras
+        if self.photo_camera_combo and self.available_cameras:
+            camera_indices = [str(idx) for idx in self.available_cameras]
+            self.photo_camera_combo['values'] = camera_indices
+            if camera_indices:
+                self.photo_camera_combo.set(camera_indices[0])  # Set default to first available camera
     
     def init_backend_modules(self):
         """Initialize backend modules (logger, device control, etc.)"""
@@ -255,11 +265,14 @@ class ControlApp:
             'root': self.root,
             'diameter_entry': self.diameter_entry,
             'servo_angle': self.servo_angle,
-            'stepper_length_cm': self.stepper_length_cm,            'stepper_dir': self.stepper_dir,
+            'stepper_length_cm': self.stepper_length_cm,
+            'stepper_dir': self.stepper_dir,
             'stepper_speed': self.stepper_speed,
             'led_color': self.led_color,
             'led_bright': self.led_bright,
             'webcam': self.webcam,
+            'webcams': self.webcams,  # Add all webcams for camera-specific operations
+            'camera_combo': self.camera_combo,  # Add camera combo for switching
             'global_delay': self
         }
         
@@ -311,7 +324,7 @@ class ControlApp:
     def update_current_camera_info(self):
         """Update the current camera info label with detailed information"""
         if hasattr(self, 'current_camera_label') and hasattr(self, 'current_camera_index'):
-            # Prüfe ob es eine Konfiguration für diese Kamera gibt
+            # Prüfe ob es eine Konfiguration für diese Kamera gibt            # Prüfe ob es eine Konfiguration für diese Kamera gibt
             camera_info = self.camera_config.get_camera_by_index(self.current_camera_index)
             if camera_info:
                 # Verwende die Bezeichnung aus der Konfiguration
@@ -324,6 +337,94 @@ class ControlApp:
                     info_text = f"Cam {self.current_camera_index} (COM{self.current_camera_index + 1}*)"
             
             self.current_camera_label.config(text=info_text)
+
+    def start_camera_stream(self, camera_index):
+        """
+        Start stream for a specific camera index and ensure it's properly initialized
+        """
+        import time
+        
+        try:
+            if camera_index in self.available_cameras and camera_index in self.webcams:
+                webcam = self.webcams[camera_index]
+                
+                # Check if stream is already running
+                if webcam.running:
+                    self.logger.log(f"📹 Kamera {camera_index} Stream bereits aktiv")
+                    return True
+                
+                # Start the stream
+                if camera_index in self.camera_labels:
+                    camera_label = self.camera_labels[camera_index]
+                    if webcam.stream_starten(camera_label):
+                        # Give stream time to initialize
+                        time.sleep(0.5)
+                        
+                        # Verify stream is running
+                        if webcam.running:
+                            # Update label to show streaming status
+                            cam_info = self.get_camera_info(camera_index)
+                            camera_label.config(text=f"{cam_info['comport']}\nLIVE", bg="lightgreen")
+                            self.logger.log(f"📹 Kamera {camera_index} Stream gestartet und initialisiert")
+                            return True
+                        else:
+                            self.logger.log(f"⚠️ Kamera {camera_index} Stream konnte nicht initialisiert werden")
+                            return False
+                    else:
+                        # Update label to show error status
+                        cam_info = self.get_camera_info(camera_index)
+                        camera_label.config(text=f"{cam_info['comport']}\nERROR", bg="lightcoral")
+                        self.logger.log(f"❌ Fehler beim Starten von Kamera {camera_index}")
+                        return False
+                else:
+                    self.logger.log(f"❌ Kein Label für Kamera {camera_index} gefunden")
+                    return False
+            else:
+                self.logger.log(f"❌ Kamera {camera_index} nicht verfügbar")
+                return False
+                
+        except Exception as e:
+            self.logger.log(f"❌ Fehler beim Starten der Kamera {camera_index}: {e}")
+            return False
+
+    def switch_camera(self, camera_index):
+        """
+        Switch to the specified camera index for queue operations and ensure stream is running
+        """
+        try:
+            if camera_index in self.available_cameras:
+                # First, start the camera stream if not already running
+                stream_started = self.start_camera_stream(camera_index)
+                
+                # Update the current camera index
+                self.current_camera_index = camera_index
+                
+                # Update the camera combo box
+                if hasattr(self, 'camera_combo') and self.camera_combo:
+                    self.camera_combo.set(str(camera_index))
+                
+                # Update camera info display
+                self.update_current_camera_info()
+                
+                # Switch the active webcam if available
+                if camera_index in self.webcams:
+                    self.webcam = self.webcams[camera_index]
+                    if stream_started:
+                        self.logger.log(f"🎥 Kamera gewechselt zu Index {camera_index} (Stream aktiv)")
+                    else:
+                        self.logger.log(f"🎥 Kamera gewechselt zu Index {camera_index} (Stream-Fehler)")
+                else:
+                    self.logger.log(f"⚠️ Kamera {camera_index} nicht verfügbar, verwende aktuelle Kamera")
+                    
+                return stream_started
+                    
+            else:
+                self.logger.log(f"❌ Ungültiger Kamera-Index: {camera_index}")
+                return False
+                
+        except Exception as e:
+            self.logger.log(f"❌ Fehler beim Kamera-Wechsel: {e}")
+            return False
 
     def refresh_camera_configuration(self):
         """

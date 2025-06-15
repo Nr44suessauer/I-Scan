@@ -121,8 +121,7 @@ class GUIBuilder:
         # Control section at top (compact)
         control_section = tk.Frame(main_container)
         control_section.pack(fill="x", pady=(0, 5))
-        
-        # Auto-stream toggle
+          # Auto-stream toggle
         auto_stream_check = tk.Checkbutton(control_section, text="Auto-Stream", 
                                           variable=auto_stream_var, font=("Arial", 8))
         auto_stream_check.pack(side=tk.LEFT)
@@ -133,13 +132,6 @@ class GUIBuilder:
         current_camera_combo = ttk.Combobox(control_section, textvariable=current_camera_var,
                                            width=5, font=("Arial", 8), state="readonly")
         current_camera_combo.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # Quick action buttons (compact)
-        btn_take_photo = tk.Button(control_section, text="📷", font=("Arial", 8), width=3)
-        btn_take_photo.pack(side=tk.LEFT, padx=1)
-        
-        btn_camera_config = tk.Button(control_section, text="⚙", font=("Arial", 8), width=3)
-        btn_camera_config.pack(side=tk.LEFT, padx=1)
           # Detect available cameras - use provided list or auto-detect
         if available_cameras is None:
             available_cameras = WebcamHelper.detect_available_cameras()
@@ -216,14 +208,13 @@ class GUIBuilder:
         btn_start_camera = tk.Button(webcam_frame)  # Hidden
         btn_stop_camera = tk.Button(webcam_frame)   # Hidden  
         btn_add_photo_to_queue = tk.Button(webcam_frame)  # Hidden
-        
-        # Current camera info label
+          # Current camera info label
         current_camera_label = tk.Label(control_section, text="Cam 0", font=("Arial", 7))
         current_camera_label.pack(side=tk.RIGHT)
         
         return (webcam_frame, camera_labels, current_camera_combo, camera_frames,
-                btn_start_camera, btn_stop_camera, btn_take_photo, btn_add_photo_to_queue,
-                btn_camera_config, current_camera_label, available_cameras, auto_stream_var)
+                btn_start_camera, btn_stop_camera, btn_add_photo_to_queue,
+                current_camera_label, available_cameras, auto_stream_var)
     
     @staticmethod
     def create_servo_frame(parent):
@@ -681,9 +672,7 @@ class GUIBuilder:
         drive_up_add_btn = tk.Button(drive_up_frame, text="+", 
                                     bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
                                     font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
-        drive_up_add_btn.pack(side=tk.LEFT, padx=2)
-        
-        # Drive Down Controls
+        drive_up_add_btn.pack(side=tk.LEFT, padx=2)        # Drive Down Controls
         drive_down_frame = tk.Frame(drive_section)
         drive_down_frame.pack(fill="x", padx=5, pady=2)
         
@@ -705,7 +694,34 @@ class GUIBuilder:
                                       bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
                                       font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
         drive_down_add_btn.pack(side=tk.LEFT, padx=2)
+          # Photo Control Section
+        photo_section = tk.LabelFrame(settings_frame, text="Photo Control", font=("Arial", 9, "bold"))
+        photo_section.pack(fill="x", padx=5, pady=3)
         
+        photo_frame = tk.Frame(photo_section)
+        photo_frame.pack(fill="x", padx=5, pady=2)
+        
+        # Camera selection for photo
+        tk.Label(photo_frame, text="Aktiv:", font=("Arial", 8)).pack(side=tk.LEFT)
+        photo_camera_var = tk.StringVar(value="0")
+        photo_camera_combo = ttk.Combobox(photo_frame, textvariable=photo_camera_var,
+                                         width=5, font=("Arial", 8), state="readonly")
+        photo_camera_combo.pack(side=tk.LEFT, padx=(2, 10))
+        
+        # Photo action buttons
+        photo_exec_btn = tk.Button(photo_frame, text="📷 Foto", 
+                                  bg="lightcyan", fg="black", font=("Arial", 8, "bold"), width=8)
+        photo_exec_btn.pack(side=tk.LEFT, padx=2)
+        
+        photo_add_btn = tk.Button(photo_frame, text="+", 
+                                 bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
+                                 font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
+        photo_add_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Camera config button
+        photo_config_btn = tk.Button(photo_frame, text="⚙ Config", font=("Arial", 8), width=8)
+        photo_config_btn.pack(side=tk.LEFT, padx=2)        
         return (settings_frame, home_exec_btn, home_add_btn,
                 drive_up_distance, drive_up_speed, drive_up_exec_btn, drive_up_add_btn,
-                drive_down_distance, drive_down_speed, drive_down_exec_btn, drive_down_add_btn)
+                drive_down_distance, drive_down_speed, drive_down_exec_btn, drive_down_add_btn,
+                photo_camera_combo, photo_exec_btn, photo_add_btn, photo_config_btn)

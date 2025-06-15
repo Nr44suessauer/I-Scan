@@ -71,7 +71,18 @@ class QueueOperations:
         self.app.operation_queue.add('home', {}, description)
     
     def add_photo_to_queue(self):
-        """Add photo taking operation to queue"""
+        """Add photo taking operation to queue with selected camera index"""
         delay = self.app.global_delay
-        description = f"Kamera: Foto aufnehmen (Global Delay: {delay}s)"
-        self.app.operation_queue.add('photo', {'delay': delay}, description)
+        
+        # Get selected camera index from photo combo box
+        camera_index = 0  # Default camera
+        if hasattr(self.app, 'photo_camera_combo') and self.app.photo_camera_combo:
+            try:
+                selected_camera = self.app.photo_camera_combo.get()
+                if selected_camera:
+                    camera_index = int(selected_camera)
+            except ValueError:
+                pass  # Use default if conversion fails
+                
+        description = f"Kamera {camera_index}: Foto aufnehmen (Delay: {delay}s)"
+        self.app.operation_queue.add('photo', {'delay': delay, 'camera_index': camera_index}, description)
