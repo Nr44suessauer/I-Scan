@@ -11,7 +11,7 @@ Website: deadlinedriven.dev
 import os
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, scrolledtext
 
 # Import configuration and components
 from config import *
@@ -103,57 +103,44 @@ class ControlApp:
          self.set_delay_btn) = GUIBuilder.create_camera_settings_frame(self.root)
         
         # Diameter input
-        self.diameter_frame, self.diameter_entry = GUIBuilder.create_diameter_frame(self.root)
-          # Position display
+        self.diameter_frame, self.diameter_entry = GUIBuilder.create_diameter_frame(self.root)        # Position display
         (self.position_frame, self.position_label, 
          self.servo_angle_label) = GUIBuilder.create_position_display(
             self.root, self.position, self.servo_angle_var)
+          # Main container for 3-column grid layout (Log | Configuration | Queue) + Camera row
+        self.main_container = tk.Frame(self.root)
+        self.main_container.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Output display with integrated calculator panel
-        (self.output_container, self.output, 
-         self.log_frame) = GUIBuilder.create_output_display(self.root)
+        # Grid configuration for 3 columns in first row, camera in second row
+        self.main_container.columnconfigure(0, weight=1, minsize=300)  # Log console
+        self.main_container.columnconfigure(1, weight=1, minsize=400)  # Calculator/Config (wider)
+        self.main_container.columnconfigure(2, weight=1, minsize=300)  # Queue
+        self.main_container.rowconfigure(0, weight=1)  # Main controls row
+        self.main_container.rowconfigure(1, weight=1)  # Camera row
         
-        # Calculator Commands Panel (integrated with output display)
+        # Row 0, Column 0: Log console
+        self.log_frame = tk.LabelFrame(self.main_container, text="Log Console", font=("Arial", 10, "bold"))
+        self.log_frame.grid(row=0, column=0, sticky="nsew", padx=5)
+        self.output = scrolledtext.ScrolledText(self.log_frame, width=35, height=20, state='disabled')
+        self.output.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Row 0, Column 1: Calculator Commands Panel (Configuration)
         (self.calc_panel, self.calc_vars, 
          self.calc_widgets) = GUIBuilder.create_calculator_commands_panel(
-            self.output_container, grid_mode=True)
+            self.main_container, grid_mode=True)
         
-        # Webcam display
-        (self.webcam_frame, self.camera_label, self.btn_start_camera,
-         self.btn_stop_camera, self.btn_take_photo, 
-         self.btn_add_photo_to_queue) = GUIBuilder.create_webcam_frame(self.root)
-        
-        # Servo controls
-        (self.servo_frame, self.servo_angle, self.servo_exec_btn, 
-         self.servo_add_btn) = GUIBuilder.create_servo_frame(self.root)
-        
-        # Stepper controls
-        (self.stepper_frame, self.stepper_length_cm, self.stepper_dir,
-         self.stepper_speed, self.stepper_exec_btn, 
-         self.stepper_add_btn) = GUIBuilder.create_stepper_frame(
-            self.root, self.last_distance_value)
-        
-        # LED color controls
-        (self.led_color_frame, self.led_color, self.led_exec_btn, 
-         self.led_add_btn) = GUIBuilder.create_led_color_frame(self.root)
-        
-        # LED brightness controls
-        (self.led_brightness_frame, self.led_bright, self.bright_exec_btn, 
-         self.bright_add_btn) = GUIBuilder.create_led_brightness_frame(self.root)
-          # Button status
-        (self.button_frame, self.button_exec_btn, 
-         self.button_add_btn) = GUIBuilder.create_button_frame(self.root)
-        
-        # Home function
-        (self.home_frame, self.home_exec_btn, 
-         self.home_add_btn) = GUIBuilder.create_home_frame(self.root)
-        
-        # Operation queue
+        # Row 0, Column 2: Operation Queue
         (self.queue_frame, self.queue_list, self.queue_exec_btn, self.queue_pause_btn, 
          self.queue_exec_selected_btn, self.queue_clear_btn, self.queue_remove_btn, 
-         self.queue_duplicate_btn, self.queue_edit_btn, self.queue_settings_btn, self.queue_move_up_btn, self.queue_move_down_btn,
+         self.queue_duplicate_btn, self.queue_edit_btn, self.queue_settings_btn, 
+         self.queue_move_up_btn, self.queue_move_down_btn,
          self.queue_export_btn, self.queue_import_btn, self.repeat_checkbox) = GUIBuilder.create_queue_frame(
-            self.root, self.repeat_queue)
+            self.main_container, self.repeat_queue, grid_mode=True)
+        
+        # Row 1: Camera Stream Display (spans all 3 columns)
+        (self.webcam_frame, self.camera_label, self.btn_start_camera,
+         self.btn_stop_camera, self.btn_take_photo, 
+         self.btn_add_photo_to_queue) = GUIBuilder.create_webcam_frame(self.main_container, grid_mode=True)
     
     def init_backend_modules(self):
         """Initialize backend modules (logger, device control, etc.)"""
@@ -163,9 +150,15 @@ class ControlApp:
             self.position, 
             self.servo_angle_var, 
             self.update_position_label
-        )
+        )        # Widget dictionary for device control - create necessary control variables
+        # Since controls are now in Calculator panel, we need to define these here
+        self.servo_angle = tk.DoubleVar(value=0.0)
+        self.stepper_length_cm = tk.DoubleVar(value=1.0)
+        self.stepper_dir = tk.StringVar(value="forward")
+        self.stepper_speed = tk.IntVar(value=int(DEFAULT_SPEED))
+        self.led_color = tk.StringVar(value="red")
+        self.led_bright = tk.IntVar(value=int(DEFAULT_LED_BRIGHTNESS))
         
-        # Widget dictionary for device control
         self.widgets = {
             'root': self.root,
             'diameter_entry': self.diameter_entry,

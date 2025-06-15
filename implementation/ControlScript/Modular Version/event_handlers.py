@@ -15,36 +15,24 @@ class EventHandlers:
         self.app = app_instance
     
     def assign_all_callbacks(self):
-        """Assign all callback functions to their respective buttons"""
+        """Assign all callback functions to their respective buttons for new 3-column layout"""
+        # Basic settings callbacks (still exist)
+        if hasattr(self.app, 'set_camera_device_btn'):
+            self.app.set_camera_device_btn.config(command=self.on_set_camera_device)
+        if hasattr(self.app, 'set_delay_btn'):
+            self.app.set_delay_btn.config(command=self.on_set_delay)
+        
         # Camera callbacks
-        self.app.btn_start_camera.config(command=self.on_start_camera)
-        self.app.btn_stop_camera.config(command=self.on_stop_camera)
-        self.app.btn_take_photo.config(command=self.on_take_photo)
-        self.app.btn_add_photo_to_queue.config(command=self.on_add_photo_to_queue)
-        self.app.set_camera_device_btn.config(command=self.on_set_camera_device)
-        self.app.set_delay_btn.config(command=self.on_set_delay)
+        if hasattr(self.app, 'btn_start_camera'):
+            self.app.btn_start_camera.config(command=self.on_start_camera)
+        if hasattr(self.app, 'btn_stop_camera'):
+            self.app.btn_stop_camera.config(command=self.on_stop_camera)
+        if hasattr(self.app, 'btn_take_photo'):
+            self.app.btn_take_photo.config(command=self.on_take_photo)
+        if hasattr(self.app, 'btn_add_photo_to_queue'):
+            self.app.btn_add_photo_to_queue.config(command=self.on_add_photo_to_queue)
         
-        # Servo callbacks
-        self.app.servo_exec_btn.config(command=self.on_servo_execute)
-        self.app.servo_add_btn.config(command=self.on_servo_add_to_queue)
-        
-        # Stepper callbacks
-        self.app.stepper_exec_btn.config(command=self.on_stepper_execute)
-        self.app.stepper_add_btn.config(command=self.on_stepper_add_to_queue)
-        
-        # LED callbacks
-        self.app.led_exec_btn.config(command=self.on_led_execute)
-        self.app.led_add_btn.config(command=self.on_led_add_to_queue)
-        self.app.bright_exec_btn.config(command=self.on_brightness_execute)
-        self.app.bright_add_btn.config(command=self.on_brightness_add_to_queue)
-        
-        # Button callbacks
-        self.app.button_exec_btn.config(command=self.on_button_execute)
-        self.app.button_add_btn.config(command=self.on_button_add_to_queue)
-          # Home callbacks
-        self.app.home_exec_btn.config(command=self.on_home_execute)
-        self.app.home_add_btn.config(command=self.on_home_add_to_queue)
-          # Calculator Commands Panel callbacks
+        # Calculator Commands Panel callbacks
         if hasattr(self.app, 'calc_widgets'):
             self.app.calc_widgets['visual_btn'].config(command=self.execute_visualisation_mode)
             self.app.calc_widgets['silent_btn'].config(command=self.execute_silent_mode)

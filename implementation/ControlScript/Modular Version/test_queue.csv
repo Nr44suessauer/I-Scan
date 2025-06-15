@@ -1,5 +1,0 @@
-type,params,description
-servo,"{""angle"": 45}",Servo: Winkel auf 45° setzen
-stepper,"{""steps"": 2048, ""direction"": 1, ""speed"": 80}","Stepper: 2048 Schritte, 5.0 cm, Richtung aufwärts, Geschwindigkeit: 80"
-led_color,"{""color"": ""#FF0000""}",LED: Farbe auf #FF0000 setzen
-photo,"{""delay"": 0.5}",Kamera: Foto aufnehmen (Global Delay: 0.5s)

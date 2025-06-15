@@ -31,6 +31,8 @@ class OperationQueue:
         self.operations = []
         self.logger = logger
         self.queue_list = queue_list
+        self.is_paused = False  # Pause-Status für die Warteschlange
+        self.is_executing = False  # Ausführungsstatus
     
     def add(self, operation_type, params, description):
         """
@@ -53,7 +55,7 @@ class OperationQueue:
         """Löscht alle Operationen aus der Warteschlange"""
         self.operations.clear()
         self.update_display()
-        self.logger.log("Warteschlange geleert")
+        self.logger.log("Operationswarteschlange gelöscht")
     
     def import_from_csv(self, file_path):
         """
@@ -133,19 +135,18 @@ class OperationQueue:
             index (int): Der Index der zu entfernenden Operation
         """
         if 0 <= index < len(self.operations):
-            removed = self.operations.pop(index)
+            removed_op = self.operations.pop(index)
             self.update_display()
-            self.logger.log(f"Aus der Warteschlange entfernt: {removed['description']}")
-    
+            self.logger.log(f"Operation entfernt: {removed_op['description']}")
+        else:
+            self.logger.log("Ungültiger Index für das Entfernen der Operation")
+
     def update_display(self):
-        """
-        Aktualisiert die Anzeige der Warteschlange in der Benutzeroberfläche
-        Aktualisiert die Liste der Operationen, die in der Warteschlange-Listbox angezeigt werden
-        """
-        self.queue_list.delete(0, tk.END)  # Aktuelle Einträge löschen
-        for idx, op in enumerate(self.operations):
-            self.queue_list.insert(tk.END, f"{idx+1}. {op['description']}")
-    
+        """Aktualisiert die Anzeige der Warteschlange in der GUI"""
+        self.queue_list.delete(0, tk.END)
+        for i, op in enumerate(self.operations):
+            self.queue_list.insert(tk.END, f"{i+1}. {op['description']}")
+
     def execute_all(self, base_url, widgets, position_var, servo_angle_var, last_distance_value, run_in_thread=True):
         """
         Führt alle Operationen in der Warteschlange sequentiell aus
@@ -163,187 +164,155 @@ class OperationQueue:
             return
         
         self.logger.log("Starte Warteschlangenausführung...")
+        self.is_executing = True  # Ausführungsstatus setzen
         
         def run_queue():
             """Führt alle Operationen in der Warteschlange in einem separaten Thread aus"""
-            total_distance = 0  # Verfolge die Gesamtdistanz für die Aktualisierung des Distanzfelds
-            
-            for idx, op in enumerate(self.operations):
-                try:
-                    self.logger.log(f"Führe aus {idx+1}/{len(self.operations)}: {op['description']}")
-
-                    if op['type'] == 'servo':
-                        angle = op['params']['angle']
-                        ApiClient.set_servo_angle(angle, base_url)
-                        self.logger.log(f"Servo: Winkel {angle}°")
-                        servo_angle_var.set(angle)
-                        widgets['root'].after(0, lambda: widgets['update_position_label']())
-
-                    elif op['type'] == 'stepper':
-                        steps = op['params']['steps']
-                        direction = op['params']['direction']
-                        speed = op['params'].get('speed')
-                        d = float(widgets['diameter_entry'].get())
-                        circumference = PI * d  # mm
-                        distance_cm = (steps / 4096) * (circumference / 10)
-                        if direction == 1:
-                            total_distance += distance_cm
-                        else:
-                            total_distance -= distance_cm
-                        # Motorbefehl wirklich ausführen:
-                        ApiClient.move_stepper(steps, direction, speed, base_url)
-                        self.logger.log(f"Stepper: {steps} Schritte, Richtung {direction}, Geschwindigkeit: {speed}")
-
-                    elif op['type'] == 'led_color':
-                        color_hex = op['params']['color']
-                        ApiClient.set_led_color(color_hex, base_url)
-                        self.logger.log(f"LED: Farbe auf {color_hex} gesetzt")
-
-                    elif op['type'] == 'led_brightness':
-                        brightness = op['params']['brightness']
-                        ApiClient.set_led_brightness(brightness, base_url)
-                        self.logger.log(f"LED: Helligkeit auf {brightness}% gesetzt")
-
-                    elif op['type'] == 'button':
-                        response = ApiClient.get_button_state(base_url)
-                        self.logger.log(f"Button-Status: {response}")
-
-                    elif op['type'] == 'home':
-                        self._execute_home_function(base_url, widgets, position_var, last_distance_value)
-                        self.logger.log("Home-Funktion ausgeführt")
-
-                    elif op['type'] == 'photo':
-                        # Delay aus den Parametern lesen, oder globale Delay verwenden
-                        delay = op['params'].get('delay')
-                        if delay is None:
-                            # Globale Delay aus widgets verwenden
-                            global_delay_obj = widgets.get('global_delay')
-                            if global_delay_obj and hasattr(global_delay_obj, 'global_delay'):
-                                delay = global_delay_obj.global_delay
-                            else:
-                                delay = 0.5  # Fallback
+            try:
+                for idx, op in enumerate(self.operations):
+                    # Prüfe, ob die Ausführung gestoppt wurde
+                    if not self.is_executing:
+                        self.logger.log("Warteschlangenausführung gestoppt")
+                        break
                         
-                        webcam_helper = widgets.get('webcam', None)
-                        if webcam_helper and webcam_helper.running and webcam_helper.current_frame is not None:
-                            self.logger.log(f"Foto wird aufgenommen mit {delay}s Autofokus-Delay...")
-                            foto_path = webcam_helper.foto_aufnehmen(delay=delay)
-                            if foto_path:
-                                self.logger.log(f"Foto aufgenommen und gespeichert als: {foto_path}")
-                            else:
-                                self.logger.log("Fehler: Foto konnte nicht gespeichert werden")
-                        else:
-                            self.logger.log("Fehler: Kamera nicht aktiv oder kein Bild verfügbar")
-
-                    time.sleep(0.5)
-                except Exception as e:
-                    self.logger.log(f"Fehler bei der Ausführung von Operation {idx+1}: {e}")
-            
-            self.logger.log("Warteschlangenausführung abgeschlossen!")
+                    # Prüfe, ob pausiert
+                    if self.is_paused:
+                        self.logger.log("Warteschlange pausiert. Warte auf Fortsetzung...")
+                        while self.is_paused and self.is_executing:
+                            time.sleep(0.1)  # Kurze Pause, um nicht zu blockieren
+                        
+                        if not self.is_executing:
+                            break
+                    
+                    # Führe die einzelne Operation aus
+                    self.logger.log(f"Führe aus {idx+1}/{len(self.operations)}: {op['description']}")
+                    self.execute_single_operation(op, base_url, widgets, position_var, servo_angle_var, last_distance_value)
+                    
+                    # Kleine Pause zwischen Operationen
+                    time.sleep(0.1)
+                    
+            except Exception as e:
+                self.logger.log(f"Fehler bei der Warteschlangenausführung: {e}")
+            finally:
+                self.logger.log("Warteschlangenausführung abgeschlossen!")
+                self.is_executing = False  # Ausführungsstatus zurücksetzen
         
         if run_in_thread:
-            threading.Thread(target=run_queue).start()
+            thread = threading.Thread(target=run_queue, daemon=True)
+            thread.start()
         else:
             run_queue()
-    
-    def _execute_home_function(self, base_url, widgets, position_var, last_distance_value):
+
+    def execute_single_operation(self, operation, base_url, widgets, position_var, servo_angle_var, last_distance_value):
         """
-        Führt die Home-Funktion als Teil der Warteschlangenausführung aus
-        Bewegt den Schrittmotor nach unten, bis der Button gedrückt wird,
-        dann leicht nach oben und setzt die Position auf Null zurück.
+        Führt eine einzelne Operation aus
         
         Args:
+            operation (dict): Die auszuführende Operation
             base_url (str): Die Basis-URL der API
             widgets (dict): Wörterbuch der für Operationen benötigten UI-Widgets
             position_var: Die DoubleVar zur Verfolgung der aktuellen Position
+            servo_angle_var: Die IntVar zur Verfolgung des aktuellen Servo-Winkels
             last_distance_value: Die StringVar für den letzten Distanzwert
         """
         try:
-            d = float(widgets['diameter_entry'].get())
-            self.logger.log('Starte Home-Funktion...')
-            
-            # Button-Status zurücksetzen
-            self.logger.log("Setze Button-Status zurück...")
-            reset_attempts = 0
-            max_reset_attempts = 10
-            
-            # Warten, bis der Button nicht mehr gedrückt ist
-            while reset_attempts < max_reset_attempts:
-                reset_attempts += 1
-                btn_response = ApiClient.get_button_state(base_url, nocache=True)
-                button_still_pressed = ApiClient.is_button_pressed(btn_response)
+            if operation['type'] == 'servo':
+                angle = operation['params']['angle']
+                ApiClient.set_servo_angle(angle, base_url)
+                self.logger.log(f"Servo: Winkel {angle}°")
+                servo_angle_var.set(angle)
+                widgets['root'].after(0, lambda: widgets['update_position_label']())
+
+            elif operation['type'] == 'stepper':
+                steps = operation['params']['steps']
+                direction = operation['params']['direction']
+                speed = operation['params'].get('speed')
+                d = float(widgets['diameter_entry'].get())
+                circumference = PI * d  # mm
+                distance_cm = (steps / 4096) * (circumference / 10)
                 
-                if button_still_pressed:
-                    self.logger.log(f"Button noch immer gedrückt, warte auf Freigabe (Versuch {reset_attempts})...")
-                    time.sleep(1)
+                # Motorbefehl ausführen
+                ApiClient.move_stepper(steps, direction, speed, base_url)
+                self.logger.log(f"Stepper: {steps} Schritte, Richtung {direction}, Geschwindigkeit: {speed}")
+                
+                # Position aktualisieren
+                if direction == 1:
+                    position_var.set(position_var.get() + distance_cm)
                 else:
-                    self.logger.log(f"Button freigegeben, fahre mit Home-Funktion fort.")
-                    break
-            
-            if reset_attempts >= max_reset_attempts:
-                self.logger.log("Warnung: Konnte Button-Status nicht zurücksetzen, fahre trotzdem fort.")
-            
-            # Mit Home-Funktion fortfahren
-            time.sleep(1)
-            
-            # Anfängliche 100 Schritte nach unten
-            speed = int(widgets['stepper_speed'].get())
-            params = {"steps": 100, "direction": -1, "speed": speed}
-            ApiClient.make_request("setMotor", params, base_url)
-            pos_cm = position_var.get() - (100 / 4096 * PI * d / 10)
-            distance_cm = (100 / 4096 * PI * d / 10)
-            self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction abwärts, Position: {pos_cm:.2f} cm")
-            
-            # Schleife, bis der Button gedrückt wird - reduzierte Protokollierung
-            max_attempts = 100
-            attempt = 0
-            button_pressed = False
-            
-            while not button_pressed and attempt < max_attempts:
-                attempt += 1
-                
-                # Button-Status abfragen
-                btn_response = ApiClient.get_button_state(base_url, nocache=True)
-                
-                # Nur bei wichtigen Ereignissen protokollieren
-                if attempt % 5 == 0:
-                    self.logger.log(f"Button-Überprüfungsversuch {attempt}: Noch nicht gedrückt")
-                
-                # Button-Status überprüfen
-                button_pressed = ApiClient.is_button_pressed(btn_response)
-                
-                if button_pressed:
-                    # Button gedrückt, 100 Schritte nach oben und fertig
-                    self.logger.log(f"Button-Druck bei Versuch {attempt} erkannt")
-                    params = {"steps": 100, "direction": 1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, base_url)
-                    pos_cm = position_var.get() + (100 / 4096 * PI * d / 10)
-                    distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction aufwärts, Position: {pos_cm:.2f} cm")
-                    break
-                else:
-                    # Button nicht gedrückt, weitere 100 Schritte nach unten
-                    params = {"steps": 100, "direction": -1, "speed": speed}
-                    ApiClient.make_request("setMotor", params, base_url)
-                    pos_cm = position_var.get() - (100 / 4096 * PI * d / 10)
-                    distance_cm = (100 / 4096 * PI * d / 10)
-                    self.logger.log(f"Motor: 100 Steps, {distance_cm:.2f} cm, Direction abwärts, Position: {pos_cm:.2f} cm")
+                    position_var.set(position_var.get() - distance_cm)
                     
-                    # Verzögerung nach jedem Schritt
-                    time.sleep(0.5)
-            
-            # Bei Bedarf warnen
-            if not button_pressed:
-                self.logger.log("Warnung: Maximale Versuche erreicht, ohne Button-Druck zu erkennen.")
+                widgets['root'].after(0, lambda: widgets['update_position_label']())
+
+            elif operation['type'] == 'led_color':
+                color_hex = operation['params']['color']
+                ApiClient.set_led_color(color_hex, base_url)
+                self.logger.log(f"LED: Farbe auf {color_hex} gesetzt")
+
+            elif operation['type'] == 'led_brightness':
+                brightness = operation['params']['brightness']
+                ApiClient.set_led_brightness(brightness, base_url)
+                self.logger.log(f"LED: Helligkeit auf {brightness}% gesetzt")
+
+            elif operation['type'] == 'button':
+                button_state = ApiClient.get_button_state(base_url)
+                self.logger.log(f"Button-Status: {button_state}")
+
+            elif operation['type'] == 'home':
+                self._home_function(base_url, widgets, position_var, servo_angle_var)
+
+            elif operation['type'] == 'photo':
+                delay = operation['params'].get('delay', 0.5)
+                foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
+                if foto_path:
+                    self.logger.log(f"Foto gespeichert: {foto_path}")
+                else:
+                    self.logger.log("Fehler beim Aufnehmen des Fotos")
+
+            else:
+                self.logger.log(f"Unbekannter Operationstyp: {operation['type']}")
                 
-            # Position auf 0 setzen
-            position_var.set(0)
-            widgets['root'].after(0, lambda: widgets['update_position_label']())
-            self.logger.log("Home-Funktion abgeschlossen, Position auf 0 gesetzt.")
+        except Exception as e:
+            self.logger.log(f"Fehler bei der Ausführung der Operation: {e}")
+
+    def pause_queue(self):
+        """Pausiert die Warteschlangenausführung"""
+        self.is_paused = True
+        self.logger.log("Warteschlange pausiert")
+
+    def resume_queue(self):
+        """Setzt die Warteschlangenausführung fort"""
+        self.is_paused = False
+        self.logger.log("Warteschlange fortgesetzt")
+
+    def stop_queue(self):
+        """Stoppt die Warteschlangenausführung"""
+        self.is_executing = False
+        self.is_paused = False
+        self.logger.log("Warteschlangenausführung gestoppt")
+
+    def _home_function(self, base_url, widgets, position_var, servo_angle_var):
+        """
+        Führt die Home-Funktion aus (ohne Button-Erkennung)
+        """
+        try:
+            self.logger.log("Starte Home-Funktion...")
             
-            # Distanzfeld zurücksetzen
-            widgets['root'].after(0, lambda: (
-                widgets['stepper_length_cm'].delete(0, tk.END),
-                widgets['stepper_length_cm'].insert(0, "0.00")
-            ))
+            # Aktuelle Eingaben lesen
+            d = float(widgets['diameter_entry'].get())
+            speed = int(widgets['stepper_speed'].get()) if widgets['stepper_speed'].get() else 80
+            
+            # Home-Bewegung: 500 Schritte nach oben
+            params = {"steps": 500, "direction": 1, "speed": speed}
+            ApiClient.make_request("setMotor", params, base_url)
+            
+            # Position berechnen und aktualisieren
+            circumference = PI * d
+            distance_cm = (500 / 4096) * (circumference / 10)
+            pos_cm = position_var.get() + distance_cm
+            position_var.set(0)  # Home-Position auf 0 setzen
+            
+            self.logger.log(f"Home-Funktion: 500 Schritte nach oben, Position auf 0 gesetzt")
+            widgets['root'].after(0, lambda: widgets['update_position_label']())
+            
         except Exception as e:
             self.logger.log(f"Fehler in der Home-Funktion: {e}")

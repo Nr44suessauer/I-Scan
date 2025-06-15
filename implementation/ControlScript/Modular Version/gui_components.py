@@ -95,13 +95,16 @@ class GUIBuilder:
         output = scrolledtext.ScrolledText(log_frame, width=45, height=16, state='disabled')
         output.pack(fill="both", expand=True)
 
-        return output_container, output, log_frame
-    
+        return output_container, output, log_frame    
     @staticmethod
-    def create_webcam_frame(parent):
+    def create_webcam_frame(parent, grid_mode=False):
         """Creates webcam display frame"""
-        webcam_frame = tk.LabelFrame(parent, text="Camera")
-        webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
+        webcam_frame = tk.LabelFrame(parent, text="Camera Stream", font=("Arial", 10, "bold"))
+        if grid_mode:
+            # Position in row 1, spanning all 3 columns
+            webcam_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
+        else:
+            webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
         
         # Camera view frame
         camera_view_frame = tk.Frame(webcam_frame)
@@ -271,15 +274,16 @@ class GUIBuilder:
         load_csv_btn.pack(side=tk.LEFT, padx=5)
         
         save_csv_btn = tk.Button(angle_calc_frame, text="CSV speichern")
-        save_csv_btn.pack(side=tk.LEFT, padx=5)
-        
-        return angle_calc_frame, show_calc_btn, load_csv_btn, save_csv_btn
-    
+        save_csv_btn.pack(side=tk.LEFT, padx=5)        
+        return angle_calc_frame, show_calc_btn, load_csv_btn, save_csv_btn    
     @staticmethod
-    def create_queue_frame(parent, repeat_queue_var):
+    def create_queue_frame(parent, repeat_queue_var, grid_mode=False):
         """Creates operation queue frame"""
-        queue_frame = tk.LabelFrame(parent, text="Operationswarteschlange")
-        queue_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        queue_frame = tk.LabelFrame(parent, text="Queue", font=("Arial", 10, "bold"))
+        if grid_mode:
+            queue_frame.grid(row=0, column=2, sticky="nsew", padx=5)  # Changed from column=3 to column=2
+        else:
+            queue_frame.pack(fill="both", expand=True, padx=10, pady=5)
         
         # Queue list
         queue_list_frame = tk.Frame(queue_frame)
@@ -488,114 +492,25 @@ class GUIBuilder:
             'servo_graph_img_label': servo_graph_img_label,
             'servo_cone_img_label': servo_cone_img_label,
             'tab1_frame': tab1_frame,
-            'tab2_frame': tab2_frame
-        }
+            'tab2_frame': tab2_frame        }
         
         return calc_panel, calc_vars, calc_widgets
 
     @staticmethod
-    def create_calculator_commands_panel(parent, grid_mode=False):
+    def create_image_display_frame(parent_container):
         """
-        Creates the comprehensive Calculator Commands Panel with visualization
-        Shows parameters, buttons, and image tabs for servo geometry visualization
+        Creates separate image display frame for grid layout (column 2)
+        Shows servo visualization images permanently visible with tabs
         """
-        calc_panel = tk.LabelFrame(parent, text="Calculator Commands", font=("Arial", 10, "bold"))
-        if grid_mode:
-            calc_panel.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        else:
-            calc_panel.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
-
-        # Frame for parameters and image side by side
-        content_frame = tk.Frame(calc_panel)
-        content_frame.pack(fill="both", expand=True)
-
-        # Parameters for both modes (left side)
-        params_frame = tk.Frame(content_frame)
-        params_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
+        from tkinter import ttk
         
-        # CSV Name
-        tk.Label(params_frame, text="CSV Name:", font=("Arial", 8)).grid(row=0, column=0, sticky="w", padx=2, pady=1)
-        calc_csv_name = tk.Entry(params_frame, width=18, font=("Arial", 8))
-        calc_csv_name.insert(0, "original_iscan")
-        calc_csv_name.grid(row=0, column=1, padx=2, pady=1)
+        # Image display frame positioned in grid (column 2)
+        image_frame = tk.LabelFrame(parent_container, text="Pictures", font=("Arial", 10, "bold"))
+        image_frame.grid(row=0, column=2, sticky="nsew", padx=5)
         
-        # Target X
-        tk.Label(params_frame, text="Target X (cm):", font=("Arial", 8)).grid(row=1, column=0, sticky="w", padx=2, pady=1)
-        calc_target_x = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_target_x.insert(0, "33")
-        calc_target_x.grid(row=1, column=1, sticky="w", padx=2, pady=1)
-        
-        # Target Y
-        tk.Label(params_frame, text="Target Y (cm):", font=("Arial", 8)).grid(row=2, column=0, sticky="w", padx=2, pady=1)
-        calc_target_y = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_target_y.insert(0, "50")
-        calc_target_y.grid(row=2, column=1, sticky="w", padx=2, pady=1)
-        
-        # Scan Distance
-        tk.Label(params_frame, text="Scan Distance (cm):", font=("Arial", 8)).grid(row=3, column=0, sticky="w", padx=2, pady=1)
-        calc_scan_distance = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_scan_distance.insert(0, "80")
-        calc_scan_distance.grid(row=3, column=1, sticky="w", padx=2, pady=1)
-        
-        # Measurements
-        tk.Label(params_frame, text="Measurements:", font=("Arial", 8)).grid(row=4, column=0, sticky="w", padx=2, pady=1)
-        calc_measurements = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_measurements.insert(0, "7")
-        calc_measurements.grid(row=4, column=1, sticky="w", padx=2, pady=1)
-        
-        # Servo Configuration Section Header
-        servo_header = tk.Label(params_frame, text="Servo Configuration:", font=("Arial", 8, "bold"), fg="darkblue")
-        servo_header.grid(row=5, column=0, columnspan=2, sticky="w", padx=2, pady=(8, 2))
-        
-        # Servo Min Angle
-        tk.Label(params_frame, text="Servo Min Angle:", font=("Arial", 8)).grid(row=6, column=0, sticky="w", padx=2, pady=1)
-        calc_servo_min = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_servo_min.insert(0, "0.0")
-        calc_servo_min.grid(row=6, column=1, sticky="w", padx=2, pady=1)
-        
-        # Servo Max Angle
-        tk.Label(params_frame, text="Servo Max Angle:", font=("Arial", 8)).grid(row=7, column=0, sticky="w", padx=2, pady=1)
-        calc_servo_max = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_servo_max.insert(0, "90.0")
-        calc_servo_max.grid(row=7, column=1, sticky="w", padx=2, pady=1)
-        
-        # Servo Neutral Angle
-        tk.Label(params_frame, text="Servo Neutral Angle:", font=("Arial", 8)).grid(row=8, column=0, sticky="w", padx=2, pady=1)
-        calc_servo_neutral = tk.Entry(params_frame, width=8, font=("Arial", 8))
-        calc_servo_neutral.insert(0, "45.0")
-        calc_servo_neutral.grid(row=8, column=1, sticky="w", padx=2, pady=1)
-        
-        # Separator
-        separator = tk.Frame(params_frame, height=2, bg="gray")
-        separator.grid(row=9, column=0, columnspan=2, sticky="ew", pady=8)
-
-        # Command Buttons
-        commands_frame = tk.LabelFrame(params_frame, text="Execute Commands", font=("Arial", 8, "bold"))
-        commands_frame.grid(row=10, column=0, columnspan=2, sticky="ew", pady=2)
-        
-        visual_btn = tk.Button(commands_frame, text="Visualisation Mode\n(--visualize)", 
-                              bg="#FFD700", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
-        visual_btn.pack(fill="x", padx=2, pady=2)
-        
-        silent_btn = tk.Button(commands_frame, text="Silent Mode\n(--silent)", 
-                              bg="#98FB98", fg="black", font=("Arial", 8, "bold"), width=15, height=2)
-        silent_btn.pack(fill="x", padx=2, pady=2)
-
-        # Current Command Display
-        current_cmd_frame = tk.LabelFrame(params_frame, text="Current Command", font=("Arial", 8, "bold"))
-        current_cmd_frame.grid(row=12, column=0, columnspan=2, sticky="ew", pady=5)
-        current_command_label = tk.Label(current_cmd_frame, 
-                                        text="python main.py --visualize --csv-name original_iscan --target-x 33 --target-y 50 --scan-distance 80 --measurements 7",
-                                        wraplength=200, justify="left", font=("Arial", 7), fg="blue")
-        current_command_label.pack(padx=2, pady=2)
-        
-        # Image display with tabs (right side)
-        image_frame = tk.Frame(content_frame)
-        image_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=5, pady=5)
-        
-        # Tab-Notebook for image switching
+        # Tab-Notebook für Bildwechsel
         image_notebook = ttk.Notebook(image_frame)
-        image_notebook.pack(fill="both", expand=True)
+        image_notebook.pack(fill="both", expand=True, padx=5, pady=5)
         
         # Tab 1: Servo Geometry Graph
         tab1_frame = tk.Frame(image_notebook)
@@ -605,34 +520,25 @@ class GUIBuilder:
         tab2_frame = tk.Frame(image_notebook)
         image_notebook.add(tab2_frame, text="Cone Detail")
         
-        # Image Labels for both tabs
-        servo_graph_img_label = tk.Label(tab1_frame)
+        # Image Labels für beide Tabs
+        servo_graph_img_label = tk.Label(tab1_frame, text="Servo Graph wird geladen...", 
+                                        bg="lightgray", width=25, height=12)
         servo_graph_img_label.pack(fill="both", expand=True)
         
-        servo_cone_img_label = tk.Label(tab2_frame)
+        servo_cone_img_label = tk.Label(tab2_frame, text="Servo Cone wird geladen...", 
+                                       bg="lightgray", width=25, height=12)
         servo_cone_img_label.pack(fill="both", expand=True)
         
-        # Return all components and variables
-        calc_vars = {
-            'csv_name': calc_csv_name,
-            'target_x': calc_target_x,
-            'target_y': calc_target_y,
-            'scan_distance': calc_scan_distance,
-            'measurements': calc_measurements,
-            'servo_min': calc_servo_min,
-            'servo_max': calc_servo_max,
-            'servo_neutral': calc_servo_neutral
-        }
+        # Image control buttons
+        image_controls = tk.Frame(image_frame)
+        image_controls.pack(fill="x", padx=5, pady=5)
         
-        calc_widgets = {
-            'visual_btn': visual_btn,
-            'silent_btn': silent_btn,
-            'current_command_label': current_command_label,
-            'image_notebook': image_notebook,
-            'servo_graph_img_label': servo_graph_img_label,
-            'servo_cone_img_label': servo_cone_img_label,
-            'tab1_frame': tab1_frame,
-            'tab2_frame': tab2_frame
-        }
+        load_csv_btn = tk.Button(image_controls, text="CSV Load", font=("Arial", 8))
+        load_csv_btn.pack(side=tk.LEFT, padx=2)
         
-        return calc_panel, calc_vars, calc_widgets
+        save_csv_btn = tk.Button(image_controls, text="CSV Save", font=("Arial", 8))
+        save_csv_btn.pack(side=tk.LEFT, padx=2)
+        
+        return (image_frame, image_notebook, servo_graph_img_label, 
+                servo_cone_img_label, tab1_frame, tab2_frame, 
+                load_csv_btn, save_csv_btn)
