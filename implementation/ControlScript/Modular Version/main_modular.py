@@ -43,10 +43,9 @@ class ControlApp:
         
         # Initialize variables
         self.init_variables()
-        
-        # Initialize webcam
+          # Initialize webcam with smaller frame size for side-by-side layout
         self.webcam = WebcamHelper(device_index=DEFAULT_CAMERA_DEVICE, 
-                                 frame_size=DEFAULT_CAMERA_FRAME_SIZE)
+                                 frame_size=(300, 300))
         
         # Create GUI components
         self.create_all_widgets()

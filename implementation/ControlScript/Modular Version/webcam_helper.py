@@ -86,20 +86,19 @@ class WebcamHelper:
         
         Args:
             panel: Das Label-Widget zur Anzeige des Streams
-            fps (int): Gewünschte Bildrate für den Stream
-        """
+            fps (int): Gewünschte Bildrate für den Stream        """
         delay = max(1, int(1000 / fps))
         
         while self.running:
             try:
                 frame = self.frame_lesen()
                 if frame is not None:
-                    # Frame für die Anzeige skalieren
+                    # Frame für die Anzeige quadratisch skalieren
                     self.current_frame = frame.copy()  # Original-Frame kopieren
-                    frame_resized = cv2.resize(frame, self.frame_size)
+                    frame_square = self._make_square_frame(frame, self.frame_size)
                     
                     # Von BGR zu RGB für tkinter konvertieren
-                    frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                    frame_rgb = cv2.cvtColor(frame_square, cv2.COLOR_BGR2RGB)
                     
                     # In Pillow-Format konvertieren
                     img = Image.fromarray(frame_rgb)
@@ -167,3 +166,43 @@ class WebcamHelper:
             cv2.imwrite(filepath, frame)
             return filepath
         return None
+    
+    def _make_square_frame(self, frame, target_size):
+        """
+        Erstellt einen quadratischen Frame aus dem Input-Frame
+        Behält das Seitenverhältnis bei und fügt schwarze Balken hinzu
+        
+        Args:
+            frame: Input-Frame von der Kamera
+            target_size: Tuple (width, height) für die Zielgröße
+            
+        Returns:
+            Square frame mit schwarzen Balken falls nötig
+        """
+        height, width = frame.shape[:2]
+        target_width, target_height = target_size
+        
+        # Bestimme die kleinere Dimension für quadratische Skalierung  
+        min_target = min(target_width, target_height)
+        
+        # Berechne Skalierungsfaktor basierend auf der größeren Dimension des Originals
+        scale_factor = min_target / max(width, height)
+        
+        # Neue Dimensionen berechnen
+        new_width = int(width * scale_factor)
+        new_height = int(height * scale_factor)
+        
+        # Frame skalieren
+        resized_frame = cv2.resize(frame, (new_width, new_height))
+        
+        # Quadratischen Hintergrund erstellen (schwarz)
+        square_frame = np.zeros((min_target, min_target, 3), dtype=np.uint8)
+        
+        # Zentrierte Position berechnen
+        start_x = (min_target - new_width) // 2
+        start_y = (min_target - new_height) // 2
+        
+        # Resized frame in die Mitte des quadratischen Frames platzieren
+        square_frame[start_y:start_y + new_height, start_x:start_x + new_width] = resized_frame
+        
+        return square_frame

@@ -86,52 +86,58 @@ class GUIBuilder:
         # Grid layout for equal distribution
         output_container.columnconfigure(0, weight=1, minsize=350)  # Log console narrower
         output_container.columnconfigure(1, weight=1, minsize=350)  # Scan configuration + image
-        output_container.rowconfigure(0, weight=1)
-
-        # Log console (left)
+        output_container.rowconfigure(0, weight=1)        # Log console (left)
         log_frame = tk.Frame(output_container)
         log_frame.grid(row=0, column=0, sticky="nsew")
         tk.Label(log_frame, text="Log-Konsole", font=("Arial", 10, "bold")).pack(anchor='w')
         output = scrolledtext.ScrolledText(log_frame, width=45, height=16, state='disabled')
         output.pack(fill="both", expand=True)
 
-        return output_container, output, log_frame    
+        return output_container, output, log_frame
+    
     @staticmethod
     def create_webcam_frame(parent, grid_mode=False):
-        """Creates webcam display frame"""
+        """Creates webcam display frame with square camera view"""
         webcam_frame = tk.LabelFrame(parent, text="Camera Stream", font=("Arial", 10, "bold"))
         if grid_mode:
-            # Position in row 1, spanning all 3 columns
-            webcam_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
+            # Position in row 1, center the frame instead of spanning full width
+            webcam_frame.grid(row=1, column=1, sticky="n", padx=5, pady=5)
         else:
             webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
+          # Main container for side-by-side layout
+        main_container = tk.Frame(webcam_frame)
+        main_container.pack(padx=10, pady=10)
         
-        # Camera view frame
-        camera_view_frame = tk.Frame(webcam_frame)
-        camera_view_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        # Left side: Camera view frame - smaller square size
+        camera_view_frame = tk.Frame(main_container, bg="black", width=300, height=300)
+        camera_view_frame.pack_propagate(False)  # Keep fixed size
+        camera_view_frame.pack(side=tk.LEFT, padx=(0, 10))
         
-        # Camera display label
+        # Camera display label with square aspect ratio
         camera_label = tk.Label(camera_view_frame, text="Kamera nicht verfügbar", 
-                               bg="gray", width=40, height=20)
+                               bg="gray", relief="sunken", bd=2)
         camera_label.pack(fill="both", expand=True)
         
-        # Camera control buttons
-        camera_control_frame = tk.Frame(webcam_frame)
-        camera_control_frame.pack(fill="x", padx=5, pady=5)
+        # Right side: Camera control buttons - vertical layout
+        camera_control_frame = tk.Frame(main_container)
+        camera_control_frame.pack(side=tk.LEFT, fill="y", padx=(10, 0))
         
-        btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten")
-        btn_start_camera.pack(side=tk.LEFT, padx=2)
+        # Button spacing and styling
+        btn_style = {"width": 15, "font": ("Arial", 9)}
         
-        btn_stop_camera = tk.Button(camera_control_frame, text="Kamera stoppen")
-        btn_stop_camera.pack(side=tk.LEFT, padx=2)
+        btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten", **btn_style)
+        btn_start_camera.pack(pady=5, fill="x")
         
-        btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen")
-        btn_take_photo.pack(side=tk.LEFT, padx=2)
+        btn_stop_camera = tk.Button(camera_control_frame, text="Kamera stoppen", **btn_style)
+        btn_stop_camera.pack(pady=5, fill="x")
         
-        btn_add_photo_to_queue = tk.Button(camera_control_frame, text="+", 
+        btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen", **btn_style)
+        btn_take_photo.pack(pady=5, fill="x")
+        
+        btn_add_photo_to_queue = tk.Button(camera_control_frame, text="+ Zur Queue", 
                                           bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
-                                          font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
-        btn_add_photo_to_queue.pack(side=tk.LEFT, padx=2)
+                                          font=BUTTON_FONT, width=15)
+        btn_add_photo_to_queue.pack(pady=5, fill="x")
         
         return (webcam_frame, camera_label, btn_start_camera, btn_stop_camera, 
                 btn_take_photo, btn_add_photo_to_queue)
