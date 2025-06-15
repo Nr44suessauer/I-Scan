@@ -1,0 +1,4 @@
+indexnummer|comport|device_index|bezeichnung|beschreibung
+0|COM3|0|Haupt-Kamera|Primäre Kamera für Überwachung
+1|COM4|1|Seiten-Kamera|Seitliche Ansicht für Detailaufnahmen
+2|COM5|2|Backup-Kamera|Reserve-Kamera für Ausfallsicherheit

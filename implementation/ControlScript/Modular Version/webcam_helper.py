@@ -23,16 +23,49 @@ class WebcamHelper:
     Bietet Methoden zum Anzeigen des Kamera-Streams und Aufnehmen von Bildern
     """
     
-    def __init__(self, device_index=0, frame_size=(320, 240)):
+    @staticmethod
+    def detect_available_cameras(max_cameras=10):
+        """
+        Erkennt alle verfügbaren Kameras im System
+        
+        Args:
+            max_cameras (int): Maximale Anzahl zu testender Kamera-Indizes
+            
+        Returns:
+            list: Liste der verfügbaren Kamera-Indizes
+        """
+        available_cameras = []
+        
+        # OpenCV-Fehlermeldungen unterdrücken
+        cv2.setLogLevel(0)  # 0 = silent
+        
+        for i in range(max_cameras):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                # Teste ob wir tatsächlich Frames lesen können
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    available_cameras.append(i)
+                cap.release()
+          # OpenCV-Logging wieder auf Standard setzen
+        cv2.setLogLevel(1)  # 1 = error level
+        
+        return available_cameras if available_cameras else [0]  # Fallback auf Index 0
+    
+    def __init__(self, device_index=0, frame_size=(320, 240), com_port=None, model=None):
         """
         Initialisiert die Webcam mit dem angegebenen Geräteindex und Framegröße
         
         Args:
             device_index (int): Index der zu verwendenden Kamera (Standard: 0)
             frame_size (tuple): Größe des angezeigten Frames (Breite, Höhe)
+            com_port (str, optional): COM-Port der Kamera
+            model (str, optional): Modellbezeichnung der Kamera
         """
         self.device_index = device_index
         self.frame_size = frame_size
+        self.com_port = com_port or f"COM{device_index + 1}"  # Fallback
+        self.model = model or f"Camera {device_index}"  # Fallback
         self.cap = None
         self.running = False
         self.current_frame = None

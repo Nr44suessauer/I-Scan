@@ -21,8 +21,7 @@ class EventHandlers:
             self.app.set_camera_device_btn.config(command=self.on_set_camera_device)
         if hasattr(self.app, 'set_delay_btn'):
             self.app.set_delay_btn.config(command=self.on_set_delay)
-        
-        # Camera callbacks
+          # Camera callbacks
         if hasattr(self.app, 'btn_start_camera'):
             self.app.btn_start_camera.config(command=self.on_start_camera)
         if hasattr(self.app, 'btn_stop_camera'):
@@ -31,11 +30,20 @@ class EventHandlers:
             self.app.btn_take_photo.config(command=self.on_take_photo)
         if hasattr(self.app, 'btn_add_photo_to_queue'):
             self.app.btn_add_photo_to_queue.config(command=self.on_add_photo_to_queue)
+        if hasattr(self.app, 'btn_camera_config'):
+            self.app.btn_camera_config.config(command=self.on_camera_config)
         
         # Calculator Commands Panel callbacks
         if hasattr(self.app, 'calc_widgets'):
             self.app.calc_widgets['visual_btn'].config(command=self.execute_visualisation_mode)
             self.app.calc_widgets['silent_btn'].config(command=self.execute_silent_mode)
+          # Camera tab selection callback
+        if hasattr(self.app, 'camera_notebook'):
+            self.app.camera_notebook.bind('<<NotebookTabChanged>>', self.on_camera_tab_changed)
+        
+        # Camera selection combobox callback
+        if hasattr(self.app, 'camera_combo'):
+            self.app.camera_combo.bind('<<ComboboxSelected>>', self.on_camera_selection_changed)
         
         # Bind calculator parameter events for real-time command update
         if hasattr(self.app, 'calc_vars'):
@@ -56,19 +64,74 @@ class EventHandlers:
         self.app.queue_move_down_btn.config(command=self.on_move_operation_down)
         self.app.queue_export_btn.config(command=self.on_export_queue)
         self.app.queue_import_btn.config(command=self.on_import_queue)
+        
+        # Settings Panel callbacks
+        if hasattr(self.app, 'home_exec_btn'):
+            self.app.home_exec_btn.config(command=self.on_execute_home)
+        if hasattr(self.app, 'home_add_btn'):
+            self.app.home_add_btn.config(command=self.on_add_home_to_queue)
+        if hasattr(self.app, 'drive_up_exec_btn'):
+            self.app.drive_up_exec_btn.config(command=self.on_execute_drive_up)
+        if hasattr(self.app, 'drive_up_add_btn'):
+            self.app.drive_up_add_btn.config(command=self.on_add_drive_up_to_queue)
+        if hasattr(self.app, 'drive_down_exec_btn'):
+            self.app.drive_down_exec_btn.config(command=self.on_execute_drive_down)
+        if hasattr(self.app, 'drive_down_add_btn'):
+            self.app.drive_down_add_btn.config(command=self.on_add_drive_down_to_queue)
+    
+        # Auto-stream toggle callback
+        if hasattr(self.app, 'auto_stream_var'):
+            self.app.auto_stream_var.trace('w', lambda *args: self.app.toggle_auto_streams())
+    
+    def on_camera_tab_changed(self, event):
+        """Handle camera tab change event"""
+        try:
+            # Get the currently selected tab
+            current_tab = self.app.camera_notebook.index(self.app.camera_notebook.select())
+            
+            # Stop current camera if running
+            if hasattr(self.app, 'webcam') and self.app.webcam.running:
+                self.app.webcam.stoppen()
+              # Switch to the selected camera
+            if current_tab < len(self.app.available_cameras):
+                camera_index = self.app.available_cameras[current_tab]
+                self.app.current_camera_index = camera_index
+                self.app.webcam = self.app.webcams[camera_index]
+                  # Update the current camera info with COM port and model
+                self.app.update_current_camera_info()
+                
+                # Automatically start the camera stream with the correct panel
+                if not self.app.webcam.running:
+                    # Get the correct camera label for this tab
+                    camera_panel = self.app.camera_labels[current_tab]
+                    self.app.webcam.stream_starten(camera_panel)
+                    self.app.logger.log(f"Camera {camera_index} automatically started")
+                
+                self.app.logger.log(f"Switched to Camera {camera_index}")
+        except Exception as e:
+            self.app.logger.log(f"Error switching camera: {str(e)}")
+    
     # Camera event handlers
     def on_start_camera(self):
-        """Start camera stream"""
-        result = self.app.webcam.stream_starten(self.app.camera_label)
-        if result:
-            self.app.logger.log("Kamera gestartet")
-        else:
-            self.app.logger.log("Fehler beim Starten der Kamera")
+        """Start camera stream for currently selected camera"""
+        try:
+            # Get the currently selected tab
+            current_tab = self.app.camera_notebook.index(self.app.camera_notebook.select())
+            # Get the current camera label from the selected tab
+            current_camera_label = self.app.camera_labels[current_tab]
+            result = self.app.webcam.stream_starten(current_camera_label)
+            if result:
+                self.app.logger.log(f"Camera {self.app.current_camera_index} gestartet")
+            else:
+                self.app.logger.log(f"Fehler beim Starten der Camera {self.app.current_camera_index}")
+        except Exception as e:            self.app.logger.log(f"Error starting camera: {str(e)}")
     
     def on_stop_camera(self):
         """Stop camera"""
         self.app.webcam.stoppen()
-        self.app.camera_label.config(text="Kamera gestoppt", image="")
+        # Update camera info to show stopped state
+        if hasattr(self.app, 'current_camera_label'):
+            self.app.current_camera_label.config(text="Kamera gestoppt")
         self.app.logger.log("Kamera gestoppt")
     
     def on_take_photo(self):
@@ -82,6 +145,13 @@ class EventHandlers:
     def on_add_photo_to_queue(self):
         """Add photo to queue"""
         self.app.queue_ops.add_photo_to_queue()
+    
+    def on_camera_config(self):
+        """Open camera configuration dialog"""
+        self.app.open_camera_config()
+        # Nach dem Schließen des Dialogs, aktualisiere die Anzeigen
+        self.app.update_camera_tab_labels()
+        self.app.update_current_camera_info()
     
     def on_set_camera_device(self):
         """Set camera device index"""
@@ -725,3 +795,103 @@ class EventHandlers:
                     self.app.calc_widgets['servo_graph_img_label'].config(image="", text=f"Fehler beim Laden des Servo Graphs: {e}")
                 if 'servo_cone_img_label' in self.app.calc_widgets:
                     self.app.calc_widgets['servo_cone_img_label'].config(image="", text=f"Fehler beim Laden des Cone Details: {e}")
+
+    def on_camera_selection_changed(self, event):
+        """Handle camera selection change from combobox"""
+        try:
+            # Get the selected camera index from combobox
+            selected_camera = int(self.app.camera_combo.get())
+            
+            # Stop current camera if running
+            if hasattr(self.app, 'webcam') and self.app.webcam and self.app.webcam.running:
+                self.app.webcam.stoppen()
+            
+            # Switch to the selected camera
+            if selected_camera in self.app.available_cameras:
+                self.app.current_camera_index = selected_camera
+                if hasattr(self.app, 'webcams') and selected_camera in self.app.webcams:
+                    self.app.webcam = self.app.webcams[selected_camera]
+                
+                # Update the current camera info
+                self.app.update_current_camera_info()
+                
+                self.app.logger.log(f"Switched to Camera {selected_camera}")
+        except (ValueError, KeyError) as e:
+            self.app.logger.log(f"Error switching camera: {e}")
+
+    # Settings Panel Event Handlers
+    def on_execute_home(self):
+        """Execute home command immediately"""
+        try:
+            # Execute home command in separate thread to avoid blocking UI
+            threading.Thread(target=self.app.device_control.home_func).start()
+            self.app.logger.log("Home command executed")
+        except Exception as e:
+            self.app.logger.log(f"Error executing home command: {e}")
+
+    def on_add_home_to_queue(self):
+        """Add home operation to queue"""
+        try:
+            description = "Home: Return to home position"
+            self.app.operation_queue.add('home', {}, description)
+            self.app.logger.log("Home operation added to queue")
+        except Exception as e:
+            self.app.logger.log(f"Error adding home to queue: {e}")
+
+    def on_execute_drive_up(self):
+        """Execute drive up command immediately"""
+        try:
+            distance = float(self.app.drive_up_distance.get())
+            speed = int(self.app.drive_up_speed.get())
+            # Use stepper motor to drive up (direction = 1)
+            self.app.widgets['stepper_length_cm'].set(distance)
+            self.app.widgets['stepper_dir'].set("1")  # Direction 1 for up
+            self.app.widgets['stepper_speed'].set(speed)
+            self.app.device_control.stepper_cmd()
+            self.app.logger.log(f"Drive up {distance}cm at speed {speed} executed")
+        except Exception as e:
+            self.app.logger.log(f"Error executing drive up: {e}")
+
+    def on_add_drive_up_to_queue(self):
+        """Add drive up operation to queue"""
+        try:
+            distance = float(self.app.drive_up_distance.get())
+            speed = int(self.app.drive_up_speed.get())
+            description = f"Drive Up: {distance}cm, direction 1, speed {speed}"
+            self.app.operation_queue.add('stepper', {
+                'distance_cm': distance,
+                'direction': 1,
+                'speed': speed
+            }, description)
+            self.app.logger.log(f"Drive up {distance}cm added to queue")
+        except Exception as e:
+            self.app.logger.log(f"Error adding drive up to queue: {e}")
+
+    def on_execute_drive_down(self):
+        """Execute drive down command immediately"""
+        try:
+            distance = float(self.app.drive_down_distance.get())
+            speed = int(self.app.drive_down_speed.get())
+            # Use stepper motor to drive down (direction = -1)
+            self.app.widgets['stepper_length_cm'].set(distance)
+            self.app.widgets['stepper_dir'].set("-1")  # Direction -1 for down
+            self.app.widgets['stepper_speed'].set(speed)
+            self.app.device_control.stepper_cmd()
+            self.app.logger.log(f"Drive down {distance}cm at speed {speed} executed")
+        except Exception as e:
+            self.app.logger.log(f"Error executing drive down: {e}")
+
+    def on_add_drive_down_to_queue(self):
+        """Add drive down operation to queue"""
+        try:
+            distance = float(self.app.drive_down_distance.get())
+            speed = int(self.app.drive_down_speed.get())
+            description = f"Drive Down: {distance}cm, direction -1, speed {speed}"
+            self.app.operation_queue.add('stepper', {
+                'distance_cm': distance,
+                'direction': -1,
+                'speed': speed
+            }, description)
+            self.app.logger.log(f"Drive down {distance}cm added to queue")
+        except Exception as e:
+            self.app.logger.log(f"Error adding drive down to queue: {e}")

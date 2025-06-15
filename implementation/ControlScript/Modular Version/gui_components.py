@@ -85,62 +85,145 @@ class GUIBuilder:
 
         # Grid layout for equal distribution
         output_container.columnconfigure(0, weight=1, minsize=350)  # Log console narrower
-        output_container.columnconfigure(1, weight=1, minsize=350)  # Scan configuration + image
-        output_container.rowconfigure(0, weight=1)        # Log console (left)
+        output_container.columnconfigure(1, weight=1, minsize=350)  # Scan configuration + image        output_container.rowconfigure(0, weight=1)
+        
+        # Log console (left)
         log_frame = tk.Frame(output_container)
         log_frame.grid(row=0, column=0, sticky="nsew")
         tk.Label(log_frame, text="Log-Konsole", font=("Arial", 10, "bold")).pack(anchor='w')
         output = scrolledtext.ScrolledText(log_frame, width=45, height=16, state='disabled')
         output.pack(fill="both", expand=True)
 
-        return output_container, output, log_frame
-    
-    @staticmethod
-    def create_webcam_frame(parent, grid_mode=False):
-        """Creates webcam display frame with square camera view"""
-        webcam_frame = tk.LabelFrame(parent, text="Camera Stream", font=("Arial", 10, "bold"))
+        return output_container, output, log_frame    @staticmethod
+    def create_webcam_frame(parent, available_cameras=None, webcams_dict=None, grid_mode=False, position="full"):
+        """Creates webcam display frame with compact grid layout for multiple cameras"""
+        from webcam_helper import WebcamHelper
+        from tkinter import ttk
+        
+        webcam_frame = tk.LabelFrame(parent, text="Camera Streams", font=("Arial", 9, "bold"))
         if grid_mode:
-            # Position in row 1, center the frame instead of spanning full width
-            webcam_frame.grid(row=1, column=1, sticky="n", padx=5, pady=5)
+            if position == "bottom_left":
+                # Position in row 1, column 0 (bottom left)
+                webcam_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+            else:
+                # Position in row 1, span all columns for grid layout
+                webcam_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
         else:
-            webcam_frame.pack(fill="both", expand=True, padx=10, pady=5, side=tk.LEFT)
-          # Main container for side-by-side layout
+            webcam_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        # Main container for layout - compact design
         main_container = tk.Frame(webcam_frame)
-        main_container.pack(padx=10, pady=10)
+        main_container.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Left side: Camera view frame - smaller square size
-        camera_view_frame = tk.Frame(main_container, bg="black", width=300, height=300)
-        camera_view_frame.pack_propagate(False)  # Keep fixed size
-        camera_view_frame.pack(side=tk.LEFT, padx=(0, 10))
+        # Auto-stream control variable
+        auto_stream_var = tk.BooleanVar(value=True)
         
-        # Camera display label with square aspect ratio
-        camera_label = tk.Label(camera_view_frame, text="Kamera nicht verfügbar", 
-                               bg="gray", relief="sunken", bd=2)
-        camera_label.pack(fill="both", expand=True)
+        # Control section at top (compact)
+        control_section = tk.Frame(main_container)
+        control_section.pack(fill="x", pady=(0, 5))
         
-        # Right side: Camera control buttons - vertical layout
-        camera_control_frame = tk.Frame(main_container)
-        camera_control_frame.pack(side=tk.LEFT, fill="y", padx=(10, 0))
+        # Auto-stream toggle
+        auto_stream_check = tk.Checkbutton(control_section, text="Auto-Stream", 
+                                          variable=auto_stream_var, font=("Arial", 8))
+        auto_stream_check.pack(side=tk.LEFT)
         
-        # Button spacing and styling
-        btn_style = {"width": 15, "font": ("Arial", 9)}
+        # Current camera selection (compact)
+        tk.Label(control_section, text="Aktiv:", font=("Arial", 8)).pack(side=tk.LEFT, padx=(10, 2))
+        current_camera_var = tk.StringVar(value="0")
+        current_camera_combo = ttk.Combobox(control_section, textvariable=current_camera_var,
+                                           width=5, font=("Arial", 8), state="readonly")
+        current_camera_combo.pack(side=tk.LEFT, padx=(0, 10))
         
-        btn_start_camera = tk.Button(camera_control_frame, text="Kamera starten", **btn_style)
-        btn_start_camera.pack(pady=5, fill="x")
+        # Quick action buttons (compact)
+        btn_take_photo = tk.Button(control_section, text="📷", font=("Arial", 8), width=3)
+        btn_take_photo.pack(side=tk.LEFT, padx=1)
         
-        btn_stop_camera = tk.Button(camera_control_frame, text="Kamera stoppen", **btn_style)
-        btn_stop_camera.pack(pady=5, fill="x")
+        btn_camera_config = tk.Button(control_section, text="⚙", font=("Arial", 8), width=3)
+        btn_camera_config.pack(side=tk.LEFT, padx=1)
+          # Detect available cameras - use provided list or auto-detect
+        if available_cameras is None:
+            available_cameras = WebcamHelper.detect_available_cameras()
         
-        btn_take_photo = tk.Button(camera_control_frame, text="Foto aufnehmen", **btn_style)
-        btn_take_photo.pack(pady=5, fill="x")
+        if not available_cameras:
+            # If no cameras detected, try to detect at least one
+            available_cameras = WebcamHelper.detect_available_cameras()
+            if not available_cameras:
+                available_cameras = [0]  # Fallback to index 0
         
-        btn_add_photo_to_queue = tk.Button(camera_control_frame, text="+ Zur Queue", 
-                                          bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
-                                          font=BUTTON_FONT, width=15)
-        btn_add_photo_to_queue.pack(pady=5, fill="x")
+        # Calculate compact grid dimensions
+        num_cameras = len(available_cameras)
         
-        return (webcam_frame, camera_label, btn_start_camera, btn_stop_camera, 
-                btn_take_photo, btn_add_photo_to_queue)
+        # Prefer horizontal layout for compact display
+        import math
+        cols = min(4, num_cameras)  # Max 4 columns for compact layout
+        rows = math.ceil(num_cameras / cols)
+        
+        # Camera grid container
+        grid_container = tk.Frame(main_container)
+        grid_container.pack(fill="both", expand=True)
+        
+        # Store camera components
+        camera_labels = {}
+        camera_frames = {}
+        
+        # Create compact grid of camera displays
+        for i, cam_index in enumerate(available_cameras):
+            row = i // cols
+            col = i % cols
+            
+            # Get camera info from webcams_dict if available
+            cam_name = f"Cam {cam_index}"
+            com_port = f"COM{cam_index + 1}"
+            
+            if webcams_dict and cam_index in webcams_dict:
+                webcam = webcams_dict[cam_index]
+                if hasattr(webcam, 'model') and webcam.model:
+                    cam_name = webcam.model
+                if hasattr(webcam, 'com_port') and webcam.com_port:
+                    com_port = webcam.com_port            # Individual camera frame - compact size, Indexnummer als Titel
+            camera_frame = tk.LabelFrame(grid_container, text=f"Cam {cam_index}", 
+                                        font=("Arial", 8, "bold"), relief="ridge", bd=1)
+            camera_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
+            
+            # Camera view area - 150x150 max size
+            camera_view_frame = tk.Frame(camera_frame, bg="black", width=150, height=150)
+            camera_view_frame.pack_propagate(False)  # Keep fixed size
+            camera_view_frame.pack(padx=2, pady=2)
+              # Camera display label - zeige COM-Port im Stream
+            camera_label = tk.Label(camera_view_frame, text=f"{com_port}\nOFFLINE", 
+                                   bg="gray", fg="white", relief="sunken", bd=1,
+                                   font=("Arial", 8))
+            camera_label.pack(fill="both", expand=True)
+            
+            # Store references
+            camera_labels[cam_index] = camera_label
+            camera_frames[cam_index] = {
+                'frame': camera_frame,
+                'view_frame': camera_view_frame
+            }
+        
+        # Configure grid weights for responsive layout
+        for i in range(cols):
+            grid_container.grid_columnconfigure(i, weight=1)
+        for i in range(rows):
+            grid_container.grid_rowconfigure(i, weight=1)
+        
+        # Update camera combo values
+        current_camera_combo['values'] = [str(cam) for cam in available_cameras]
+        current_camera_combo.set(str(available_cameras[0]) if available_cameras else "0")
+        
+        # Hidden buttons for compatibility (not displayed in compact mode)
+        btn_start_camera = tk.Button(webcam_frame)  # Hidden
+        btn_stop_camera = tk.Button(webcam_frame)   # Hidden  
+        btn_add_photo_to_queue = tk.Button(webcam_frame)  # Hidden
+        
+        # Current camera info label
+        current_camera_label = tk.Label(control_section, text="Cam 0", font=("Arial", 7))
+        current_camera_label.pack(side=tk.RIGHT)
+        
+        return (webcam_frame, camera_labels, current_camera_combo, camera_frames,
+                btn_start_camera, btn_stop_camera, btn_take_photo, btn_add_photo_to_queue,
+                btn_camera_config, current_camera_label, available_cameras, auto_stream_var)
     
     @staticmethod
     def create_servo_frame(parent):
@@ -548,3 +631,81 @@ class GUIBuilder:
         return (image_frame, image_notebook, servo_graph_img_label, 
                 servo_cone_img_label, tab1_frame, tab2_frame, 
                 load_csv_btn, save_csv_btn)
+    
+    @staticmethod
+    def create_settings_panel(parent, grid_mode=False):
+        """Creates a settings panel with Home, Drive Up/Down controls"""
+        settings_frame = tk.LabelFrame(parent, text="Einstellungen", font=("Arial", 10, "bold"))
+        if grid_mode:
+            settings_frame.grid(row=1, column=2, sticky="nsew", padx=5, pady=(5,0))
+        else:
+            settings_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Home Control Section
+        home_section = tk.LabelFrame(settings_frame, text="Home Control", font=("Arial", 9, "bold"))
+        home_section.pack(fill="x", padx=5, pady=3)
+        
+        home_control_frame = tk.Frame(home_section)
+        home_control_frame.pack(fill="x", padx=5, pady=3)
+        
+        home_exec_btn = tk.Button(home_control_frame, text="🏠 Home", 
+                                 bg="lightblue", fg="black", font=("Arial", 9, "bold"), width=10)
+        home_exec_btn.pack(side=tk.LEFT, padx=2)
+        
+        home_add_btn = tk.Button(home_control_frame, text="+", 
+                                bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
+                                font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
+        home_add_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Drive Control Section
+        drive_section = tk.LabelFrame(settings_frame, text="Drive Control", font=("Arial", 9, "bold"))
+        drive_section.pack(fill="x", padx=5, pady=3)
+          # Drive Up Controls
+        drive_up_frame = tk.Frame(drive_section)
+        drive_up_frame.pack(fill="x", padx=5, pady=2)
+        
+        tk.Label(drive_up_frame, text="Up Distance (cm):", font=("Arial", 8)).pack(side=tk.LEFT)
+        drive_up_distance = tk.Entry(drive_up_frame, width=6, font=("Arial", 8))
+        drive_up_distance.insert(0, "1.0")
+        drive_up_distance.pack(side=tk.LEFT, padx=(5,5))
+        
+        tk.Label(drive_up_frame, text="Speed:", font=("Arial", 8)).pack(side=tk.LEFT, padx=(5,0))
+        drive_up_speed = tk.Entry(drive_up_frame, width=4, font=("Arial", 8))
+        drive_up_speed.insert(0, "80")
+        drive_up_speed.pack(side=tk.LEFT, padx=(5,5))
+        
+        drive_up_exec_btn = tk.Button(drive_up_frame, text="⬆ Up (1)", 
+                                     bg="lightgreen", fg="black", font=("Arial", 8, "bold"), width=8)
+        drive_up_exec_btn.pack(side=tk.LEFT, padx=2)
+        
+        drive_up_add_btn = tk.Button(drive_up_frame, text="+", 
+                                    bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
+                                    font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
+        drive_up_add_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Drive Down Controls
+        drive_down_frame = tk.Frame(drive_section)
+        drive_down_frame.pack(fill="x", padx=5, pady=2)
+        
+        tk.Label(drive_down_frame, text="Down Distance (cm):", font=("Arial", 8)).pack(side=tk.LEFT)
+        drive_down_distance = tk.Entry(drive_down_frame, width=6, font=("Arial", 8))
+        drive_down_distance.insert(0, "1.0")
+        drive_down_distance.pack(side=tk.LEFT, padx=(5,5))
+        
+        tk.Label(drive_down_frame, text="Speed:", font=("Arial", 8)).pack(side=tk.LEFT, padx=(5,0))
+        drive_down_speed = tk.Entry(drive_down_frame, width=4, font=("Arial", 8))
+        drive_down_speed.insert(0, "80")
+        drive_down_speed.pack(side=tk.LEFT, padx=(5,5))
+        
+        drive_down_exec_btn = tk.Button(drive_down_frame, text="⬇ Down (-1)", 
+                                       bg="orange", fg="black", font=("Arial", 8, "bold"), width=8)
+        drive_down_exec_btn.pack(side=tk.LEFT, padx=2)
+        
+        drive_down_add_btn = tk.Button(drive_down_frame, text="+", 
+                                      bg=BUTTON_ADD_COLOR, fg=BUTTON_ADD_FG,
+                                      font=BUTTON_FONT, width=BUTTON_ADD_WIDTH)
+        drive_down_add_btn.pack(side=tk.LEFT, padx=2)
+        
+        return (settings_frame, home_exec_btn, home_add_btn,
+                drive_up_distance, drive_up_speed, drive_up_exec_btn, drive_up_add_btn,
+                drive_down_distance, drive_down_speed, drive_down_exec_btn, drive_down_add_btn)
