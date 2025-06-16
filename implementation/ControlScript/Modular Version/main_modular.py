@@ -12,6 +12,7 @@ import os
 import threading
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
+import time
 
 # Import configuration and components
 from config import *
@@ -44,11 +45,14 @@ class ControlApp:
         
         # Initialize variables
         self.init_variables()
-          # Initialize camera configuration (JSON-based)
+        
+        # Initialize camera configuration (JSON-based)
         self.camera_config = JSONCameraConfig("cameras_config.json")
         print("DEBUG: JSON Config loaded")
         cameras = self.camera_config.get_enabled_cameras()
-        print(f"DEBUG: Loaded cameras from JSON: {cameras}")        # Initialize JSON Camera Stream Manager
+        print(f"DEBUG: Loaded cameras from JSON: {cameras}")
+        
+        # Initialize JSON Camera Stream Manager
         self.camera_stream_manager = JSONCameraStreamManager("cameras_config.json")
         
         # Setup available cameras based on JSON config
@@ -81,6 +85,9 @@ class ControlApp:
         # Setup close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
+        # Start JSON file monitoring
+        self.start_json_monitoring()
+        
         # Start auto-streams if enabled (delayed to ensure GUI is ready)
         if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
             self.root.after(500, self.start_auto_streams)  # Reduced to 0.5 second delay
@@ -108,51 +115,188 @@ class ControlApp:
         self.last_distance_value = tk.StringVar(value=DEFAULT_DISTANCE)
         self.repeat_queue = tk.BooleanVar(value=DEFAULT_REPEAT_QUEUE)
         self.global_delay = DEFAULT_AUTOFOCUS_DELAY
-
+    
     def setup_available_cameras_json(self):
         """Setup available cameras based on JSON config"""
-        # Hole verfügbare Kameras aus JSON-Konfiguration
-        available_cameras = self.camera_config.get_available_cameras()
+        # Hole alle aktivierten Kameras aus JSON-Konfiguration (auch offline)
+        enabled_cameras = self.camera_config.get_enabled_cameras()
         
         print("JSON-Kamera-Setup:")
-        for camera in available_cameras:
-            hardware_info = camera['hardware_interface']
+        for camera in enabled_cameras:
+            verbindung_info = self.camera_config.parse_verbindung(camera['verbindung'])
             print(f"  Index {camera['index']}: {camera['name']} ({camera['verbindung']}) - {camera['beschreibung']}")
-            print(f"    Hardware: {hardware_info}")
+            if verbindung_info:
+                print(f"    Hardware: {verbindung_info}")
         
-        # Setze verfügbare Kamera-Indices
-        self.available_cameras = [cam['index'] for cam in available_cameras]
-        print(f"JSON-Konfiguration: {len(available_cameras)} Kameras verfügbar: {self.available_cameras}")
+        # Setze verfügbare Kamera-Indices auf alle aktivierten Kameras aus JSON
+        self.available_cameras = [cam['index'] for cam in enabled_cameras]
+        print(f"JSON-Konfiguration: {len(enabled_cameras)} Kameras konfiguriert: {self.available_cameras}")
+        
+        # Zusätzlich: Erkenne physisch verfügbare Kameras für Online-Status
+        from webcam_helper import WebcamHelper
+        physically_available = WebcamHelper.detect_available_cameras()
+        self.physically_available_cameras = physically_available
+        print(f"Physisch verfügbare Kameras: {physically_available}")
 
+    def start_json_monitoring(self):
+        """Start monitoring the JSON configuration file for changes"""
+        self.json_monitoring_active = True
+        self.json_last_modified = self.get_json_modification_time()        
+        # Start monitoring thread
+        monitoring_thread = threading.Thread(target=self.monitor_json_file, daemon=True)
+        monitoring_thread.start()
+        
+    def get_json_modification_time(self):
+        """Get the last modification time of the JSON config file"""
+        try:
+            # Get the script directory and build absolute path
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            config_path = os.path.join(script_dir, "camera", "cameras_config.json")
+            return os.path.getmtime(config_path)
+        except Exception as e:
+            print(f"Error getting JSON modification time: {e}")
+            return 0
+    
+    def monitor_json_file(self):
+        """Monitor JSON config file for changes in background thread"""
+        while self.json_monitoring_active:
+            try:
+                current_modified = self.get_json_modification_time()
+                
+                if current_modified > self.json_last_modified:
+                    print("JSON-Konfiguration geändert - GUI wird aktualisiert...")
+                    self.json_last_modified = current_modified
+                    # Schedule GUI update in main thread
+                    self.root.after(100, self.reload_configuration)
+                    
+                time.sleep(1)  # Check every second
+                
+            except Exception as e:
+                print(f"Error in JSON monitoring: {e}")
+                time.sleep(5)  # Wait longer on error
+    
+    def reload_configuration(self):
+        """Reload JSON configuration and completely reinitialize camera system"""
+        try:
+            print("JSON-Konfiguration geändert - Führe komplette Neu-Initialisierung durch...")
+            
+            # Komplette Neu-Initialisierung des Kamera-Systems
+            self.reinitialize_camera_streams()
+            
+            print("Kamera-System erfolgreich neu initialisiert nach JSON-Änderung")
+            
+        except Exception as e:
+            print(f"Fehler beim Neuladen der Konfiguration: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Konfigurationsfehler", 
+                               f"Fehler beim Laden der JSON-Konfiguration:\n{e}")
+    
+    def stop_json_monitoring(self):
+        """Stop JSON file monitoring"""
+        self.json_monitoring_active = False
+    
+    def update_photo_camera_combo(self):
+        """Update photo camera combo box with only online cameras"""
+        if hasattr(self, 'photo_camera_combo'):
+            try:
+                # Clear current values
+                self.photo_camera_combo['values'] = ()
+                
+                # Get online cameras only
+                online_cameras = []
+                for cam_index in self.available_cameras:
+                    # Check if camera is physically available
+                    camera_info = self.camera_config.get_camera_by_index(cam_index)
+                    hardware_info = self.camera_config.parse_verbindung(camera_info['verbindung'])
+                    
+                    if hardware_info:
+                        device_index = hardware_info.get('device_index', cam_index)
+                        if device_index in getattr(self, 'physically_available_cameras', []):
+                            # Camera is online - add to combo
+                            camera_display = f"Cam {cam_index}: {camera_info['name']}"
+                            online_cameras.append(camera_display)
+                
+                # Update combo box values
+                if online_cameras:
+                    self.photo_camera_combo['values'] = tuple(online_cameras)
+                    # Set first online camera as default if nothing selected
+                    if not self.photo_camera_combo.get():
+                        self.photo_camera_combo.current(0)
+                else:
+                    self.photo_camera_combo['values'] = ("Keine Online-Kameras verfügbar",)
+                    self.photo_camera_combo.current(0)
+                
+                print(f"Photo-Combo aktualisiert: {len(online_cameras)} Online-Kameras")
+                
+            except Exception as e:
+                print(f"Fehler beim Aktualisieren der Photo-Camera-Combo: {e}")
+    
+    def refresh_camera_streams_only(self):
+        """Refresh camera streams without rebuilding the entire GUI"""
+        try:
+            print("Aktualisiere Kamera-Streams...")
+            
+            # Start streams for available cameras
+            for cam_index in self.available_cameras:
+                if cam_index in self.webcams:
+                    webcam = self.webcams[cam_index]
+                    if hasattr(webcam, 'start_stream'):
+                        try:
+                            webcam.start_stream()
+                            print(f"Stream für Kamera {cam_index} gestartet")
+                        except Exception as e:
+                            print(f"Fehler beim Starten des Streams für Kamera {cam_index}: {e}")
+            
+            print("Kamera-Streams aktualisiert")
+            
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Kamera-Streams: {e}")
+    
     def setup_webcams_json(self):
-        """Setup webcam instances based on JSON configuration (for compatibility)"""
+        """Setup webcam instances based on JSON configuration (only for physically available cameras)"""
         self.webcams = {}
         self.current_camera_index = 0
         
-        available_cameras = self.camera_config.get_available_cameras()
+        # Hole alle aktivierten Kameras aus JSON
+        enabled_cameras = self.camera_config.get_enabled_cameras()
         
-        for camera_config in available_cameras:
-            cam_index = camera_config['index']
-            hardware_info = camera_config['hardware_interface']
+        for camera in enabled_cameras:
+            cam_index = camera['index']
+            verbindung_info = self.camera_config.parse_verbindung(camera['verbindung'])
             
-            if hardware_info.get('type') == 'usb':
-                device_index = hardware_info.get('device_index', 0)
+            if verbindung_info and verbindung_info.get('type') == 'usb':
+                device_index = verbindung_info.get('device_index', 0)
                 
-                print(f"Initialisiere JSON-Kamera Index {cam_index}: {camera_config['name']} (USB-{device_index})")
-                  # Erstelle WebcamHelper-Instanz für Kompatibilität
-                from webcam_helper import WebcamHelper
-                webcam = WebcamHelper(
-                    device_index=device_index,
-                    frame_size=(150, 150),
-                    com_port=f"USB-{device_index}",
-                    model=camera_config['name']
-                )
-                self.webcams[cam_index] = webcam
-        
-        # Setze primäre Kamera
-        if self.available_cameras:
-            self.current_camera_index = self.available_cameras[0]
-            self.webcam = self.webcams[self.current_camera_index]
+                # Erstelle nur Webcam-Instanz wenn physisch verfügbar
+                if device_index in getattr(self, 'physically_available_cameras', []):
+                    print(f"Initialisiere JSON-Kamera Index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
+                    
+                    from webcam_helper import WebcamHelper
+                    webcam = WebcamHelper(
+                        device_index=device_index,
+                        frame_size=(150, 150),
+                        com_port=f"USB-{device_index}",
+                        model=camera['name']
+                    )
+                    self.webcams[cam_index] = webcam
+                else:
+                    print(f"Kamera Index {cam_index}: {camera['name']} (USB-{device_index}) - OFFLINE - Keine Webcam-Instanz erstellt")
+          # Setze primäre Kamera auf erste verfügbare online Kamera
+        if self.available_cameras and self.webcams:
+            # Find first camera that has a webcam instance (is online)
+            for cam_index in self.available_cameras:
+                if cam_index in self.webcams:
+                    self.current_camera_index = cam_index
+                    self.webcam = self.webcams[cam_index]
+                    break
+            else:
+                # No online cameras available
+                self.current_camera_index = None
+                self.webcam = None
+        else:
+            self.current_camera_index = None
+            self.webcam = None
     
     def create_all_widgets(self):
         """Create all GUI widgets using GUIBuilder"""
@@ -220,14 +364,7 @@ class ControlApp:
          self.drive_up_distance, self.drive_up_speed, self.drive_up_exec_btn, self.drive_up_add_btn,
          self.drive_down_distance, self.drive_down_speed, self.drive_down_exec_btn, self.drive_down_add_btn,
          self.photo_camera_combo, self.photo_exec_btn, self.photo_add_btn, self.photo_config_btn) = GUIBuilder.create_settings_panel(
-            self.main_container, grid_mode=True)
-            
-        # Populate photo camera combo box with available cameras
-        if self.photo_camera_combo and self.available_cameras:
-            camera_indices = [str(idx) for idx in self.available_cameras]
-            self.photo_camera_combo['values'] = camera_indices
-            if camera_indices:
-                self.photo_camera_combo.set(camera_indices[0])  # Set default to first available camera
+            self.main_container, grid_mode=True)        # Populate photo camera combo box with available cameras from JSON configuration will be done after logger initialization
     
     def init_backend_modules(self):
         """Initialize backend modules (logger, device control, etc.)"""
@@ -274,9 +411,11 @@ class ControlApp:
             self.position,
             self.servo_angle_var
         )
-        
-        # Angle calculator interface
+          # Angle calculator interface
         self.angle_calculator = AngleCalculatorInterface(self.logger)
+        
+        # Update photo camera combo box now that logger is initialized
+        self.update_photo_camera_combo()
     
     def initialize_calculator_display(self):
         """Initialize the calculator display with current values and load images"""
@@ -324,8 +463,7 @@ class ControlApp:
                 if webcam.running:
                     self.logger.log(f"📹 Kamera {camera_index} Stream bereits aktiv")
                     return True
-                
-                # Start the stream
+                  # Start the stream
                 if camera_index in self.camera_labels:
                     camera_label = self.camera_labels[camera_index]
                     if webcam.stream_starten(camera_label):
@@ -334,9 +472,8 @@ class ControlApp:
                         
                         # Verify stream is running
                         if webcam.running:
-                            # Update label to show streaming status
-                            cam_info = self.get_camera_info(camera_index)
-                            camera_label.config(text=f"{cam_info['usb_label']}\nLIVE", bg="lightgreen")
+                            # Don't override the label - let the stream display video frames
+                            # The stream_loop in webcam_helper will update the label with video
                             self.logger.log(f"📹 Kamera {camera_index} Stream gestartet und initialisiert")
                             return True
                         else:
@@ -428,85 +565,14 @@ class ControlApp:
                     self.current_camera_index = self.available_cameras[0]
                     self.webcam = self.webcams[self.current_camera_index]
             
+            # Update photo camera combo box with new configuration
+            self.update_photo_camera_combo()
+        
             print(f"Camera configuration refreshed successfully - {len(self.available_cameras)} cameras available")
             
         except Exception as e:
             print(f"Error during camera configuration refresh: {e}")
             self.logger.log(f"⚠️ Fehler beim Aktualisieren der Kamera-Konfiguration: {e}")
-
-    def safe_refresh_camera_grid(self):
-        """Safely refresh the camera grid display"""
-        try:
-            self.refresh_camera_grid()
-        except Exception as e:
-            print(f"Error refreshing camera grid: {e}")
-            # Try to rebuild the grid completely
-            try:
-                self.setup_camera_grid()
-            except Exception as e2:
-                print(f"Error rebuilding camera grid: {e2}")
-
-    def refresh_camera_streams_only(self):
-        """Refresh only the camera streams without rebuilding the GUI"""
-        try:
-            print("Refreshing camera streams only...")
-            
-            # For each existing camera widget, restart the stream if camera is available
-            if hasattr(self, 'camera_labels') and hasattr(self, 'webcams'):
-                for cam_index in list(self.camera_labels.keys()):
-                    try:
-                        # Stop existing stream for this camera
-                        if cam_index in self.webcams:
-                            webcam = self.webcams[cam_index]
-                            if hasattr(webcam, 'stop_stream'):
-                                webcam.stop_stream()
-                        
-                        # Check if camera is still available in new config
-                        if cam_index in self.available_cameras and cam_index in self.webcams:
-                            # Get the existing label widget
-                            camera_label = self.camera_labels[cam_index]
-                            
-                            # Start the stream for this camera
-                            webcam = self.webcams[cam_index]
-                            if webcam:
-                                success = webcam.stream_starten(camera_label)
-                                if success:
-                                    camera_info = self.get_camera_info(cam_index)
-                                    print(f"Stream restarted for camera {cam_index}: {camera_info['name']}")
-                                else:
-                                    print(f"Failed to restart stream for camera {cam_index}")
-                                    # Update label to show offline status
-                                    camera_info = self.get_camera_info(cam_index)
-                                    camera_label.config(text=f"{camera_info['usb_label']}\nOFFLINE")
-                        else:
-                            # Camera no longer available, show offline
-                            if cam_index in self.camera_labels:
-                                camera_label = self.camera_labels[cam_index]
-                                camera_label.config(text=f"Cam {cam_index}\nOFFLINE", bg="gray")
-                                
-                    except Exception as e:
-                        print(f"Error restarting stream for camera {cam_index}: {e}")
-            
-            print(f"Camera streams refreshed - {len(self.available_cameras)} cameras available")
-            
-        except Exception as e:
-            print(f"Error during camera stream refresh: {e}")
-            self.logger.log(f"⚠️ Fehler beim Aktualisieren der Kamera-Streams: {e}")
-
-    # ...existing code...
-        self.update_camera_tab_labels()
-        self.update_current_camera_info()
-        
-        # Update camera combo box
-        if hasattr(self, 'camera_combo'):
-            self.camera_combo['values'] = [str(cam) for cam in self.available_cameras]
-            self.camera_combo.set(str(self.current_camera_index) if self.available_cameras else "0")
-        
-        # Restart auto-streams if enabled
-        if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
-            self.root.after(500, self.start_auto_streams)
-        
-        print(f"Camera configuration refreshed. Available cameras: {self.available_cameras}")
 
     def stop_all_camera_streams(self):
         """Stop all running camera streams before reconfiguration"""
@@ -521,69 +587,97 @@ class ControlApp:
                     print(f"Error stopping camera {cam_index}: {e}")
 
     def refresh_camera_grid(self):
-        """Recreate the camera grid with new configuration"""
+        """Recreate the camera grid with new configuration using grid() layout"""
         if hasattr(self, 'camera_labels') and hasattr(self, 'camera_frames'):
+            # Stop all running streams before destroying labels
+            print("Stoppe laufende Streams vor Grid-Refresh...")
+            for cam_index in list(self.camera_labels.keys()):
+                if cam_index in self.webcams:
+                    webcam = self.webcams[cam_index]
+                    try:
+                        if hasattr(webcam, 'running') and webcam.running:
+                            webcam.stop_stream()
+                            print(f"Stream für Kamera {cam_index} gestoppt")
+                    except Exception as e:
+                        print(f"Fehler beim Stoppen des Streams für Kamera {cam_index}: {e}")
+            
             # Clear existing camera grid elements
             for cam_index in list(self.camera_frames.keys()):
                 try:
                     self.camera_frames[cam_index]['frame'].destroy()
                 except:
                     pass
-            
-            # Clear the dictionaries
             self.camera_labels.clear()
             self.camera_frames.clear()
-            
+
             # Recreate camera grid with new configuration
             if hasattr(self, 'webcam_frame') and self.available_cameras:
-                # Clear all children from webcam_frame first
+                # Find the grid_container (assume it's the first child of webcam_frame)
+                grid_container = None
                 for child in self.webcam_frame.winfo_children():
-                    try:
-                        child.destroy()
-                    except:
-                        pass
-                
-                # Create new grid container
-                grid_container = tk.Frame(self.webcam_frame)
-                grid_container.pack(fill="both", expand=True)
-                
+                    if isinstance(child, tk.Frame):
+                        grid_container = child
+                        break
+                if grid_container is None:
+                    grid_container = tk.Frame(self.webcam_frame)
+                    grid_container.pack(fill="both", expand=True)
+
+                # Clear all children from grid_container
+                for child in grid_container.winfo_children():
+                    child.destroy()
+
                 # Calculate grid dimensions
                 num_cameras = len(self.available_cameras)
                 cols = min(4, num_cameras)  # Max 4 columns
                 rows = (num_cameras + cols - 1) // cols
-                
-                # Create new camera tiles using pack layout instead of grid
+
+                # Create new camera tiles using grid layout
                 for i, cam_index in enumerate(self.available_cameras):
-                    # Get camera info
                     camera_info = self.get_camera_info(cam_index)
-                    
-                    # Create a frame for this camera
-                    camera_row_frame = tk.Frame(grid_container)
-                    camera_row_frame.pack(side='top', fill='x', padx=2, pady=2)
-                    
-                    # Individual camera frame - compact size
-                    camera_frame = tk.LabelFrame(camera_row_frame, text=f"Cam {cam_index}", 
+                    row = i // cols
+                    col = i % cols
+
+                    camera_frame = tk.LabelFrame(grid_container, text=f"Cam {cam_index}", 
                                                 font=("Arial", 8, "bold"), relief="ridge", bd=1)
-                    camera_frame.pack(side='left', padx=2, pady=2)
-                    
-                    # Camera view area - 150x150 max size
+                    camera_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
+
                     camera_view_frame = tk.Frame(camera_frame, bg="black", width=150, height=150)
-                    camera_view_frame.pack_propagate(False)  # Keep fixed size
+                    camera_view_frame.pack_propagate(False)
                     camera_view_frame.pack(padx=2, pady=2)
-                    
-                    # Camera display label - zeige USB-Label im Stream
-                    camera_label = tk.Label(camera_view_frame, text=f"{camera_info['usb_label']}\nOFFLINE", 
-                                           bg="gray", fg="white", relief="sunken", bd=1,
+
+                    hardware_info = self.camera_config.parse_verbindung(
+                        self.camera_config.get_camera_by_index(cam_index)['verbindung']
+                    )
+                    device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+                    is_online = device_index in getattr(self, 'physically_available_cameras', [])
+
+                    if is_online:
+                        bg_color = "gray"
+                        status_text = "OFFLINE"  # Will be updated when stream starts
+                        fg_color = "white"
+                    else:
+                        bg_color = "#8B0000"
+                        status_text = "NICHT VERFÜGBAR"
+                        fg_color = "white"
+
+                    camera_label = tk.Label(camera_view_frame, 
+                                           text=f"{camera_info['usb_label']}\n{status_text}", 
+                                           bg=bg_color, fg=fg_color, relief="sunken", bd=1,
                                            font=("Arial", 8))
                     camera_label.pack(fill="both", expand=True)
-                    
-                    # Store references
+
                     self.camera_labels[cam_index] = camera_label
                     self.camera_frames[cam_index] = {
                         'frame': camera_frame,
                         'view_frame': camera_view_frame
                     }
 
+                # Configure grid weights for even scaling
+                for c in range(cols):
+                    grid_container.grid_columnconfigure(c, weight=1)
+                for r in range(rows):
+                    grid_container.grid_rowconfigure(r, weight=1)
+    
     def open_camera_config(self):
         """Open camera configuration editor (JSON-based)"""
         self.create_camera_config_editor()
@@ -967,15 +1061,19 @@ Verfügbare Verbindungstypen:
         
         # Refresh configuration
         self.refresh_camera_configuration()
-        
-        # If auto-stream was enabled, restart streams
+          # If auto-stream was enabled, restart streams
         if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
             self.root.after(1000, self.start_auto_streams)  # Give time for camera release
         
         self.logger.log(f"🔄 Kamera-Liste aktualisiert: {len(self.available_cameras)} Kameras verfügbar")
+    
     def on_closing(self):
         """Handle application closing"""
         try:
+            # Stop JSON monitoring
+            if hasattr(self, 'json_monitoring_active'):
+                self.stop_json_monitoring()
+            
             # Stop all camera streams first
             if hasattr(self, 'webcams'):
                 for cam_index, webcam in self.webcams.items():
@@ -1023,7 +1121,356 @@ Verfügbare Verbindungstypen:
         finally:
             self.on_closing()
 
+    def update_camera_tiles_gentle(self):
+        """Gently update camera tiles without destroying the entire grid"""
+        if not hasattr(self, 'camera_labels') or not hasattr(self, 'camera_frames'):
+            # If no existing grid, create it from scratch
+            self.refresh_camera_grid()
+            return
+        
+        # Get current enabled cameras from JSON
+        current_enabled_cameras = set(self.available_cameras)
+        
+        # Get cameras that currently have tiles
+        existing_cameras = set(self.camera_frames.keys())
+        
+        # Find cameras to add and remove
+        cameras_to_add = current_enabled_cameras - existing_cameras
+        cameras_to_remove = existing_cameras - current_enabled_cameras
+        
+        print(f"Sanfte Kachel-Aktualisierung:")
+        print(f"  Zu entfernen: {cameras_to_remove}")
+        print(f"  Hinzuzufügen: {cameras_to_add}")
+        print(f"  Bleiben: {existing_cameras & current_enabled_cameras}")
+        
+        # Remove tiles for disabled cameras
+        for cam_index in cameras_to_remove:
+            if cam_index in self.camera_frames:
+                try:
+                    # Destroy the camera frame
+                    self.camera_frames[cam_index]['frame'].destroy()
+                    # Remove from dictionaries
+                    del self.camera_frames[cam_index]
+                    if cam_index in self.camera_labels:
+                        del self.camera_labels[cam_index]
+                    print(f"  Kachel für Kamera {cam_index} entfernt")
+                except Exception as e:
+                    print(f"  Fehler beim Entfernen der Kachel {cam_index}: {e}")
+        
+        # Add tiles for new cameras
+        if cameras_to_add and hasattr(self, 'webcam_frame'):
+            # Find or create grid container
+            grid_container = None
+            for child in self.webcam_frame.winfo_children():
+                if isinstance(child, tk.Frame):
+                    grid_container = child
+                    break
+            
+            if not grid_container:
+                grid_container = tk.Frame(self.webcam_frame)
+                grid_container.pack(fill="both", expand=True)
+            
+            # Add new camera tiles
+            for cam_index in cameras_to_add:
+                self.add_single_camera_tile(grid_container, cam_index)
+                print(f"  Kachel für Kamera {cam_index} hinzugefügt")
+        
+        # Update status of existing tiles (online/offline)
+        for cam_index in (existing_cameras & current_enabled_cameras):
+            self.update_camera_tile_status(cam_index)
+    
+    def add_single_camera_tile(self, grid_container, cam_index):
+        """Add a single camera tile to the grid"""
+        try:
+            # Get camera info
+            camera_info = self.get_camera_info(cam_index)
+            
+            # Create a frame for this camera
+            camera_row_frame = tk.Frame(grid_container)
+            camera_row_frame.pack(side='top', fill='x', padx=2, pady=2)
+            
+            # Individual camera frame - compact size
+            camera_frame = tk.LabelFrame(camera_row_frame, text=f"Cam {cam_index}", 
+                                        font=("Arial", 8, "bold"), relief="ridge", bd=1)
+            camera_frame.pack(side='left', padx=2, pady=2)
+            
+            # Camera view area - 150x150 max size
+            camera_view_frame = tk.Frame(camera_frame, bg="black", width=150, height=150)
+            camera_view_frame.pack_propagate(False)  # Keep fixed size
+            camera_view_frame.pack(padx=2, pady=2)
+            
+            # Check if camera is physically available
+            hardware_info = self.camera_config.parse_verbindung(
+                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+            )
+            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+            is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            
+            # Camera display label with online/offline status
+            if is_online:
+                bg_color = "gray"
+                status_text = "OFFLINE"  # Will be updated when stream starts
+                fg_color = "white"
+            else:
+                bg_color = "#8B0000"  # Dark red
+                status_text = "NICHT VERFÜGBAR"
+                fg_color = "white"
+            
+            camera_label = tk.Label(camera_view_frame, 
+                                   text=f"{camera_info['usb_label']}\n{status_text}", 
+                                   bg=bg_color, fg=fg_color, relief="sunken", bd=1,
+                                   font=("Arial", 8))
+            camera_label.pack(fill="both", expand=True)
+              # Store references
+            self.camera_labels[cam_index] = camera_label
+            self.camera_frames[cam_index] = {
+                'frame': camera_frame,
+                'view_frame': camera_view_frame
+            }
+            
+        except Exception as e:
+            print(f"Fehler beim Hinzufügen der Kachel {cam_index}: {e}")
+    
+    def update_camera_tile_status(self, cam_index):
+        """Update the status of an existing camera tile"""
+        if cam_index not in self.camera_labels:
+            return
+        
+        try:
+            # Check if camera is physically available
+            hardware_info = self.camera_config.parse_verbindung(
+                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+            )
+            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+            is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            
+            camera_info = self.get_camera_info(cam_index)
+            camera_label = self.camera_labels[cam_index]
+            
+            # Check if camera stream is running - don't override video display
+            if cam_index in self.webcams:
+                webcam = self.webcams[cam_index]
+                if hasattr(webcam, 'running') and webcam.running:
+                    # Stream is running - don't override the video display
+                    return
+            
+            # Update color and text based on online status only if stream is not running
+            if is_online:
+                bg_color = "gray"
+                status_text = "OFFLINE"  # Will be updated when stream starts
+                fg_color = "white"
+            else:
+                bg_color = "#8B0000"  # Dark red
+                status_text = "NICHT VERFÜGBAR"
+                fg_color = "white"
+            
+            camera_label.configure(
+                text=f"{camera_info['usb_label']}\n{status_text}",
+                bg=bg_color,
+                fg=fg_color
+            )
+            
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Kachel {cam_index}: {e}")
 
+    def reinitialize_camera_streams(self):
+        """
+        Komplette Neu-Initialisierung des Kamera-Stream-Bereichs
+        Funktioniert wie ein Neustart des Kamera-Systems mit neuen JSON-Daten
+        """
+        print("=== KOMPLETTE NEU-INITIALISIERUNG DES KAMERA-SYSTEMS ===")
+        
+        try:
+            # Schritt 1: Alle laufenden Streams stoppen und Webcam-Instanzen freigeben
+            print("Schritt 1: Stoppe alle Streams und gebe Ressourcen frei...")
+            if hasattr(self, 'webcams'):
+                for cam_index, webcam in self.webcams.items():
+                    try:
+                        if hasattr(webcam, 'running') and webcam.running:
+                            webcam.stop_stream()
+                            print(f"  Stream für Kamera {cam_index} gestoppt")
+                        if hasattr(webcam, 'release'):
+                            webcam.release()
+                            print(f"  Ressourcen für Kamera {cam_index} freigegeben")
+                    except Exception as e:
+                        print(f"  Fehler beim Stoppen/Freigeben von Kamera {cam_index}: {e}")
+            
+            # Schritt 2: Alle Kamera-GUI-Elemente entfernen
+            print("Schritt 2: Entferne alle Kamera-GUI-Elemente...")
+            if hasattr(self, 'camera_labels'):
+                self.camera_labels.clear()
+            if hasattr(self, 'camera_frames'):
+                for cam_index, frame_data in self.camera_frames.items():
+                    try:
+                        frame_data['frame'].destroy()
+                    except:
+                        pass
+                self.camera_frames.clear()
+            
+            # Webcam-Frame komplett leeren
+            if hasattr(self, 'webcam_frame'):
+                for child in self.webcam_frame.winfo_children():
+                    try:
+                        child.destroy()
+                    except:
+                        pass
+            
+            # Schritt 3: Kamera-System komplett neu aufbauen (wie beim Programmstart)
+            print("Schritt 3: Baue Kamera-System neu auf...")
+            
+            # JSON-Konfiguration neu laden
+            self.camera_config = JSONCameraConfig("cameras_config.json")
+            
+            # Verfügbare Kameras neu ermitteln
+            self.setup_available_cameras_json()
+            
+            # Webcam-Instanzen neu erstellen
+            self.setup_webcams_json()
+            
+            # Schritt 4: GUI komplett neu erstellen
+            print("Schritt 4: Erstelle Kamera-GUI neu...")
+            self.recreate_camera_gui_completely()
+            
+            # Schritt 5: Photo-Combo aktualisieren
+            self.update_photo_camera_combo()
+            
+            # Schritt 6: Auto-Streams starten (wenn aktiviert)
+            if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
+                print("Schritt 6: Starte Auto-Streams...")
+                self.root.after(1000, self.start_auto_streams)  # 1 Sekunde warten für GUI-Setup
+            
+            print("=== KAMERA-SYSTEM NEU-INITIALISIERUNG ABGESCHLOSSEN ===")
+            
+        except Exception as e:
+            print(f"Fehler bei der Kamera-System Neu-Initialisierung: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def recreate_camera_gui_completely(self):
+        """
+        Erstellt die Kamera-GUI komplett neu, basierend auf aktueller JSON-Konfiguration
+        Simuliert die ursprüngliche GUI-Erstellung beim Programmstart
+        """
+        print("Erstelle Kamera-GUI komplett neu...")
+        
+        if not hasattr(self, 'webcam_frame') or not self.available_cameras:
+            print("Keine Kameras verfügbar oder webcam_frame nicht vorhanden")
+            return
+        
+        # Haupt-Container für das Kamera-Grid erstellen
+        main_container = tk.Frame(self.webcam_frame)
+        main_container.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Grid-Container erstellen
+        grid_container = tk.Frame(main_container)
+        grid_container.pack(fill="both", expand=True)
+        
+        # Grid-Dimensionen berechnen
+        num_cameras = len(self.available_cameras)
+        cols = min(4, num_cameras)  # Maximal 4 Spalten
+        rows = (num_cameras + cols - 1) // cols
+        
+        print(f"Erstelle Grid für {num_cameras} Kameras: {rows}x{cols}")
+        
+        # Kamera-Kacheln erstellen (basierend auf JSON-Konfiguration)
+        for i, cam_index in enumerate(self.available_cameras):
+            row = i // cols
+            col = i % cols
+            
+            # Kamera-Info aus JSON holen
+            camera_info = self.get_camera_info(cam_index)
+            
+            # Kamera-Frame erstellen
+            camera_frame = tk.LabelFrame(grid_container, text=f"Cam {cam_index}", 
+                                        font=("Arial", 8, "bold"), relief="ridge", bd=1)
+            camera_frame.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
+            
+            # Kamera-Ansichts-Frame erstellen
+            camera_view_frame = tk.Frame(camera_frame, bg="black", width=150, height=150)
+            camera_view_frame.pack_propagate(False)
+            camera_view_frame.pack(padx=2, pady=2)
+            
+            # Online/Offline-Status prüfen
+            hardware_info = self.camera_config.parse_verbindung(
+                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+            )
+            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+            is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            
+            # Kamera-Label mit initialem Status erstellen
+            if is_online:
+                bg_color = "gray"
+                status_text = "BEREIT"
+                fg_color = "white"
+            else:
+                bg_color = "#8B0000"  # Dunkelrot
+                status_text = "NICHT VERFÜGBAR"
+                fg_color = "white"
+            
+            camera_label = tk.Label(camera_view_frame, 
+                                   text=f"{camera_info['usb_label']}\n{status_text}", 
+                                   bg=bg_color, fg=fg_color, relief="sunken", bd=1,
+                                   font=("Arial", 8))
+            camera_label.pack(fill="both", expand=True)
+            
+            # Referenzen speichern
+            if not hasattr(self, 'camera_labels'):
+                self.camera_labels = {}
+            if not hasattr(self, 'camera_frames'):
+                self.camera_frames = {}
+                
+            self.camera_labels[cam_index] = camera_label
+            self.camera_frames[cam_index] = {
+                'frame': camera_frame,
+                'view_frame': camera_view_frame
+            }
+            
+            print(f"  Kamera {cam_index} GUI erstellt - {'ONLINE' if is_online else 'OFFLINE'}")
+        
+        # Grid-Gewichte für gleichmäßige Skalierung setzen
+        for c in range(cols):
+            grid_container.grid_columnconfigure(c, weight=1)
+        for r in range(rows):
+            grid_container.grid_rowconfigure(r, weight=1)
+        
+        # Kontroll-Buttons-Frame erstellen (falls nicht vorhanden)
+        control_frame = tk.Frame(main_container)
+        control_frame.pack(fill="x", pady=(5, 0))
+        
+        # Auto-Stream-Checkbox (falls nicht vorhanden)
+        if not hasattr(self, 'auto_stream_var'):
+            self.auto_stream_var = tk.BooleanVar(value=True)
+        
+        auto_stream_check = tk.Checkbutton(control_frame, text="Auto-Stream", 
+                                         variable=self.auto_stream_var, font=("Arial", 9))
+        auto_stream_check.pack(side=tk.LEFT)
+        
+        print("Kamera-GUI komplett neu erstellt")
+
+
+# Entry point for the application
 if __name__ == "__main__":
-    app = ControlApp()
-    app.run()
+    print("=" * 48)
+    print("I-Scan Control Software - Modular Version")
+    print("=" * 48)
+    print("Starting modular I-Scan application...")
+    print("Features: Thread-safe camera, Non-blocking operations")
+    print()
+    
+    try:
+        # Create and run the application
+        app = ControlApp()
+        app.root.mainloop()
+        
+    except Exception as e:
+        print(f"\n❌ Critical Error: {e}")
+        import traceback
+        traceback.print_exc()
+        input("Application closed. Press any key to exit...")
+        
+    except KeyboardInterrupt:
+        print("\n⚠️  Application interrupted by user")
+        
+    finally:
+        print("Application closed. Press any key to exit...")
+        input()
