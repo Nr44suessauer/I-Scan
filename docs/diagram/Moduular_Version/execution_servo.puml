@@ -1,0 +1,36 @@
+@startuml execution_servo
+autonumber
+actor User
+participant GUI as "Tkinter GUI"
+participant EH as "EventHandlers"
+participant QO as "QueueOperations"
+participant OQ as "OperationQueue"
+participant DC as "DeviceControl"
+participant SAC as "ServoAngleCalculator"
+participant API as "ApiClient"
+participant Logger
+
+User -> GUI : Clicks "Execute Servo"
+GUI -> EH : on_servo_execute()
+EH -> DC : servo_cmd() (in new thread)
+
+activate DC
+DC -> DC : Reads angle from GUI variable
+DC -> API : set_servo_angle(angle, base_url)
+activate API
+API -> API : make_request("setServo", params, base_url)
+API -> API : Sends HTTP GET Request
+API --> DC : Response (Success/Error)
+deactivate API
+
+DC -> Logger : log("Servo: Angle X°")
+activate Logger
+Logger -> GUI : Updates Log Console
+Logger -> Logger : _update_from_log(msg)
+Logger -> DC : update_callback() (for GUI update)
+deactivate Logger
+
+DC -> GUI : Updates Servo Angle Label
+deactivate DC
+
+@enduml

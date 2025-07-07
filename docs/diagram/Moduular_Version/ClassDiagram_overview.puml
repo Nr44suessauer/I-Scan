@@ -1,0 +1,341 @@
+@startuml ClassDiagram_overview
+!define RECTANGLE class
+
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 80
+
+' Layout directives
+!define LEFT_COLUMN 100
+!define CENTER_COLUMN 300
+!define RIGHT_COLUMN 500
+
+' Main Application Layer
+package "Application Layer" {
+    class ControlApp {
+        - root: tk.Tk
+        - camera_config: JSONCameraConfig
+        - camera_stream_manager: JSONCameraStreamManager
+        - webcams: Dict[int, WebcamHelper]
+        - logger: Logger
+        - device_control: DeviceControl
+        - operation_queue: OperationQueue
+        - event_handlers: EventHandlers
+        - angle_calculator: AngleCalculatorInterface
+        --
+        + __init__()
+        + setup_window_icon()
+        + init_variables()
+        + setup_available_cameras_json()
+        + start_json_monitoring()
+        + reload_configuration()
+        + update_photo_camera_combo()
+        + setup_webcams_json()
+        + create_all_widgets()
+        + init_backend_modules()
+        + initialize_calculator_display()
+        + update_camera_tab_labels()
+        + update_current_camera_info()
+        + start_camera_stream()
+        + switch_camera()
+        + refresh_camera_configuration()
+        + stop_all_camera_streams()
+        + refresh_camera_grid()
+        + open_camera_config()
+        + on_closing()
+        + toggle_auto_streams()
+        + get_camera_info()
+        + refresh_cameras()
+        + start_auto_streams()
+    }
+}
+
+' GUI Layer
+package "GUI Layer" {
+    class GUIBuilder << (S, #FF7700) static >> {
+        + create_url_frame()
+        + create_camera_settings_frame()
+        + create_diameter_frame()
+        + create_position_display()
+        + create_output_display()
+        + create_webcam_frame()
+        + create_servo_frame()
+        + create_stepper_frame()
+        + create_led_color_frame()
+        + create_led_brightness_frame()
+        + create_button_frame()
+        + create_home_frame()
+        + create_angle_calculator_frame()
+        + create_queue_frame()
+        + create_calculator_commands_panel()
+        + create_image_display_frame()
+        + create_settings_panel()
+    }
+
+    class EventHandlers {
+        - app: ControlApp
+        --
+        + __init__(app_instance)
+        + assign_all_callbacks()
+        + on_camera_tab_changed(event)
+        + on_start_camera()
+        + on_stop_camera()
+        + on_refresh_cameras()
+        + on_take_photo()
+        + on_add_photo_to_queue()
+        + on_camera_config()
+        + on_set_camera_device()
+        + on_set_delay()
+        + on_servo_execute()
+        + on_servo_add_to_queue()
+        + on_stepper_execute()
+        + on_stepper_add_to_queue()
+        + on_led_execute()
+        + on_led_add_to_queue()
+        + on_brightness_execute()
+        + on_brightness_add_to_queue()
+        + on_button_execute()
+        + on_button_add_to_queue()
+        + on_home_execute()
+        + on_home_add_to_queue()
+        + on_show_angle_calculator()
+        + on_load_csv()
+        + on_save_csv()
+        + on_execute_queue()
+        + on_clear_queue()
+        + on_remove_selected_operation()
+        + on_export_queue()
+        + on_import_queue()
+        + on_pause_queue()
+        + on_execute_selected_operation()
+        + on_duplicate_selected_operation()
+        + on_move_operation_up()
+        + on_move_operation_down()
+        + on_edit_selected_operation()
+        + on_queue_settings()
+        - _show_edit_dialog(operation, index)
+        - _show_queue_settings_dialog()
+        + update_command_display(event=None)
+        + execute_visualisation_mode()
+        + execute_silent_mode()
+    }
+
+    class Logger {
+        - output: scrolledtext.ScrolledText
+        - position: tk.DoubleVar
+        - servo_angle_var: tk.IntVar
+        - update_callback: Callable
+        --
+        + __init__(output_widget, position_var, servo_angle_var, update_callback)
+        + log(msg)
+        - _update_from_log(msg)
+    }
+}
+
+' Queue Management Layer
+package "Queue Management" {
+    class QueueOperations {
+        - app: ControlApp
+        --
+        + __init__(app_instance)
+        + add_servo_to_queue()
+        + add_stepper_to_queue()
+        + add_led_color_to_queue()
+        + add_brightness_to_queue()
+        + add_button_to_queue()
+        + add_home_to_queue()
+        + add_photo_to_queue()
+    }
+
+    class OperationQueue {
+        - operations: List
+        - logger: Logger
+        - queue_list: tk.Listbox
+        - is_paused: bool
+        - is_executing: bool
+        --
+        + __init__(logger, queue_list)
+        + add(operation_type, params, description)
+        + clear()
+        + import_from_csv(file_path)
+        + export_to_csv(file_path)
+        + remove(index)
+        + update_display()
+        + execute_all(base_url, widgets, position_var, servo_angle_var, last_distance_value, run_in_thread=True)
+        + execute_single_operation(operation, base_url, widgets, position_var, servo_angle_var, last_distance_value)
+        + pause_queue()
+        + resume_queue()
+        + stop_queue()
+        - _home_function(base_url, widgets, position_var, servo_angle_var)
+    }
+}
+
+' Camera Management Layer
+package "Camera Management" {
+    class JSONCameraConfig {
+        - config_file: str
+        - config_data: Dict
+        --
+        + __init__(config_file)
+        + load_config()
+        + save_config()
+        + create_default_config()
+        + get_cameras()
+        + get_enabled_cameras()
+        + get_camera_by_index(index)
+        + add_camera(index, verbindung, beschreibung, name=None)
+        + update_camera(index, **kwargs)
+        + remove_camera(index)
+        + get_settings()
+        + update_settings(**kwargs)
+        + parse_verbindung(verbindung)
+        + get_available_cameras()
+    }
+
+    class JSONCameraStreamManager {
+        - config: JSONCameraConfig
+        - streams: Dict
+        - gui_callbacks: Dict[int, Callable]
+        --
+        + __init__(config_file)
+        + reload_config()
+        + update_streams()
+        + start_all_streams()
+        + stop_all_streams()
+        + get_stream(index)
+        + get_all_streams()
+        + take_photo_all()
+        + get_status_all()
+        + set_gui_callback(index, callback)
+        + refresh_camera(index)
+        + add_camera_to_config(index, verbindung, beschreibung, name=None)
+        + remove_camera_from_config(index)
+    }
+
+    class CameraStream {
+        - config: Dict
+        - index: int
+        - name: str
+        - verbindung: str
+        - beschreibung: str
+        - hardware_interface: Dict
+        - cap: cv2.VideoCapture
+        - running: bool
+        - thread: threading.Thread
+        - current_frame: Any
+        - frame_lock: threading.Lock
+        - on_frame_callback: Optional[Callable]
+        - frames_captured: int
+        - last_frame_time: float
+        - fps_actual: float
+        --
+        + __init__(camera_config, on_frame_callback=None)
+        + connect()
+        + disconnect()
+        + start_stream()
+        + stop_stream()
+        - _stream_loop()
+        + get_frame()
+        + take_photo()
+        + get_status()
+    }
+
+    class WebcamHelper {
+        - device_index: int
+        - frame_size: tuple
+        - com_port: str
+        - model: str
+        - cap: cv2.VideoCapture
+        - running: bool
+        - current_frame: Any
+        - thread: threading.Thread
+        - bild_zaehler: int
+        --
+        + {static} detect_available_cameras(max_cameras=10)
+        + __init__(device_index=0, frame_size=(320, 240), com_port=None, model=None)
+        + starten()
+        + stoppen()
+        + frame_lesen()
+        + stream_loop(panel, fps=30)
+        - _update_panel(panel, img_tk)
+        + stream_starten(panel)
+        + foto_aufnehmen(delay=0.2)
+        - _make_square_frame(frame, target_size)
+        + stop_stream()
+        + release()
+    }
+}
+
+' Device Control Layer
+package "Device Control" {
+    class DeviceControl {
+        - logger: Logger
+        - base_url_var: tk.StringVar
+        - widgets: Dict
+        - position: tk.DoubleVar
+        - servo_angle_var: tk.IntVar
+        - servo_calculator: ServoAngleCalculator
+        --
+        + __init__(logger, base_url_var, widgets, position_var, servo_angle_var)
+        + servo_cmd()
+        + servo_auto_position_cmd()
+        + update_servo_target_center(center_x, center_y)
+        + stepper_cmd()
+        + led_cmd()
+        + bright_cmd()
+        + button_cmd()
+        + home_func()
+        - _home_logic(base_url)
+    }
+
+    class ServoAngleCalculator {
+        - target_center_x: float
+        - target_center_y: float
+        - z_module_x: float
+        --
+        + __init__(target_center_x=150, target_center_y=75, z_module_x=0)
+        + calculate_servo_angle_from_position(current_y_position)
+        + calculate_targeting_angle(current_y_position)
+        + get_angle_info(current_y_position)
+        + update_target_center(new_x, new_y)
+        + validate_servo_angle(angle)
+    }
+
+    class ApiClient << (S, #0077B6) static >> {
+        + make_request(endpoint, params=None, base_url=None, timeout=30)
+        + set_servo_angle(angle, base_url)
+        + move_stepper(steps, direction, speed, base_url)
+        + set_led_color(color_hex, base_url)
+        + set_led_brightness(brightness, base_url)
+        + get_button_state(base_url, nocache=False)
+        + is_button_pressed(response)
+    }
+}
+
+' Relationships - Grouped by layer
+ControlApp ||--|| GUIBuilder : creates
+ControlApp ||--|| EventHandlers : manages
+ControlApp ||--|| QueueOperations : uses
+ControlApp ||--|| OperationQueue : manages
+ControlApp ||--|| JSONCameraConfig : configures
+ControlApp ||--|| JSONCameraStreamManager : manages
+ControlApp ||--o{ WebcamHelper : controls
+ControlApp ||--|| Logger : logs to
+ControlApp ||--|| DeviceControl : controls
+
+EventHandlers --> ControlApp : callbacks
+EventHandlers --> QueueOperations : triggers
+QueueOperations --> OperationQueue : adds to
+
+JSONCameraStreamManager --> JSONCameraConfig : reads
+JSONCameraStreamManager --> CameraStream : manages
+CameraStream --> WebcamHelper : uses for detection
+
+DeviceControl --> ServoAngleCalculator : calculates
+DeviceControl --> ApiClient : sends commands
+OperationQueue --> ApiClient : executes via
+
+@enduml

@@ -1,0 +1,66 @@
+@startuml camera_queue_execution
+autonumber
+actor User
+participant GUI as "Tkinter GUI"
+participant EH as "EventHandlers"
+participant QO as "QueueOperations"
+participant OQ as "OperationQueue"
+participant CA as "ControlApp"
+participant CSM as "JSONCameraStreamManager"
+participant CS as "CameraStream"
+participant WH as "WebcamHelper"
+participant Logger
+
+User -> GUI : Clicks "Add Photo to Queue"
+GUI -> EH : on_add_photo_to_queue()
+EH -> QO : add_photo_to_queue()
+
+activate QO
+QO -> QO : Determines Camera Index & Delay
+QO -> OQ : add('photo', {params}, description)
+activate OQ
+OQ -> OQ : Adds operation to list
+OQ -> OQ : update_display()
+OQ -> Logger : log("Added to queue: Camera X: Take photo...")
+deactivate OQ
+deactivate QO
+
+User -> GUI : Clicks "Execute Queue"
+GUI -> EH : on_execute_queue()
+EH -> OQ : execute_all(...) (in new Thread)
+
+activate OQ
+OQ -> Logger : log("Starting queue execution...")
+loop for each operation in queue
+    OQ -> OQ : execute_single_operation(operation,...)
+    activate OQ
+    OQ -> Logger : log("Executing X/Y: Camera Z: Take photo...")
+    OQ -> CA : switch_camera(camera_index)
+    activate CA
+    CA -> CA : Checks/starts stream for camera_index
+    CA -> CSM : get_stream(camera_index)
+    activate CSM
+    CSM -> CS : get_stream()
+    deactivate CSM
+    CA -> CS : start_stream() (if not active)
+    activate CS
+    CS -> CS : connect() (if needed)
+    CS -> CS : _stream_loop() (starts Thread)
+    deactivate CS
+    CA --> OQ : stream_success
+    deactivate CA
+
+    OQ -> CS : take_photo()
+    activate CS
+    CS -> CS : get_frame()
+    CS -> CS : Saves frame as file
+    CS --> OQ : filepath
+    deactivate CS
+
+    OQ -> Logger : log("Photo saved from Camera X:...")
+    deactivate OQ
+end loop
+OQ -> Logger : log("Queue execution completed!")
+deactivate OQ
+
+@enduml

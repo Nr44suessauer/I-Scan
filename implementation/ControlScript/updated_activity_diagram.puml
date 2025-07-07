@@ -1,0 +1,174 @@
+@startuml full_activity_diagram_updated
+
+skinparam activityBorderColor #333333
+skinparam activityArrowColor #333333
+skinparam activityEndColor #FF0000
+skinparam activityStartColor #00AA00
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+title Activity Diagram: Overall Software Usage Process (Updated with Modular Structure)
+
+|User|start
+:Launch Application;
+
+|I-Scan Application|
+:Initialize GUI Components (GUIBuilder);
+:Load Configuration (config.py);
+:Load JSON Camera Configuration (cameras_config.json);
+:Initialize JSONCameraConfig & JSONCameraStreamManager;
+:Setup Camera System with JSON-based Configuration;
+:Initialize Backend Modules (Logger, DeviceControl, OperationQueue, AngleCalculatorInterface);
+:Initialize Modular Components (EventHandlers, QueueOperations);
+:Setup Enhanced Logging System;
+:Start JSON Config File Monitoring Thread;
+:Assign Event Callbacks to GUI Components;
+
+|User|
+fork
+
+|User|
+  partition "Interactive Control & Configuration" {
+    :Adjust API URL / Camera Settings;
+    :Refresh Camera List from JSON Config;
+    :Start/Stop Camera Streams (JSONCameraStreamManager);
+    :Switch Active Camera;
+    :Take Photo via Camera Module;
+    :Open Camera Configuration Dialog;
+    :Manually Control Servo / Stepper / LEDs;
+    :Query Button State;
+    :Execute Home Function;
+  }
+
+|User|
+  partition "Operation Queue Management (QueueOperations)" {
+    :Add Operation to Queue (e.g., Photo, Servo, Stepper);
+    :Clear Queue;
+    :Remove Selected Operation;
+    :Duplicate Operation;
+    :Edit Operation Parameters;
+    :Move Operation Up/Down in Queue;
+    :Export Queue to CSV;
+    :Import Queue from CSV;
+    :Adjust Global Queue Settings (e.g., Repeat Queue);
+  }
+
+|User|
+  partition "Mathematical Operations & Visualization (AngleCalculatorInterface)" {
+    :Input Parameters in Calculator Panel (CSV Name, Target X/Y, Scan Distance, Measurements, Servo Angles);
+    :Update Command Display;
+    :Click "Visualisation Mode" or "Silent Mode";
+
+|I-Scan Application|
+    :Prepare Command Line Arguments;
+    :Log: Starting Math Operation (Enhanced Logging);
+    :Launch Math Visualization Tool as Subprocess;
+
+|Math Visualization Tool (Subprocess)|
+    :Read Input Parameters;
+    :Perform Mathematical Calculations (e.g., Servo Geometry);
+    if (Visualisation Mode) then (Yes)
+      :Generate Visualization Images (e.g., Servo Graph, Cone Detail);
+      :Save Images to output/ Directory;
+    else (No)
+    endif
+    :Generate/Update CSV Data;
+    :Save CSV Data to Disk;
+    :Log: Operation Results;
+    :Exit Subprocess;
+
+|I-Scan Application|
+    if (Visualisation Mode) then (Yes)
+      :Load Generated Images;
+      :Display Images in GUI Tabs;
+    endif
+    :Log: Math Operation Completed (Enhanced Logging);
+    :User can optionally Load/Save CSV Data;
+  }
+fork again
+
+|I-Scan Application|
+  partition "Background Processes" {
+    :Monitor cameras_config.json for changes (Monitoring Thread);
+    if (JSON Config changed?) then (Yes)
+      :Log: JSON Configuration Change Detected;
+      :Reload JSONCameraConfig;
+      :Reinitialize JSONCameraStreamManager;
+      :Update GUI Camera Displays;
+      :Log: Camera System Reinitialized;
+    else (No)
+    endif
+    :Continuously update GUI elements (position, angle);
+    :Process Enhanced Logging Messages;
+    :Update Camera Stream Statistics;
+  }
+end fork
+
+|User|
+:Decide to execute operations?;
+if (Yes) then (Execute Queue)
+  :Click "Execute Queue" (EventHandlers);
+
+|I-Scan Application|
+  :Start Queue Execution Thread (OperationQueue);
+  :Log: "Starting Queue Execution..." (Enhanced Logging);
+  repeat
+    :Check Pause/Stop Status;
+    if (Paused) then (Yes)
+      :Wait for Resume;
+      :Log: Queue Paused;
+    endif
+    if (Stopped) then (Yes)
+      :Log: Queue Stopped;
+      break;
+    endif
+    :Get next Operation from Queue;
+    :Log: "Executing Operation..." with Details;
+    if (Operation Type is Hardware Command) then (Hardware Command)
+
+|Backend Logic (DeviceControl)|
+      :Prepare API Request via DeviceControl Module;
+
+|External Hardware / API|
+      :Send HTTP Request (ApiClient);
+      :Execute Command on Hardware;
+      :Send Response;
+
+|Backend Logic|
+      :Process API Response;
+      :Update Internal State (position, angle);
+      :Log: Hardware Command Result;
+    else if (Operation Type is Photo) then (Photo)
+
+|Backend Logic (Camera Module)|
+      :Switch to specified Camera via JSONCameraStreamManager;
+      :Capture Frame from Active Camera Stream;
+      :Save Photo to File;
+      :Log: Photo Captured with Camera Details;
+    else (Other Operation)
+      :Execute internal logic for operation;
+      :Log: Operation Details;
+    endif
+
+|I-Scan Application|
+    :Log: Operation Result with Timestamp;
+    :Update GUI Displays;
+    :Wait for configured delay;
+  repeat while (More operations in queue AND not stopped) is (Yes)
+  :Log: "Queue Execution Completed/Stopped!" (Enhanced Logging);
+else (No)
+endif
+
+|User|
+:Close Application Window;
+
+|I-Scan Application|
+:Trigger on_closing event (EventHandlers);
+:Stop JSON Configuration Monitoring;
+:Stop All Camera Streams (JSONCameraStreamManager);
+:Release All Camera Resources;
+:Close Enhanced Logging System;
+:Terminate Application;
+
+stop
+@enduml
