@@ -153,11 +153,23 @@ class EventHandlers:
             if hasattr(self.app, 'photo_camera_combo') and self.app.photo_camera_combo:
                 selected_camera = self.app.photo_camera_combo.get()
                 if selected_camera:
-                    camera_index = int(selected_camera)
+                    # Extract camera index from text like "Cam 1: Web Cam" -> 1
+                    try:
+                        camera_index = int(selected_camera.split(':')[0].replace('Cam', '').strip())
+                    except (ValueError, IndexError):
+                        # Fallback: try to extract first number from string
+                        import re
+                        match = re.search(r'\d+', selected_camera)
+                        if match:
+                            camera_index = int(match.group())
+                        else:
+                            self.app.logger.log(f"Fehler: Kann Kamera-Index nicht aus '{selected_camera}' extrahieren")
+                            return
+                    
                     # Use the selected camera for taking photo
                     if camera_index in self.app.webcams:
                         webcam = self.app.webcams[camera_index]
-                        success = webcam.foto_aufnehmen(delay=self.app.global_delay)
+                        success = webcam.shoot_pic(delay=self.app.global_delay)
                         if success:
                             self.app.logger.log(f"Foto aufgenommen von Kamera {camera_index}")
                         else:
@@ -168,7 +180,7 @@ class EventHandlers:
                     self.app.logger.log("Keine Kamera ausgewählt")
             else:
                 # Fallback to default behavior if no combo box available
-                success = self.app.webcam.foto_aufnehmen(delay=self.app.global_delay)
+                success = self.app.webcam.shoot_pic(delay=self.app.global_delay)
                 if success:
                     self.app.logger.log("Foto aufgenommen")
                 else:
@@ -834,7 +846,20 @@ class EventHandlers:
         """Handle camera selection change from combobox"""
         try:
             # Get the selected camera index from combobox
-            selected_camera = int(self.app.camera_combo.get())
+            selected_camera_text = self.app.camera_combo.get()
+            
+            # Extract camera index from text like "Cam 1: Web Cam" -> 1
+            try:
+                selected_camera = int(selected_camera_text.split(':')[0].replace('Cam', '').strip())
+            except (ValueError, IndexError):
+                # Fallback: try to extract first number from string
+                import re
+                match = re.search(r'\d+', selected_camera_text)
+                if match:
+                    selected_camera = int(match.group())
+                else:
+                    self.app.logger.log(f"Fehler: Kann Kamera-Index nicht aus '{selected_camera_text}' extrahieren")
+                    return
             
             # Stop current camera if running
             if hasattr(self.app, 'webcam') and self.app.webcam and self.app.webcam.running:

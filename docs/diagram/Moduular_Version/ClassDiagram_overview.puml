@@ -262,7 +262,7 @@ package "Camera Management" {
         + stream_loop(panel, fps=30)
         - _update_panel(panel, img_tk)
         + stream_starten(panel)
-        + foto_aufnehmen(delay=0.2)
+        + shoot_pic(delay=0.2)
         - _make_square_frame(frame, target_size)
         + stop_stream()
         + release()

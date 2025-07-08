@@ -80,7 +80,17 @@ class QueueOperations:
             try:
                 selected_camera = self.app.photo_camera_combo.get()
                 if selected_camera:
-                    camera_index = int(selected_camera)
+                    # Extract camera index from text like "Cam 1: Web Cam" -> 1
+                    try:
+                        camera_index = int(selected_camera.split(':')[0].replace('Cam', '').strip())
+                    except (ValueError, IndexError):
+                        # Fallback: try to extract first number from string
+                        import re
+                        match = re.search(r'\d+', selected_camera)
+                        if match:
+                            camera_index = int(match.group())
+                        else:
+                            camera_index = 0  # Use default if extraction fails
             except ValueError:
                 pass  # Use default if conversion fails
                 
