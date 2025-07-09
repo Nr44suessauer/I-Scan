@@ -1,4 +1,5 @@
 @startuml execution_servo
+!theme plain
 autonumber
 actor User
 participant GUI as "Tkinter GUI"
@@ -6,7 +7,6 @@ participant EH as "EventHandlers"
 participant QO as "QueueOperations"
 participant OQ as "OperationQueue"
 participant DC as "DeviceControl"
-participant SAC as "ServoAngleCalculator"
 participant API as "ApiClient"
 participant Logger
 

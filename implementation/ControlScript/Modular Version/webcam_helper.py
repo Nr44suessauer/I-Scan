@@ -186,7 +186,7 @@ class WebcamHelper:
             return True
         return False
     
-    def foto_aufnehmen(self, delay=0.2):
+    def shoot_pic(self, delay=0.2):
         """
         Nimmt das aktuelle Kamerabild auf und speichert es als PNG-Datei im Ordner 'pictures'.
         Führt nach der Aufnahme ein Delay aus.

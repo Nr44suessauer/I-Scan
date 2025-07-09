@@ -280,7 +280,7 @@ class OperationQueue:
                             if camera_index in main_app.webcams:
                                 webcam = main_app.webcams[camera_index]
                                 self.logger.log(f"📸 Nehme Foto mit Kamera {camera_index} auf (Stream initialisiert)...")
-                                foto_path = webcam.foto_aufnehmen(delay=delay)
+                                foto_path = webcam.shoot_pic(delay=delay)
                             else:
                                 self.logger.log(f"❌ Kamera {camera_index} nicht verfügbar")
                                 foto_path = None
@@ -290,10 +290,10 @@ class OperationQueue:
                     elif 'webcams' in widgets and camera_index in widgets['webcams']:
                         # Direct camera access if switch fails
                         webcam = widgets['webcams'][camera_index]
-                        foto_path = webcam.foto_aufnehmen(delay=delay)
+                        foto_path = webcam.shoot_pic(delay=delay)
                     else:
                         # Fallback to default webcam
-                        foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
+                        foto_path = widgets['webcam'].shoot_pic(delay=delay)
                         
                     if foto_path:
                         self.logger.log(f"✅ Foto gespeichert von Kamera {camera_index}: {foto_path}")
@@ -303,7 +303,7 @@ class OperationQueue:
                 except Exception as e:
                     self.logger.log(f"❌ Fehler bei Foto-Operation: {e}")
                     # Fallback
-                    foto_path = widgets['webcam'].foto_aufnehmen(delay=delay)
+                    foto_path = widgets['webcam'].shoot_pic(delay=delay)
                     if foto_path:
                         self.logger.log(f"✅ Foto gespeichert (Fallback): {foto_path}")
                     else:
