@@ -133,7 +133,7 @@ class ControlApp:
         print(f"JSON configuration: {len(enabled_cameras)} cameras configured: {self.available_cameras}")
         print(f"JSON configuration: {len(enabled_cameras)} cameras configured: {self.available_cameras}")
         
-        # Zusätzlich: Erkenne physisch verfügbare Kameras für Online-Status
+        # Additionally: Detect physically available cameras for online status
         from webcam_helper import WebcamHelper
         physically_available = WebcamHelper.detect_available_cameras()
         self.physically_available_cameras = physically_available
@@ -226,13 +226,13 @@ class ControlApp:
                     if not self.photo_camera_combo.get():
                         self.photo_camera_combo.current(0)
                 else:
-                    self.photo_camera_combo['values'] = ("Keine Online-Kameras verfügbar",)
+                    self.photo_camera_combo['values'] = ("No online cameras available",)
                     self.photo_camera_combo.current(0)
                 
-                print(f"Photo-Combo aktualisiert: {len(online_cameras)} Online-Kameras")
+                print(f"Photo combo updated: {len(online_cameras)} online cameras")
                 
             except Exception as e:
-                print(f"Fehler beim Aktualisieren der Photo-Camera-Combo: {e}")
+                print(f"Error updating photo camera combo: {e}")
     
     def refresh_camera_streams_only(self):
         """Refresh camera streams without rebuilding the entire GUI"""
@@ -246,9 +246,9 @@ class ControlApp:
                     if hasattr(webcam, 'start_stream'):
                         try:
                             webcam.start_stream()
-                            print(f"Stream für Kamera {cam_index} gestartet")
+                            print(f"Stream started for camera {cam_index}")
                         except Exception as e:
-                            print(f"Fehler beim Starten des Streams für Kamera {cam_index}: {e}")
+                            print(f"Error starting stream for camera {cam_index}: {e}")
             
             print("Camera streams updated")
             
@@ -272,7 +272,7 @@ class ControlApp:
                 
                 # Erstelle nur Webcam-Instanz wenn physisch verfügbar
                 if device_index in getattr(self, 'physically_available_cameras', []):
-                    print(f"Initialize JSON camera index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
+                    print(f"Initialized JSON camera index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
                     
                     from webcam_helper import WebcamHelper
                     webcam = WebcamHelper(
@@ -283,7 +283,7 @@ class ControlApp:
                     )
                     self.webcams[cam_index] = webcam
                 else:
-                    print(f"Kamera Index {cam_index}: {camera['name']} (USB-{device_index}) - OFFLINE - Keine Webcam-Instanz erstellt")
+                    print(f"Camera index {cam_index}: {camera['name']} (USB-{device_index}) - OFFLINE - No webcam instance created")
           # Setze primäre Kamera auf erste verfügbare online Kamera
         if self.available_cameras and self.webcams:
             # Find first camera that has a webcam instance (is online)

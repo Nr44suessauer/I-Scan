@@ -699,7 +699,7 @@ class GUIBuilder:
         photo_frame.pack(fill="x", padx=5, pady=2)
         
         # Camera selection for photo
-        tk.Label(photo_frame, text="Aktiv:", font=("Arial", 8)).pack(side=tk.LEFT)
+        tk.Label(photo_frame, text="Active:", font=("Arial", 8)).pack(side=tk.LEFT)
         photo_camera_var = tk.StringVar(value="0")
         photo_camera_combo = ttk.Combobox(photo_frame, textvariable=photo_camera_var,
                                          width=5, font=("Arial", 8), state="readonly")

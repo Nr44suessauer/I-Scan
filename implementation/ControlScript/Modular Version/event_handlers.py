@@ -42,10 +42,10 @@ class EventHandlers:
         if hasattr(self.app, 'calc_widgets'):
             self.app.calc_widgets['visual_btn'].config(command=self.execute_visualisation_mode)
             self.app.calc_widgets['silent_btn'].config(command=self.execute_silent_mode)
-          # Camera tab selection callback
+        # Camera tab selection callback
         if hasattr(self.app, 'camera_notebook'):
             self.app.camera_notebook.bind('<<NotebookTabChanged>>', self.on_camera_tab_changed)
-          # Camera selection combobox callback
+        # Camera selection combobox callback
         if hasattr(self.app, 'camera_combo') and self.app.camera_combo is not None:
             self.app.camera_combo.bind('<<ComboboxSelected>>', self.on_camera_selection_changed)
         
@@ -96,12 +96,12 @@ class EventHandlers:
             # Stop current camera if running
             if hasattr(self.app, 'webcam') and self.app.webcam.running:
                 self.app.webcam.stoppen()
-              # Switch to the selected camera
+            # Switch to the selected camera
             if current_tab < len(self.app.available_cameras):
                 camera_index = self.app.available_cameras[current_tab]
                 self.app.current_camera_index = camera_index
                 self.app.webcam = self.app.webcams[camera_index]
-                  # Update the current camera info with COM port and model
+                # Update the current camera info with COM port and model
                 self.app.update_current_camera_info()
                 
                 # Automatically start the camera stream with the correct panel
@@ -125,9 +125,9 @@ class EventHandlers:
             current_camera_label = self.app.camera_labels[current_tab]
             result = self.app.webcam.stream_starten(current_camera_label)
             if result:
-                self.app.logger.log(f"Camera {self.app.current_camera_index} gestartet")
+                self.app.logger.log(f"Camera {self.app.current_camera_index} started")
             else:
-                self.app.logger.log(f"Fehler beim Starten der Camera {self.app.current_camera_index}")
+                self.app.logger.log(f"Error starting Camera {self.app.current_camera_index}")
         except Exception as e:
             self.app.logger.log(f"Error starting camera: {str(e)}")
     
@@ -136,15 +136,15 @@ class EventHandlers:
         self.app.webcam.stoppen()
         # Update camera info to show stopped state
         if hasattr(self.app, 'current_camera_label'):
-            self.app.current_camera_label.config(text="Kamera gestoppt")
-        self.app.logger.log("Kamera gestoppt")
+            self.app.current_camera_label.config(text="Camera stopped")
+        self.app.logger.log("Camera stopped")
     
     def on_refresh_cameras(self):
         """Refresh all cameras"""
         try:
             self.app.refresh_cameras()
         except Exception as e:
-            self.app.logger.log(f"❌ Fehler beim Refresh der Kameras: {e}")
+            self.app.logger.log(f"❌ Error refreshing cameras: {e}")
 
     def on_take_photo(self):
         """Take photo from selected camera in settings panel"""
@@ -163,7 +163,7 @@ class EventHandlers:
                         if match:
                             camera_index = int(match.group())
                         else:
-                            self.app.logger.log(f"Fehler: Kann Kamera-Index nicht aus '{selected_camera}' extrahieren")
+                            self.app.logger.log(f"Error: Cannot extract camera index from '{selected_camera}'")
                             return
                     
                     # Use the selected camera for taking photo
@@ -171,22 +171,22 @@ class EventHandlers:
                         webcam = self.app.webcams[camera_index]
                         success = webcam.shoot_pic(delay=self.app.global_delay)
                         if success:
-                            self.app.logger.log(f"Foto aufgenommen von Kamera {camera_index}")
+                            self.app.logger.log(f"Photo taken from camera {camera_index}")
                         else:
-                            self.app.logger.log(f"Fehler beim Aufnehmen des Fotos von Kamera {camera_index}")
+                            self.app.logger.log(f"Error taking photo from camera {camera_index}")
                     else:
-                        self.app.logger.log(f"Kamera {camera_index} nicht verfügbar")
+                        self.app.logger.log(f"Camera {camera_index} not available")
                 else:
-                    self.app.logger.log("Keine Kamera ausgewählt")
+                    self.app.logger.log("No camera selected")
             else:
                 # Fallback to default behavior if no combo box available
                 success = self.app.webcam.shoot_pic(delay=self.app.global_delay)
                 if success:
-                    self.app.logger.log("Foto aufgenommen")
+                    self.app.logger.log("Photo taken")
                 else:
-                    self.app.logger.log("Fehler beim Aufnehmen des Fotos")
+                    self.app.logger.log("Error taking photo")
         except Exception as e:
-            self.app.logger.log(f"Fehler beim Foto aufnehmen: {str(e)}")
+            self.app.logger.log(f"Error taking photo: {str(e)}")
     
     def on_add_photo_to_queue(self):
         """Add photo to queue"""
@@ -195,7 +195,7 @@ class EventHandlers:
     def on_camera_config(self):
         """Open camera configuration dialog"""
         self.app.open_camera_config()
-        # Nach dem Schließen des Dialogs, aktualisiere die Anzeigen
+        # After closing the dialog, update the displays
         self.app.update_camera_tab_labels()
         self.app.update_current_camera_info()
     
@@ -207,18 +207,18 @@ class EventHandlers:
             from webcam_helper import WebcamHelper
             self.app.webcam = WebcamHelper(device_index=idx, frame_size=(320, 240))
             self.app.widgets['webcam'] = self.app.webcam
-            self.app.logger.log(f"Kamera Device Index auf {idx} gesetzt. Kamera neu initialisiert.")
+            self.app.logger.log(f"Camera device index set to {idx}. Camera reinitialized.")
         except Exception as e:
-            self.app.logger.log(f"Fehler beim Setzen des Kamera Device Index: {e}")
+            self.app.logger.log(f"Error setting camera device index: {e}")
     
     def on_set_delay(self):
         """Set autofocus delay"""
         try:
             self.app.global_delay = float(self.app.camera_delay_var.get())
-            self.app.logger.log(f"Globale Autofokus-Delay auf {self.app.global_delay}s gesetzt")
+            self.app.logger.log(f"Global autofocus delay set to {self.app.global_delay}s")
         except ValueError:
-            self.app.logger.log("Fehler: Ungültiger Delay-Wert")
-      # Servo event handlers
+            self.app.logger.log("Error: Invalid delay value")
+    # Servo event handlers
     def on_servo_execute(self):
         """Execute servo command in separate thread to avoid blocking camera"""
         def servo_thread():
@@ -245,7 +245,7 @@ class EventHandlers:
     def on_stepper_add_to_queue(self):
         """Add stepper to queue"""
         self.app.queue_ops.add_stepper_to_queue()
-      # LED event handlers
+    # LED event handlers
     def on_led_execute(self):
         """Execute LED color command in separate thread to avoid blocking camera"""
         def led_thread():
@@ -271,7 +271,7 @@ class EventHandlers:
     def on_brightness_add_to_queue(self):
         """Add LED brightness to queue"""
         self.app.queue_ops.add_brightness_to_queue()
-      # Button event handlers
+    # Button event handlers
     def on_button_execute(self):
         """Execute button status command in separate thread to avoid blocking camera"""
         def button_thread():
@@ -322,10 +322,10 @@ class EventHandlers:
             while True:
                 base_url = self.app.base_url_var.get()
                 if not base_url:
-                    self.app.logger.log("Keine URL konfiguriert!")
+                    self.app.logger.log("No URL configured!")
                     break
                 
-                self.app.logger.log(f"Führe Warteschlange für {base_url} aus...")
+                self.app.logger.log(f"Executing queue for {base_url} ...")
                 self.app.operation_queue.execute_all(
                     base_url,
                     self.app.widgets,
@@ -338,7 +338,7 @@ class EventHandlers:
                 if not self.app.repeat_queue.get():
                     break
                 
-                self.app.logger.log("Wiederhole Warteschlange...")
+                self.app.logger.log("Repeating queue ...")
         
         threading.Thread(target=run_queue_with_repeat, daemon=True).start()
     
@@ -363,9 +363,9 @@ class EventHandlers:
             # Check if operation_queue has export method
             if hasattr(self.app.operation_queue, 'export_to_csv'):
                 self.app.operation_queue.export_to_csv(filename)
-                self.app.logger.log(f"Queue exportiert nach: {filename}")
+                self.app.logger.log(f"Queue exported to: {filename}")
             else:
-                self.app.logger.log("Export-Funktion nicht verfügbar")
+                self.app.logger.log("Export function not available")
     
     def on_import_queue(self):
         """Import queue from CSV"""
@@ -376,26 +376,26 @@ class EventHandlers:
             # Check if operation_queue has import method
             if hasattr(self.app.operation_queue, 'import_from_csv'):
                 self.app.operation_queue.import_from_csv(filename)
-                self.app.logger.log(f"Queue importiert von: {filename}")
+                self.app.logger.log(f"Queue imported from: {filename}")
             else:
-                self.app.logger.log("Import-Funktion nicht verfügbar")
+                self.app.logger.log("Import function not available")
     
     def on_pause_queue(self):
         """Pause/Resume queue execution"""
         if hasattr(self.app.operation_queue, 'is_paused'):
             if self.app.operation_queue.is_paused:
                 self.app.operation_queue.is_paused = False
-                self.app.queue_pause_btn.config(text="Pausieren", bg="orange")
-                self.app.logger.log("Queue-Ausführung fortgesetzt")
+                self.app.queue_pause_btn.config(text="Pause", bg="orange")
+                self.app.logger.log("Queue execution resumed")
             else:
                 self.app.operation_queue.is_paused = True
-                self.app.queue_pause_btn.config(text="Fortsetzen", bg="lightblue")
-                self.app.logger.log("Queue-Ausführung pausiert")
+                self.app.queue_pause_btn.config(text="Resume", bg="lightblue")
+                self.app.logger.log("Queue execution paused")
         else:
             # Add pause functionality to operation queue if not available
             self.app.operation_queue.is_paused = True
-            self.app.queue_pause_btn.config(text="Fortsetzen", bg="lightblue")
-            self.app.logger.log("Queue-Ausführung pausiert")
+            self.app.queue_pause_btn.config(text="Resume", bg="lightblue")
+            self.app.logger.log("Queue execution paused")
     
     def on_execute_selected_operation(self):
         """Execute only the selected operation from queue"""
@@ -404,13 +404,13 @@ class EventHandlers:
             selected_index = selection[0]
             base_url = self.app.base_url_var.get()
             if not base_url:
-                self.app.logger.log("Keine URL konfiguriert!")
+                self.app.logger.log("No URL configured!")
                 return
             
             # Get the operation from the queue
             if hasattr(self.app.operation_queue, 'operations') and selected_index < len(self.app.operation_queue.operations):
                 operation = self.app.operation_queue.operations[selected_index]
-                self.app.logger.log(f"Führe ausgewählte Operation aus: {operation}")
+                self.app.logger.log(f"Executing selected operation: {operation}")
                 
                 # Execute single operation
                 def execute_single():
@@ -425,9 +425,9 @@ class EventHandlers:
                 
                 threading.Thread(target=execute_single, daemon=True).start()
             else:
-                self.app.logger.log("Fehler beim Zugriff auf die ausgewählte Operation")
+                self.app.logger.log("Error accessing selected operation")
         else:
-            self.app.logger.log("Keine Operation ausgewählt")
+            self.app.logger.log("No operation selected")
     
     def on_duplicate_selected_operation(self):
         """Duplicate the selected operation in queue"""
@@ -439,11 +439,11 @@ class EventHandlers:
                 # Add copy of the operation
                 self.app.operation_queue.operations.insert(selected_index + 1, operation.copy() if hasattr(operation, 'copy') else operation)
                 self.app.operation_queue.update_display()
-                self.app.logger.log("Operation kopiert")
+                self.app.logger.log("Operation duplicated")
             else:
-                self.app.logger.log("Fehler beim Kopieren der Operation")
+                self.app.logger.log("Error duplicating operation")
         else:
-            self.app.logger.log("Keine Operation zum Kopieren ausgewählt")
+            self.app.logger.log("No operation selected to duplicate")
     
     def on_move_operation_up(self):
         """Move selected operation up in queue"""
@@ -457,11 +457,11 @@ class EventHandlers:
                 self.app.operation_queue.update_display()
                 # Keep selection on the moved item
                 self.app.queue_list.selection_set(selected_index - 1)
-                self.app.logger.log("Operation nach oben verschoben")
+                self.app.logger.log("Operation moved up")
             else:
-                self.app.logger.log("Operation kann nicht weiter nach oben verschoben werden")
+                self.app.logger.log("Operation cannot be moved further up")
         else:
-            self.app.logger.log("Keine Operation zum Verschieben ausgewählt")
+            self.app.logger.log("No operation selected to move up")
     
     def on_move_operation_down(self):
         """Move selected operation down in queue"""
@@ -473,12 +473,13 @@ class EventHandlers:
                 operations = self.app.operation_queue.operations
                 operations[selected_index], operations[selected_index + 1] = operations[selected_index + 1], operations[selected_index]
                 self.app.operation_queue.update_display()
-                # Keep selection on the moved item                self.app.queue_list.selection_set(selected_index + 1)
-                self.app.logger.log("Operation nach unten verschoben")
+                # Keep selection on the moved item
+                self.app.queue_list.selection_set(selected_index + 1)
+                self.app.logger.log("Operation moved down")
             else:
-                self.app.logger.log("Operation kann nicht weiter nach unten verschoben werden")
+                self.app.logger.log("Operation cannot be moved further down")
         else:
-            self.app.logger.log("Keine Operation zum Verschieben ausgewählt")
+            self.app.logger.log("No operation selected to move down")
 
     def on_edit_selected_operation(self):
         """Edit selected operation in queue"""
@@ -489,9 +490,9 @@ class EventHandlers:
                 operation = self.app.operation_queue.operations[selected_index]
                 self._show_edit_dialog(operation, selected_index)
             else:
-                self.app.logger.log("Fehler beim Zugriff auf die Operation")
+                self.app.logger.log("Error accessing operation")
         else:
-            self.app.logger.log("Keine Operation zum Bearbeiten ausgewählt")
+            self.app.logger.log("No operation selected to edit")
     
     def on_queue_settings(self):
         """Show queue execution settings"""
@@ -503,17 +504,17 @@ class EventHandlers:
         from tkinter import messagebox
         
         edit_window = tk.Toplevel(self.app.root)
-        edit_window.title(f"Operation {index + 1} bearbeiten")
+        edit_window.title(f"Edit Operation {index + 1}")
         edit_window.geometry("350x300")
         edit_window.transient(self.app.root)
         edit_window.grab_set()
         
         # Info
-        tk.Label(edit_window, text=f"Typ: {operation['type']}", font=("Arial", 10, "bold")).pack(pady=5)
+        tk.Label(edit_window, text=f"Type: {operation['type']}", font=("Arial", 10, "bold")).pack(pady=5)
         tk.Label(edit_window, text=operation['description'], wraplength=300).pack(pady=5)
         
         # Parameters
-        params_frame = tk.LabelFrame(edit_window, text="Parameter")
+        params_frame = tk.LabelFrame(edit_window, text="Parameters")
         params_frame.pack(fill="both", expand=True, padx=10, pady=5)
         
         param_vars = {}
@@ -529,17 +530,17 @@ class EventHandlers:
             tk.Entry(frame, textvariable=param_vars[param_name]).pack(side="left", fill="x", expand=True, padx=5)
         
         # Execution settings
-        exec_frame = tk.LabelFrame(edit_window, text="Ausführung")
+        exec_frame = tk.LabelFrame(edit_window, text="Execution")
         exec_frame.pack(fill="x", padx=10, pady=5)
         
         exec_row = tk.Frame(exec_frame)
         exec_row.pack(fill="x", padx=5, pady=5)
         
-        tk.Label(exec_row, text="Verzögerung (s):").pack(side="left")
+        tk.Label(exec_row, text="Delay (s):").pack(side="left")
         delay_var = tk.StringVar(value=str(operation['params'].get('delay', 0.5)))
         tk.Entry(exec_row, textvariable=delay_var, width=6).pack(side="left", padx=5)
         
-        tk.Label(exec_row, text="Wiederh.:").pack(side="left", padx=(20, 0))
+        tk.Label(exec_row, text="Repeat:").pack(side="left", padx=(20, 0))
         repeat_var = tk.StringVar(value=str(operation['params'].get('repeat_count', 1)))
         tk.Entry(exec_row, textvariable=repeat_var, width=6).pack(side="left", padx=5)
         
@@ -559,45 +560,42 @@ class EventHandlers:
                         new_params[param_name] = float(value)
                     else:
                         new_params[param_name] = value
-                
                 new_params['delay'] = float(delay_var.get()) if delay_var.get() else 0.5
                 new_params['repeat_count'] = int(repeat_var.get()) if repeat_var.get() else 1
-                
                 self.app.operation_queue.operations[index]['params'] = new_params
                 self.app.operation_queue.update_display()
                 edit_window.destroy()
-                self.app.logger.log(f"Operation {index + 1} bearbeitet")
+                self.app.logger.log(f"Operation {index + 1} edited")
             except Exception as e:
-                messagebox.showerror("Fehler", f"Speichern fehlgeschlagen:\n{str(e)}")
-        
-        tk.Button(btn_frame, text="Speichern", command=save_changes, bg="lightgreen", width=10).pack(side="left", padx=5)
-        tk.Button(btn_frame, text="Abbrechen", command=edit_window.destroy, bg="lightcoral", width=10).pack(side="left", padx=5)
+                messagebox.showerror("Error", f"Save failed:\n{str(e)}")
+        tk.Button(btn_frame, text="Save", command=save_changes, bg="lightgreen", width=10).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Cancel", command=edit_window.destroy, bg="lightcoral", width=10).pack(side="left", padx=5)
     
     def _show_queue_settings_dialog(self):
         """Show queue settings dialog"""
         import tkinter as tk
         
         settings_window = tk.Toplevel(self.app.root)
-        settings_window.title("Queue-Einstellungen")
+        settings_window.title("Queue Settings")
         settings_window.geometry("300x200")
         settings_window.transient(self.app.root)
         settings_window.grab_set()
         
         # Global settings
-        global_frame = tk.LabelFrame(settings_window, text="Globale Einstellungen")
+        global_frame = tk.LabelFrame(settings_window, text="Global Settings")
         global_frame.pack(fill="x", padx=10, pady=10)
         
         auto_repeat_var = tk.BooleanVar(value=self.app.repeat_queue.get())
-        tk.Checkbutton(global_frame, text="Auto-Wiederholung der Queue", 
+        tk.Checkbutton(global_frame, text="Auto-repeat queue", 
                       variable=auto_repeat_var).pack(anchor="w", padx=5, pady=5)
         
         # Batch operations
-        batch_frame = tk.LabelFrame(settings_window, text="Batch-Operationen")
+        batch_frame = tk.LabelFrame(settings_window, text="Batch Operations")
         batch_frame.pack(fill="x", padx=10, pady=5)
         
         apply_frame = tk.Frame(batch_frame)
         apply_frame.pack(fill="x", padx=5, pady=5)
-        tk.Label(apply_frame, text="Verzögerung für alle:").pack(side="left")
+        tk.Label(apply_frame, text="Delay for all:").pack(side="left")
         batch_delay_var = tk.StringVar(value="0.5")
         tk.Entry(apply_frame, textvariable=batch_delay_var, width=8).pack(side="left", padx=5)
         
@@ -607,12 +605,11 @@ class EventHandlers:
                 for op in self.app.operation_queue.operations:
                     op['params']['delay'] = delay
                 self.app.operation_queue.update_display()
-                self.app.logger.log(f"Verzögerung von {delay}s auf alle Operationen angewendet")
+                self.app.logger.log(f"Delay of {delay}s applied to all operations")
             except Exception as e:
                 from tkinter import messagebox
-                messagebox.showerror("Fehler", f"Anwenden fehlgeschlagen:\n{str(e)}")
-        
-        tk.Button(apply_frame, text="Anwenden", command=apply_to_all, bg="lightyellow").pack(side="left", padx=5)
+                messagebox.showerror("Error", f"Apply failed:\n{str(e)}")
+        tk.Button(apply_frame, text="Apply", command=apply_to_all, bg="lightyellow").pack(side="left", padx=5)
         
         # Buttons
         btn_frame = tk.Frame(settings_window)
@@ -621,10 +618,9 @@ class EventHandlers:
         def save_settings():
             self.app.repeat_queue.set(auto_repeat_var.get())
             settings_window.destroy()
-            self.app.logger.log("Queue-Einstellungen gespeichert")
-        
+            self.app.logger.log("Queue settings saved")
         tk.Button(btn_frame, text="OK", command=save_settings, bg="lightgreen", width=10).pack(side="left", padx=5)
-        tk.Button(btn_frame, text="Abbrechen", command=settings_window.destroy, bg="lightcoral", width=10).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Cancel", command=settings_window.destroy, bg="lightcoral", width=10).pack(side="left", padx=5)
 
     # Calculator Commands Panel Methods
     def update_command_display(self, event=None):
@@ -668,7 +664,7 @@ class EventHandlers:
             servo_max = float(self.app.calc_vars['servo_max'].get())
             servo_neutral = float(self.app.calc_vars['servo_neutral'].get())
             
-            self.app.logger.log(f"🖼️ Starte Visualisation Mode: {csv_name}")
+            self.app.logger.log(f"🖼️ Starting Visualisation Mode: {csv_name}")
             self.app.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
             self.app.logger.log(f"🔧 Servo: Min={servo_min}°, Max={servo_max}°, Neutral={servo_neutral}°")
 
@@ -750,7 +746,7 @@ class EventHandlers:
                         csv_file = os.path.join(output_dir, f"{csv_name}.csv")
                         if os.path.exists(csv_file):
                             from tkinter import messagebox
-                            if messagebox.askyesno("CSV Import", "CSV was generated successfully. Do you want to import the CSV file into the queue now?"):
+                        if messagebox.askyesno("CSV Import", "CSV was generated successfully. Do you want to import the CSV file into the queue now?"):
                                 self.import_specific_csv(csv_file)
                     else:
                         self.app.logger.log(f"❌ Silent Mode failed: {result.stderr}")
@@ -760,20 +756,20 @@ class EventHandlers:
             threading.Thread(target=run_command).start()
             
         except Exception as e:
-            self.app.logger.log(f"❌ Fehler bei Silent Mode: {e}")
+            self.app.logger.log(f"❌ Error in Silent Mode: {e}")
             from tkinter import messagebox
-            messagebox.showerror("Fehler", f"Fehler bei der Silent Mode Ausführung:\n{e}")
+            messagebox.showerror("Error", f"Error during Silent Mode execution:\n{e}")
 
     def import_specific_csv(self, csv_file):
         """Import a specific CSV file to the queue"""
         try:
             if hasattr(self.app.operation_queue, 'import_from_csv'):
                 self.app.operation_queue.import_from_csv(csv_file)
-                self.app.logger.log(f"CSV importiert: {csv_file}")
+                self.app.logger.log(f"CSV imported: {csv_file}")
             else:
-                self.app.logger.log("Import-Funktion nicht verfügbar")
+                self.app.logger.log("Import function not available")
         except Exception as e:
-            self.app.logger.log(f"Fehler beim CSV Import: {e}")
+            self.app.logger.log(f"Error importing CSV: {e}")
 
     def update_servo_graph_image(self):
         """
@@ -818,7 +814,7 @@ class EventHandlers:
                 self.app.servo_graph_img = ImageTk.PhotoImage(img)
                 self.app.calc_widgets['servo_graph_img_label'].config(image=self.app.servo_graph_img, text="")
             else:
-                self.app.calc_widgets['servo_graph_img_label'].config(image="", text=f"Servo Graph nicht gefunden:\n{graph_path}")
+                self.app.calc_widgets['servo_graph_img_label'].config(image="", text=f"Servo graph not found:\n{graph_path}")
             
             # Load Cone Detail with uniform scaling
             if os.path.exists(cone_path):
@@ -833,14 +829,14 @@ class EventHandlers:
                 self.app.servo_cone_img = ImageTk.PhotoImage(img)
                 self.app.calc_widgets['servo_cone_img_label'].config(image=self.app.servo_cone_img, text="")
             else:
-                self.app.calc_widgets['servo_cone_img_label'].config(image="", text=f"Cone Detail nicht gefunden:\n{cone_path}")
+                self.app.calc_widgets['servo_cone_img_label'].config(image="", text=f"Cone detail not found:\n{cone_path}")
                 
         except Exception as e:
             if hasattr(self.app, 'calc_widgets'):
                 if 'servo_graph_img_label' in self.app.calc_widgets:
-                    self.app.calc_widgets['servo_graph_img_label'].config(image="", text=f"Fehler beim Laden des Servo Graphs: {e}")
+                    self.app.calc_widgets['servo_graph_img_label'].config(image="", text=f"Error loading servo graph: {e}")
                 if 'servo_cone_img_label' in self.app.calc_widgets:
-                    self.app.calc_widgets['servo_cone_img_label'].config(image="", text=f"Fehler beim Laden des Cone Details: {e}")
+                    self.app.calc_widgets['servo_cone_img_label'].config(image="", text=f"Error loading cone detail: {e}")
 
     def on_camera_selection_changed(self, event):
         """Handle camera selection change from combobox"""
@@ -858,7 +854,7 @@ class EventHandlers:
                 if match:
                     selected_camera = int(match.group())
                 else:
-                    self.app.logger.log(f"Fehler: Kann Kamera-Index nicht aus '{selected_camera_text}' extrahieren")
+                    self.app.logger.log(f"Error: Cannot extract camera index from '{selected_camera_text}'")
                     return
             
             # Stop current camera if running
