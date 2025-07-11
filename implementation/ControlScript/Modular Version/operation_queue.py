@@ -1,6 +1,6 @@
 """
-Operations-Queue-Modul
-Verwaltet die Operationswarteschlange
+Operations Queue Module
+Manages the operations queue
 
 Author: Marc Nauendorf
 Email: marc.nauendorf@hs-heilbronn.de
@@ -16,17 +16,17 @@ PI = 3.141592653589793
 
 class OperationQueue:
     """
-    Klasse für die Verwaltung der Operationswarteschlange
-    Verarbeitet das Hinzufügen, Entfernen und Ausführen von Operationen in einer Warteschlange.
+    Class for managing the operations queue
+    Handles adding, removing, and executing operations in a queue.
     """
     
     def __init__(self, logger, queue_list):
         """
-        Initialisiert die Operationswarteschlange
-        
+        Initializes the operations queue
+
         Args:
-            logger: Die Logger-Instanz für die Protokollierung
-            queue_list: Das Listbox-Widget zur Anzeige der Warteschlange
+            logger: The logger instance for logging
+            queue_list: The Listbox widget for displaying the queue
         """
         self.operations = []
         self.logger = logger
@@ -36,8 +36,8 @@ class OperationQueue:
     
     def add(self, operation_type, params, description):
         """
-        Fügt eine Operation zur Warteschlange hinzu
-        
+        Adds an operation to the queue
+
         Args:
             operation_type (str): The type of operation (servo, stepper, etc.)
             params (dict): The parameters for the operation
@@ -81,12 +81,12 @@ class OperationQueue:
                     self.add(op_type, params, description)
                     imported_count += 1
                     
-            self.logger.log(f"✅ CSV erfolgreich importiert: {os.path.basename(file_path)}")
-            self.logger.log(f"📋 {imported_count} Operationen zur Warteschlange hinzugefügt")
+            self.logger.log(f"✅ CSV successfully imported: {os.path.basename(file_path)}")
+            self.logger.log(f"📋 {imported_count} operations added to the queue")
             
             # Optional: Show success message
             from tkinter import messagebox
-            messagebox.showinfo("Import erfolgreich", f"CSV wurde erfolgreich importiert!\n{imported_count} Operationen hinzugefügt.")
+            messagebox.showinfo("Import successful", f"CSV was successfully imported!\n{imported_count} operations added.")
             
         except Exception as e:
             self.logger.log(f"❌ Fehler beim CSV-Import: {str(e)}")
@@ -116,16 +116,16 @@ class OperationQueue:
                         op['description']
                     ])
                     
-            self.logger.log(f"✅ CSV erfolgreich exportiert: {os.path.basename(file_path)}")
+            self.logger.log(f"✅ CSV successfully exported: {os.path.basename(file_path)}")
             
             # Optional: Show success message
             from tkinter import messagebox
-            messagebox.showinfo("Export erfolgreich", f"Warteschlange wurde als CSV gespeichert: {os.path.basename(file_path)}")
+            messagebox.showinfo("Export successful", f"Queue was saved as CSV: {os.path.basename(file_path)}")
             
         except Exception as e:
-            self.logger.log(f"❌ Fehler beim CSV-Export: {str(e)}")
+            self.logger.log(f"❌ Error during CSV export: {str(e)}")
             from tkinter import messagebox
-            messagebox.showerror("Export Fehler", f"Fehler beim Exportieren der CSV-Datei:\n{str(e)}")
+            messagebox.showerror("Export error", f"Error exporting CSV file:\n{str(e)}")
 
     def remove(self, index):
         """
@@ -270,7 +270,7 @@ class OperationQueue:
                     if 'global_delay' in widgets and hasattr(widgets['global_delay'], 'switch_camera'):
                         main_app = widgets['global_delay']
                         
-                        self.logger.log(f"📷 Bereite Foto mit Kamera {camera_index} vor...")
+                        self.logger.log(f"📷 Preparing photo with camera {camera_index}...")
                         
                         # Switch camera and ensure stream is running
                         stream_success = main_app.switch_camera(camera_index)
@@ -280,12 +280,15 @@ class OperationQueue:
                             if camera_index in main_app.webcams:
                                 webcam = main_app.webcams[camera_index]
                                 self.logger.log(f"📸 Nehme Foto mit Kamera {camera_index} auf (Stream initialisiert)...")
+                                self.logger.log(f"📸 Taking photo with camera {camera_index} (stream initialized)...")
                                 foto_path = webcam.shoot_pic(delay=delay)
                             else:
                                 self.logger.log(f"❌ Kamera {camera_index} nicht verfügbar")
+                                self.logger.log(f"❌ Camera {camera_index} not available")
                                 foto_path = None
                         else:
                             self.logger.log(f"❌ Kamera {camera_index} Stream konnte nicht gestartet werden")
+                            self.logger.log(f"❌ Camera {camera_index} stream could not be started")
                             foto_path = None
                     elif 'webcams' in widgets and camera_index in widgets['webcams']:
                         # Direct camera access if switch fails
@@ -296,12 +299,12 @@ class OperationQueue:
                         foto_path = widgets['webcam'].shoot_pic(delay=delay)
                         
                     if foto_path:
-                        self.logger.log(f"✅ Foto gespeichert von Kamera {camera_index}: {foto_path}")
+                        self.logger.log(f"✅ Photo saved from camera {camera_index}: {foto_path}")
                     else:
-                        self.logger.log(f"❌ Fehler beim Aufnehmen des Fotos von Kamera {camera_index}")
+                        self.logger.log(f"❌ Error taking photo from camera {camera_index}")
                         
                 except Exception as e:
-                    self.logger.log(f"❌ Fehler bei Foto-Operation: {e}")
+                    self.logger.log(f"❌ Error during photo operation: {e}")
                     # Fallback
                     foto_path = widgets['webcam'].shoot_pic(delay=delay)
                     if foto_path:

@@ -1,6 +1,6 @@
 """
-JSON-basierter Kamera-Stream-Manager
-Erstellt automatisch Streams für alle konfigurierten Kameras
+JSON-based camera stream manager
+Automatically creates streams for all configured cameras
 """
 
 import cv2
@@ -15,14 +15,14 @@ except ImportError:
 
 
 class CameraStream:
-    """Einzelner Kamera-Stream"""
+    """Single camera stream"""
     
     def __init__(self, camera_config: Dict, on_frame_callback: Optional[Callable] = None):
         self.config = camera_config
         self.index = camera_config['index']
         self.name = camera_config['name']
-        self.verbindung = camera_config['verbindung']
-        self.beschreibung = camera_config['beschreibung']
+        self.connection = camera_config['connection']
+        self.description = camera_config['description']
         self.hardware_interface = camera_config.get('hardware_interface', {})
         
         self.cap = None
@@ -32,12 +32,12 @@ class CameraStream:
         self.frame_lock = threading.Lock()
         self.on_frame_callback = on_frame_callback
         
-        # Stream-Statistiken
+        # Stream statistics
         self.frames_captured = 0
         self.last_frame_time = 0
         self.fps_actual = 0
         
-        print(f"CameraStream erstellt: {self.name} ({self.verbindung})")
+        print(f"CameraStream created: {self.name} ({self.connection})")
     
     def connect(self) -> bool:
         """Verbinde zur Kamera"""
@@ -60,7 +60,7 @@ class CameraStream:
                 if 'fps' in self.config:
                     self.cap.set(cv2.CAP_PROP_FPS, self.config['fps'])
                 
-                print(f"USB-Kamera {device_index} erfolgreich verbunden")
+                print(f"USB camera {device_index} connected successfully")
                 return True
             
             elif self.hardware_interface.get('type') == 'network':
@@ -69,14 +69,14 @@ class CameraStream:
                 self.cap = cv2.VideoCapture(stream_url)
                 
                 if not self.cap.isOpened():
-                    print(f"Fehler: Kann Netzwerk-Kamera {stream_url} nicht öffnen")
+                    print(f"Error: Cannot open network camera {stream_url}")
                     return False
                 
-                print(f"Netzwerk-Kamera {stream_url} erfolgreich verbunden")
+                print(f"Network camera {stream_url} connected successfully")
                 return True
             
             else:
-                print(f"Unbekannter Kamera-Typ: {self.hardware_interface.get('type')}")
+                print(f"Unknown camera type: {self.hardware_interface.get('type')}")
                 return False
                 
         except Exception as e:
@@ -84,12 +84,12 @@ class CameraStream:
             return False
     
     def disconnect(self):
-        """Trenne Verbindung zur Kamera"""
+        """Disconnect camera"""
         self.stop_stream()
         if self.cap:
             self.cap.release()
             self.cap = None
-        print(f"Kamera {self.name} getrennt")
+        print(f"Camera {self.name} disconnected")
     
     def start_stream(self) -> bool:
         """Starte Stream"""
@@ -176,7 +176,7 @@ class CameraStream:
         return {
             'name': self.name,
             'index': self.index,
-            'verbindung': self.verbindung,
+            'connection': self.connection,
             'running': self.running,
             'connected': self.cap is not None and self.cap.isOpened() if self.cap else False,
             'frames_captured': self.frames_captured,
@@ -314,20 +314,20 @@ class JSONCameraStreamManager:
                 del self.streams[index]
                 print(f"Kamera {index} entfernt")
     
-    def add_camera_to_config(self, index: int, verbindung: str, beschreibung: str, name: str = None):
-        """Füge neue Kamera zur Konfiguration hinzu"""
-        if self.config.add_camera(index, verbindung, beschreibung, name):
+    def add_camera_to_config(self, index: int, connection: str, description: str, name: str = None):
+        """Add new camera to configuration"""
+        if self.config.add_camera(index, connection, description, name):
             self.update_streams()
-            print(f"Kamera {index} hinzugefügt")
+            print(f"Camera {index} added")
             return True
         return False
     
     def remove_camera_from_config(self, index: int):
-        """Entferne Kamera aus Konfiguration"""
+        """Remove camera from configuration"""
         if self.config.remove_camera(index):
             if index in self.streams:
                 self.streams[index].disconnect()
                 del self.streams[index]
-            print(f"Kamera {index} entfernt")
+            print(f"Camera {index} removed")
             return True
         return False

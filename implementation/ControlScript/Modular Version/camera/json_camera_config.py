@@ -1,6 +1,7 @@
+
 """
-JSON-basierte Kamera-Konfiguration
-Verwaltet Kamera-Einstellungen über JSON-Datei
+JSON-based camera configuration
+Manages camera settings via JSON file
 """
 
 import json
@@ -9,7 +10,7 @@ from typing import List, Dict, Optional
 
 
 class JSONCameraConfig:
-    """JSON-basierte Kamera-Konfiguration"""
+    """JSON-based camera configuration"""
     
     def __init__(self, config_file: str = "cameras_config.json"):
         self.config_file = os.path.join(os.path.dirname(__file__), config_file)
@@ -80,86 +81,78 @@ class JSONCameraConfig:
                 return camera
         return None
     
-    def add_camera(self, index: int, verbindung: str, beschreibung: str, name: str = None) -> bool:
-        """Füge neue Kamera hinzu"""
+    def add_camera(self, index: int, connection: str, description: str, name: str = None) -> bool:
+        """Add new camera"""
         try:
             if 'cameras' not in self.config_data:
                 self.config_data['cameras'] = []
-            
-            # Prüfe ob Index bereits existiert
+            # Check if index already exists
             if self.get_camera_by_index(index):
-                print(f"Kamera mit Index {index} existiert bereits")
+                print(f"Camera with index {index} already exists")
                 return False
-            
             new_camera = {
                 "index": index,
-                "verbindung": verbindung,
-                "beschreibung": beschreibung,
-                "name": name or f"Kamera {index + 1}",
+                "connection": connection,
+                "description": description,
+                "name": name or f"Camera {index + 1}",
                 "enabled": True,
                 "resolution": [640, 480],
                 "fps": 30
             }
-            
             self.config_data['cameras'].append(new_camera)
             return self.save_config()
         except Exception as e:
-            print(f"Fehler beim Hinzufügen der Kamera: {e}")
+            print(f"Error adding camera: {e}")
             return False
     
     def update_camera(self, index: int, **kwargs) -> bool:
-        """Aktualisiere Kamera-Einstellungen"""
+        """Update camera settings"""
         try:
             camera = self.get_camera_by_index(index)
             if not camera:
-                print(f"Kamera mit Index {index} nicht gefunden")
+                print(f"Camera with index {index} not found")
                 return False
-            
-            # Aktualisiere Felder
+            # Update fields
             for key, value in kwargs.items():
                 if key in camera:
                     camera[key] = value
-            
             return self.save_config()
         except Exception as e:
-            print(f"Fehler beim Aktualisieren der Kamera: {e}")
+            print(f"Error updating camera: {e}")
             return False
     
     def remove_camera(self, index: int) -> bool:
-        """Entferne Kamera"""
+        """Remove camera"""
         try:
             cameras = self.config_data.get('cameras', [])
             original_count = len(cameras)
             self.config_data['cameras'] = [cam for cam in cameras if cam.get('index') != index]
-            
             if len(self.config_data['cameras']) < original_count:
                 return self.save_config()
             else:
-                print(f"Kamera mit Index {index} nicht gefunden")
+                print(f"Camera with index {index} not found")
                 return False
         except Exception as e:
-            print(f"Fehler beim Entfernen der Kamera: {e}")
+            print(f"Error removing camera: {e}")
             return False
     
     def get_settings(self) -> Dict:
-        """Hole globale Einstellungen"""
+        """Get global settings"""
         return self.config_data.get('settings', {})
     
     def update_settings(self, **kwargs) -> bool:
-        """Aktualisiere globale Einstellungen"""
+        """Update global settings"""
         try:
             if 'settings' not in self.config_data:
                 self.config_data['settings'] = {}
-            
             for key, value in kwargs.items():
                 self.config_data['settings'][key] = value
-            
             return self.save_config()
         except Exception as e:
-            print(f"Fehler beim Aktualisieren der Einstellungen: {e}")
+            print(f"Error updating settings: {e}")
             return False
     
-    def parse_verbindung(self, connection: str) -> Dict:
+    def parse_connection(self, connection: str) -> Dict:
         """Parse connection string and extract hardware interface"""
         try:
             if connection.startswith("USB:"):
@@ -200,14 +193,12 @@ class JSONCameraConfig:
             return None
     
     def get_available_cameras(self) -> List[Dict]:
-        """Hole alle verfügbaren Kameras mit Hardware-Interface-Info"""
+        """Get all available cameras with hardware interface info"""
         available_cameras = []
-        
         for camera in self.get_enabled_cameras():
-            verbindung_info = self.parse_verbindung(camera['verbindung'])
-            if verbindung_info:
+            connection_info = self.parse_connection(camera['connection'])
+            if connection_info:
                 camera_info = camera.copy()
-                camera_info['hardware_interface'] = verbindung_info
+                camera_info['hardware_interface'] = connection_info
                 available_cameras.append(camera_info)
-        
         return available_cameras

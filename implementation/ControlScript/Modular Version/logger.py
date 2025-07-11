@@ -1,6 +1,6 @@
 """
-Logger-Modul
-Verwaltet die Protokollierung und Anzeige von Nachrichten
+Logger Module
+Manages logging and display of messages
 
 Author: Marc Nauendorf
 Email: marc.nauendorf@hs-heilbronn.de
@@ -12,20 +12,19 @@ import tkinter as tk
 
 class Logger:
     """
-    Klasse für die Protokollierung und Anzeige von Nachrichten
-    Verwaltet die Ausgabeanzeige und verarbeitet Protokollnachrichten zur Aktualisierung
-    von Positions- und Servo-Winkelwerten aus dem Protokollinhalt.
+    Class for logging and displaying messages
+    Manages the output display and processes log messages to update position and servo angle values from the log content.
     """
     
     def __init__(self, output_widget, position_var, servo_angle_var, update_callback):
         """
-        Initialisiert den Logger mit UI-Elementen und zu überwachenden Variablen
-        
+        Initializes the logger with UI elements and variables to monitor
+
         Args:
-            output_widget: Das ScrolledText-Widget, in dem Protokolle angezeigt werden
-            position_var: Die DoubleVar zur Verfolgung der aktuellen Position
-            servo_angle_var: Die IntVar zur Verfolgung des aktuellen Servo-Winkels
-            update_callback: Funktion, die nach der Aktualisierung von Position oder Winkel aufgerufen wird
+            output_widget: The ScrolledText widget where logs are displayed
+            position_var: The DoubleVar for tracking the current position
+            servo_angle_var: The IntVar for tracking the current servo angle
+            update_callback: Function called after updating position or angle
         """
         self.output = output_widget
         self.position = position_var
@@ -34,11 +33,11 @@ class Logger:
     
     def log(self, msg):
         """
-        Zeigt eine Nachricht im Protokoll mit entsprechender Formatierung und Farbe an
-        Analysiert auch die Nachricht, um Positions- und Servo-Winkelwerte zu aktualisieren
-        
+        Displays a message in the log with appropriate formatting and color
+        Also analyzes the message to update position and servo angle values
+
         Args:
-            msg (str): Die zu protokollierende Nachricht
+            msg (str): The message to log
         """
         # Determine message type and select color based on content
         msg_lower = msg.lower()

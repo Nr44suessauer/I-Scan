@@ -118,25 +118,27 @@ class ControlApp:
     
     def setup_available_cameras_json(self):
         """Setup available cameras based on JSON config"""
-        # Hole alle aktivierten Kameras aus JSON-Konfiguration (auch offline)
+        # Get all enabled cameras from JSON configuration (including offline)
         enabled_cameras = self.camera_config.get_enabled_cameras()
         
-        print("JSON-Kamera-Setup:")
+        print("JSON camera setup:")
         for camera in enabled_cameras:
-            connection_info = self.camera_config.parse_verbindung(camera['connection'])
+            connection_info = self.camera_config.parse_connection(camera['connection'])
             print(f"  Index {camera['index']}: {camera['name']} ({camera['connection']}) - {camera['description']}")
             if connection_info:
                 print(f"    Hardware: {connection_info}")
         
-        # Setze verfügbare Kamera-Indices auf alle aktivierten Kameras aus JSON
+        # Set available camera indices to all enabled cameras from JSON
         self.available_cameras = [cam['index'] for cam in enabled_cameras]
-        print(f"JSON-Konfiguration: {len(enabled_cameras)} Kameras konfiguriert: {self.available_cameras}")
+        print(f"JSON configuration: {len(enabled_cameras)} cameras configured: {self.available_cameras}")
+        print(f"JSON configuration: {len(enabled_cameras)} cameras configured: {self.available_cameras}")
         
         # Zusätzlich: Erkenne physisch verfügbare Kameras für Online-Status
         from webcam_helper import WebcamHelper
         physically_available = WebcamHelper.detect_available_cameras()
         self.physically_available_cameras = physically_available
-        print(f"Physisch verfügbare Kameras: {physically_available}")
+        print(f"Physically available cameras: {physically_available}")
+        print(f"Physically available cameras: {physically_available}")
 
     def start_json_monitoring(self):
         """Start monitoring the JSON configuration file for changes"""
@@ -164,7 +166,7 @@ class ControlApp:
                 current_modified = self.get_json_modification_time()
                 
                 if current_modified > self.json_last_modified:
-                    print("JSON-Konfiguration geändert - GUI wird aktualisiert...")
+                    print("JSON configuration changed - updating GUI...")
                     self.json_last_modified = current_modified
                     # Schedule GUI update in main thread
                     self.root.after(100, self.reload_configuration)
@@ -178,19 +180,19 @@ class ControlApp:
     def reload_configuration(self):
         """Reload JSON configuration and completely reinitialize camera system"""
         try:
-            print("JSON-Konfiguration geändert - Führe komplette Neu-Initialisierung durch...")
+            print("JSON configuration changed - Performing complete re-initialization...")
             
-            # Komplette Neu-Initialisierung des Kamera-Systems
+            # Complete re-initialization of the camera system
             self.reinitialize_camera_streams()
             
-            print("Kamera-System erfolgreich neu initialisiert nach JSON-Änderung")
+            print("Camera system successfully re-initialized after JSON change")
             
         except Exception as e:
-            print(f"Fehler beim Neuladen der Konfiguration: {e}")
+            print(f"Error reloading configuration: {e}")
             import traceback
             traceback.print_exc()
-            messagebox.showerror("Konfigurationsfehler", 
-                               f"Fehler beim Laden der JSON-Konfiguration:\n{e}")
+            messagebox.showerror("Configuration error", 
+                               f"Error loading JSON configuration:\n{e}")
     
     def stop_json_monitoring(self):
         """Stop JSON file monitoring"""
@@ -208,7 +210,7 @@ class ControlApp:
                 for cam_index in self.available_cameras:
                     # Check if camera is physically available
                     camera_info = self.camera_config.get_camera_by_index(cam_index)
-                    hardware_info = self.camera_config.parse_verbindung(camera_info['connection'])
+                    hardware_info = self.camera_config.parse_connection(camera_info['connection'])
                     
                     if hardware_info:
                         device_index = hardware_info.get('device_index', cam_index)
@@ -235,7 +237,7 @@ class ControlApp:
     def refresh_camera_streams_only(self):
         """Refresh camera streams without rebuilding the entire GUI"""
         try:
-            print("Aktualisiere Kamera-Streams...")
+            print("Refreshing camera streams...")
             
             # Start streams for available cameras
             for cam_index in self.available_cameras:
@@ -248,10 +250,10 @@ class ControlApp:
                         except Exception as e:
                             print(f"Fehler beim Starten des Streams für Kamera {cam_index}: {e}")
             
-            print("Kamera-Streams aktualisiert")
+            print("Camera streams updated")
             
         except Exception as e:
-            print(f"Fehler beim Aktualisieren der Kamera-Streams: {e}")
+            print(f"Error updating camera streams: {e}")
     
     def setup_webcams_json(self):
         """Setup webcam instances based on JSON configuration (only for physically available cameras)"""
@@ -263,7 +265,7 @@ class ControlApp:
         
         for camera in enabled_cameras:
             cam_index = camera['index']
-            connection_info = self.camera_config.parse_verbindung(camera['connection'])
+            connection_info = self.camera_config.parse_connection(camera['connection'])
             
             if connection_info and connection_info.get('type') == 'usb':
                 device_index = connection_info.get('device_index', 0)
@@ -474,26 +476,25 @@ class ControlApp:
                         if webcam.running:
                             # Don't override the label - let the stream display video frames
                             # The stream_loop in webcam_helper will update the label with video
-                            self.logger.log(f"📹 Kamera {camera_index} Stream gestartet und initialisiert")
+                            self.logger.log(f"📹 Camera {camera_index} stream started and initialized")
                             return True
                         else:
-                            self.logger.log(f"⚠️ Kamera {camera_index} Stream konnte nicht initialisiert werden")
+                            self.logger.log(f"⚠️ Camera {camera_index} stream could not be initialized")
                             return False
                     else:
                         # Update label to show error status
                         cam_info = self.get_camera_info(camera_index)
                         camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
-                        self.logger.log(f"❌ Fehler beim Starten von Kamera {camera_index}")
+                        self.logger.log(f"❌ Error starting camera {camera_index}")
                         return False
                 else:
-                    self.logger.log(f"❌ Kein Label für Kamera {camera_index} gefunden")
+                    self.logger.log(f"❌ No label found for camera {camera_index}")
                     return False
             else:
-                self.logger.log(f"❌ Kamera {camera_index} nicht verfügbar")
+                self.logger.log(f"❌ Camera {camera_index} not available")
                 return False
-                
         except Exception as e:
-            self.logger.log(f"❌ Fehler beim Starten der Kamera {camera_index}: {e}")
+            self.logger.log(f"❌ Error starting camera {camera_index}: {e}")
             return False
 
     def switch_camera(self, camera_index):
@@ -646,7 +647,7 @@ class ControlApp:
                     camera_view_frame.pack(padx=2, pady=2)
 
                     hardware_info = self.camera_config.parse_verbindung(
-                        self.camera_config.get_camera_by_index(cam_index)['verbindung']
+                        self.camera_config.get_camera_by_index(cam_index)['connection']
                     )
                     device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
                     is_online = device_index in getattr(self, 'physically_available_cameras', [])
@@ -857,58 +858,49 @@ Verfügbare Verbindungstypen:
             # Get current content and parse it
             content = editor.get("1.0", "end-1c")
             config_data = json.loads(content)
-            
             # Find the next available index
             existing_indices = [cam.get('index', 0) for cam in config_data.get('cameras', [])]
             next_index = max(existing_indices) + 1 if existing_indices else 0
-            
-            # Create new camera template with dynamic index
+            # Create new camera template with dynamic index (all keys in English)
             new_camera = {
                 "index": next_index,
-                "verbindung": f"USB:{next_index}",
-                "beschreibung": f"Neue Kamera Beschreibung {next_index}",
-                "name": f"Kamera {next_index + 1}",
+                "connection": f"USB:{next_index}",
+                "description": f"New camera description {next_index}",
+                "name": f"Camera {next_index + 1}",
                 "enabled": True,
                 "resolution": [640, 480],
                 "fps": 30
             }
-            
             # Add the new camera to the config
             if 'cameras' not in config_data:
                 config_data['cameras'] = []
-            
             config_data['cameras'].append(new_camera)
-            
             # Convert back to JSON with proper formatting
             new_content = json.dumps(config_data, indent=2, ensure_ascii=False)
-            
             # Update the editor
             editor.delete("1.0", "end")
             editor.insert("1.0", new_content)
-            
             # Scroll to the end to show the new camera
             editor.see("end")
-            
-            messagebox.showinfo("Erfolg", f"✅ Neue Kamera mit Index {next_index} hinzugefügt!")
-            
+            messagebox.showinfo("Success", f"✅ New camera with index {next_index} added!")
         except json.JSONDecodeError as e:
-            messagebox.showerror("JSON-Fehler", f"Ungültiges JSON-Format:\n{e}")
+            messagebox.showerror("JSON Error", f"Invalid JSON format:\n{e}")
         except Exception as e:
-            messagebox.showerror("Fehler", f"Fehler beim Hinzufügen der Kamera:\n{e}")
+            messagebox.showerror("Error", f"Error adding camera:\n{e}")
     
     def reset_json_editor(self, editor):
         """Reset JSON editor to current saved configuration"""
         from tkinter import messagebox
         import json
         
-        if messagebox.askyesno("Zurücksetzen", "Alle Änderungen verwerfen und zur gespeicherten Konfiguration zurückkehren?"):
+        if messagebox.askyesno("Reset", "Discard all changes and revert to the saved configuration?"):
             try:
                 current_config = self.camera_config.config_data
                 json_text = json.dumps(current_config, indent=2, ensure_ascii=False)
                 editor.delete("1.0", "end")
                 editor.insert("1.0", json_text)
             except Exception as e:
-                messagebox.showerror("Fehler", f"Fehler beim Zurücksetzen: {e}")
+                messagebox.showerror("Error", f"Error during reset: {e}")
     def save_json_config(self, editor, window):
         """Save JSON configuration and apply changes"""
         import json
@@ -928,17 +920,15 @@ Verfügbare Verbindungstypen:
             success = self.camera_config.save_config()
             
             if success:
-                messagebox.showinfo("Erfolg", "✅ Konfiguration erfolgreich gespeichert!\n\nDie Änderungen werden beim nächsten Start angewendet.")
-                
+                messagebox.showinfo("Success", "✅ Configuration saved successfully!\n\nChanges will be applied on next start.")
                 # Close the window
                 window.destroy()
-                  # Just log the change, no immediate refresh to avoid GUI conflicts
-                self.logger.log("📷 Kamera-Konfiguration gespeichert. Neustart für Änderungen erforderlich.")
+                # Just log the change, no immediate refresh to avoid GUI conflicts
+                self.logger.log("📷 Camera configuration saved. Restart required for changes.")
             else:
-                messagebox.showerror("Fehler", "❌ Fehler beim Speichern der Konfiguration!")
-                
+                messagebox.showerror("Error", "❌ Error saving configuration!")
         except Exception as e:
-            messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
+            messagebox.showerror("Error", f"Error saving:\n{e}")
     
     def save_and_reload_json_config(self, editor, window):
         """Save JSON configuration and apply changes immediately (live-reload)"""
@@ -963,17 +953,17 @@ Verfügbare Verbindungstypen:
                 window.destroy()
                 
                 # Show success message
-                messagebox.showinfo("Erfolg", "✅ Konfiguration erfolgreich gespeichert!\n\nDie Änderungen werden sofort angewendet.")
+                messagebox.showinfo("Success", "✅ Configuration saved successfully!\n\nChanges will be applied immediately.")
                 
                 # Apply changes immediately with a small delay to ensure window is closed
                 self.root.after(500, self.refresh_camera_configuration)
                 
-                self.logger.log("📷 Kamera-Konfiguration gespeichert und live angewendet.")
+                self.logger.log("📷 Camera configuration saved and applied live.")
             else:
-                messagebox.showerror("Fehler", "❌ Fehler beim Speichern der Konfiguration!")
+                messagebox.showerror("Error", "❌ Error saving configuration!")
                 
         except Exception as e:
-            messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
+            messagebox.showerror("Error", f"Error saving:\n{e}")
     
     def get_camera_info(self, cam_index):
         """Get camera information for display - JSON-based"""
@@ -981,7 +971,7 @@ Verfügbare Verbindungstypen:
             # Try to get info from JSON config
             camera = self.camera_config.get_camera_by_index(cam_index)
             if camera:
-                hardware_info = self.camera_config.parse_verbindung(camera['connection'])
+                hardware_info = self.camera_config.parse_connection(camera['connection'])
                 device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
                 
                 return {
@@ -1003,7 +993,7 @@ Verfügbare Verbindungstypen:
         """Start all camera streams automatically if auto-stream is enabled"""
         print("DEBUG: start_auto_streams called")
         if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
-            self.logger.log("🎬 Starte automatische Kamera-Streams...")
+            self.logger.log("🎬 Starting automatic camera streams...")
             success_count = 0
             total_cameras = len(self.available_cameras)
             
@@ -1017,15 +1007,15 @@ Verfügbare Verbindungstypen:
                         print(f"DEBUG: Failed to start auto-stream for camera {cam_index}")
                 except Exception as e:
                     print(f"DEBUG: Exception starting auto-stream for camera {cam_index}: {e}")
-                    self.logger.log(f"❌ Auto-Stream Fehler Kamera {cam_index}: {e}")
+                    self.logger.log(f"❌ Auto-stream error camera {cam_index}: {e}")
             
-            self.logger.log(f"🎬 Auto-Streams: {success_count}/{total_cameras} Kameras gestartet")
+            self.logger.log(f"🎬 Auto-streams: {success_count}/{total_cameras} cameras started")
         else:
             print("DEBUG: Auto-stream is disabled")
 
     def stop_auto_streams(self):
         """Stop all camera streams"""
-        self.logger.log("⏹️ Stoppe alle Kamera-Streams...")
+        self.logger.log("⏹️ Stopping all camera streams...")
         stopped_count = 0
         
         for cam_index in self.available_cameras:
@@ -1201,7 +1191,7 @@ Verfügbare Verbindungstypen:
             
             # Check if camera is physically available
             hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+                self.camera_config.get_camera_by_index(cam_index)['connection']
             )
             device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
             is_online = device_index in getattr(self, 'physically_available_cameras', [])
@@ -1239,7 +1229,7 @@ Verfügbare Verbindungstypen:
         try:
             # Check if camera is physically available
             hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+                self.camera_config.get_camera_by_index(cam_index)['connection']
             )
             device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
             is_online = device_index in getattr(self, 'physically_available_cameras', [])
@@ -1392,7 +1382,7 @@ Verfügbare Verbindungstypen:
             
             # Online/Offline-Status prüfen
             hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['verbindung']
+                self.camera_config.get_camera_by_index(cam_index)['connection']
             )
             device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
             is_online = device_index in getattr(self, 'physically_available_cameras', [])

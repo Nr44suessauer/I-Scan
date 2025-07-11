@@ -689,20 +689,20 @@ class EventHandlers:
                 try:
                     result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True, encoding="utf-8")
                     if result.returncode == 0:
-                        self.app.logger.log(f"✅ Visualisation Mode erfolgreich abgeschlossen")
-                        self.app.logger.log("📊 Visualisierungen wurden im Calculator_Angle_Maschine/MathVisualisation/output/ Ordner gespeichert")
+                        self.app.logger.log(f"✅ Visualisation Mode completed successfully")
+                        self.app.logger.log("📊 Visualizations saved in Calculator_Angle_Maschine/MathVisualisation/output/ folder")
                         self.update_servo_graph_image()
                     else:
-                        self.app.logger.log(f"❌ Visualisation Mode fehlgeschlagen: {result.stderr}")
+                        self.app.logger.log(f"❌ Visualisation Mode failed: {result.stderr}")
                 except Exception as e:
-                    self.app.logger.log(f"❌ Fehler bei Visualisation Mode: {e}")
+                    self.app.logger.log(f"❌ Error in Visualisation Mode: {e}")
 
             threading.Thread(target=run_command).start()
 
         except Exception as e:
-            self.app.logger.log(f"❌ Fehler bei Visualisation Mode: {e}")
+            self.app.logger.log(f"❌ Error in Visualisation Mode: {e}")
             from tkinter import messagebox
-            messagebox.showerror("Fehler", f"Fehler bei der Visualisation Mode Ausführung:\n{e}")
+            messagebox.showerror("Error", f"Error during Visualisation Mode execution:\n{e}")
     
     def execute_silent_mode(self):
         """
@@ -723,7 +723,7 @@ class EventHandlers:
             servo_max = float(self.app.calc_vars['servo_max'].get())
             servo_neutral = float(self.app.calc_vars['servo_neutral'].get())
             
-            self.app.logger.log(f"🔇 Starte Silent Mode: {csv_name}")
+            self.app.logger.log(f"🔇 Starting Silent Mode: {csv_name}")
             self.app.logger.log(f"📍 Target: ({target_x}, {target_y}), Distance: {scan_distance}, Measurements: {measurements}")
             self.app.logger.log(f"🔧 Servo: Min={servo_min}°, Max={servo_max}°, Neutral={servo_neutral}°")
             
@@ -744,18 +744,18 @@ class EventHandlers:
                 try:
                     result = subprocess.run(command, cwd=calc_dir, capture_output=True, text=True, encoding="utf-8")
                     if result.returncode == 0:
-                        self.app.logger.log(f"✅ Silent Mode erfolgreich abgeschlossen")
+                        self.app.logger.log(f"✅ Silent Mode completed successfully")
                         # Search for generated CSV file
                         output_dir = os.path.join(calc_dir, "output")
                         csv_file = os.path.join(output_dir, f"{csv_name}.csv")
                         if os.path.exists(csv_file):
                             from tkinter import messagebox
-                            if messagebox.askyesno("CSV Import", "CSV wurde erfolgreich generiert. Soll die CSV-Datei sofort in die Warteschlange importiert werden?"):
+                            if messagebox.askyesno("CSV Import", "CSV was generated successfully. Do you want to import the CSV file into the queue now?"):
                                 self.import_specific_csv(csv_file)
                     else:
-                        self.app.logger.log(f"❌ Silent Mode fehlgeschlagen: {result.stderr}")
+                        self.app.logger.log(f"❌ Silent Mode failed: {result.stderr}")
                 except Exception as e:
-                    self.app.logger.log(f"❌ Fehler bei Silent Mode: {e}")
+                    self.app.logger.log(f"❌ Error in Silent Mode: {e}")
             
             threading.Thread(target=run_command).start()
             

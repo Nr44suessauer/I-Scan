@@ -17,7 +17,7 @@ class QueueOperations:
         """Add servo operation to queue"""
         try:
             angle = int(self.app.servo_angle.get())
-            description = f"Servo: Winkel auf {angle}° setzen"
+            description = f"Servo: Set angle to {angle}°"
             self.app.operation_queue.add('servo', {'angle': angle}, description)
         except Exception as e:
             self.app.logger.log(f"Fehler beim Hinzufügen zur Warteschlange: {e}")
@@ -33,12 +33,12 @@ class QueueOperations:
             direction = int(self.app.stepper_dir.get()) if self.app.stepper_dir.get() else 1
             speed = int(self.app.stepper_speed.get()) if self.app.stepper_speed.get() else int(DEFAULT_SPEED)
             
-            dir_text = "aufwärts" if direction == 1 else "abwärts"
+            dir_text = "up" if direction == 1 else "down"
             params = {"steps": steps, "direction": direction, "speed": speed}
-            description = f"Stepper: {steps} Schritte, {length_cm} cm, Richtung {dir_text}, Geschwindigkeit: {speed}"
+            description = f"Stepper: {steps} steps, {length_cm} cm, direction {dir_text}, speed: {speed}"
             self.app.operation_queue.add('stepper', params, description)
         except Exception as e:
-            self.app.logger.log(f"Fehler beim Hinzufügen zur Warteschlange: {e}")
+            self.app.logger.log(f"Error adding to queue: {e}")
     
     def add_led_color_to_queue(self):
         """Add LED color operation to queue"""
@@ -49,7 +49,7 @@ class QueueOperations:
             description = f"LED: Set color to {color_hex}"
             self.app.operation_queue.add('led_color', {'color': color_hex}, description)
         except Exception as e:
-            self.app.logger.log(f"Fehler beim Hinzufügen zur Warteschlange: {e}")
+            self.app.logger.log(f"Error adding to queue: {e}")
     
     def add_brightness_to_queue(self):
         """Add LED brightness operation to queue"""
@@ -94,5 +94,5 @@ class QueueOperations:
             except ValueError:
                 pass  # Use default if conversion fails
                 
-        description = f"Kamera {camera_index}: Foto aufnehmen (Delay: {delay}s)"
+        description = f"Camera {camera_index}: Take photo (Delay: {delay}s)"
         self.app.operation_queue.add('photo', {'delay': delay, 'camera_index': camera_index}, description)

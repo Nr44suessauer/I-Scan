@@ -13,22 +13,22 @@ import math
 
 class ServoAngleCalculator:
     """
-    Berechnet Servo-Winkel basierend auf der aktuellen Position im Koordinatensystem.
-    
-    Koordinatensystem-Definition:
-    - Bei Servo-Position 90° ist der Servo parallel zur X-Achse
-    - Bei Servo-Position 0° zeigt der Servo von Y-Max nach Y-Min (0/0)
-    - Das Zentrum des Koordinatensystems ist bei (0, 0)
+    Calculates servo angle based on the current position in the coordinate system.
+
+    Coordinate system definition:
+    - At servo position 90°, the servo is parallel to the X-axis
+    - At servo position 0°, the servo points from Y-Max to Y-Min (0/0)
+    - The center of the coordinate system is at (0, 0)
     """
     
     def __init__(self, target_center_x=150, target_center_y=75, z_module_x=0):
         """
-        Initialisiert den Servo-Winkel-Rechner.
-        
+        Initializes the servo angle calculator.
+
         Args:
-            target_center_x (float): X-Koordinate des Zielzentrums (Standard: 150)
-            target_center_y (float): Y-Koordinate des Zielzentrums (Standard: 75)
-            z_module_x (float): X-Koordinate des Z-Moduls (Standard: 0)
+            target_center_x (float): X-coordinate of the target center (default: 150)
+            target_center_y (float): Y-coordinate of the target center (default: 75)
+            z_module_x (float): X-coordinate of the Z-module (default: 0)
         """
         self.target_center_x = target_center_x
         self.target_center_y = target_center_y

@@ -16,7 +16,7 @@ class GUIBuilder:
         """Creates the URL input frame"""
         url_frame = tk.Frame(parent)
         url_frame.pack(fill="x", padx=10, pady=(10,2))
-        tk.Label(url_frame, text="API-Adresse:").pack(side=tk.LEFT)
+        tk.Label(url_frame, text="API address:").pack(side=tk.LEFT)
         base_url_entry = tk.Entry(url_frame, textvariable=base_url_var, width=30)
         base_url_entry.pack(side=tk.LEFT, padx=5)
         return url_frame, base_url_entry
@@ -26,22 +26,22 @@ class GUIBuilder:
         """Creates camera settings frame"""
         camera_settings_frame = tk.Frame(parent)
         camera_settings_frame.pack(fill="x", padx=10, pady=(2,2))
-        tk.Label(camera_settings_frame, text="Kamera Device Index (z.B. 0, 1, 2):").pack(side=tk.LEFT)
+        tk.Label(camera_settings_frame, text="Camera device index (e.g. 0, 1, 2):").pack(side=tk.LEFT)
         
         camera_device_index_var = tk.StringVar(value=str(DEFAULT_CAMERA_DEVICE))
         camera_device_entry = tk.Entry(camera_settings_frame, width=5, textvariable=camera_device_index_var)
         camera_device_entry.pack(side=tk.LEFT)
         
-        set_camera_device_btn = tk.Button(camera_settings_frame, text="Setzen")
+        set_camera_device_btn = tk.Button(camera_settings_frame, text="Set")
         set_camera_device_btn.pack(side=tk.LEFT, padx=5)
         
         # Autofocus delay
-        tk.Label(camera_settings_frame, text="  Autofokus-Delay (s):").pack(side=tk.LEFT, padx=(20,0))
+        tk.Label(camera_settings_frame, text="  Autofocus delay (s):").pack(side=tk.LEFT, padx=(20,0))
         camera_delay_var = tk.StringVar(value=str(DEFAULT_AUTOFOCUS_DELAY))
         camera_delay_entry = tk.Entry(camera_settings_frame, width=5, textvariable=camera_delay_var)
         camera_delay_entry.pack(side=tk.LEFT)
         
-        set_delay_btn = tk.Button(camera_settings_frame, text="set")
+        set_delay_btn = tk.Button(camera_settings_frame, text="Set")
         set_delay_btn.pack(side=tk.LEFT, padx=5)
         
         return (camera_settings_frame, camera_device_index_var, camera_device_entry, 
@@ -90,7 +90,7 @@ class GUIBuilder:
         # Log console (left)
         log_frame = tk.Frame(output_container)
         log_frame.grid(row=0, column=0, sticky="nsew")
-        tk.Label(log_frame, text="Log-Konsole", font=("Arial", 10, "bold")).pack(anchor='w')
+        tk.Label(log_frame, text="Log Console", font=("Arial", 10, "bold")).pack(anchor='w')
         output = scrolledtext.ScrolledText(log_frame, width=45, height=16, state='disabled')
         output.pack(fill="both", expand=True)
 
@@ -191,6 +191,7 @@ class GUIBuilder:
         # Refresh cameras button
         btn_refresh_cameras = tk.Button(control_frame, text="🔄 Kameras Neu Laden", 
                                        font=("Arial", 9), bg="#4CAF50", fg="white")
+        btn_refresh_cameras.config(text="🔄 Reload Cameras")
         btn_refresh_cameras.pack(side=tk.LEFT, padx=(0, 10))
         
         # Auto-stream toggle (moved here for better layout)
@@ -213,15 +214,15 @@ class GUIBuilder:
     @staticmethod
     def create_servo_frame(parent):
         """Creates servo control frame"""
-        servo_frame = tk.LabelFrame(parent, text="Servo-Steuerung")
+        servo_frame = tk.LabelFrame(parent, text="Set Servo Angle")
         servo_frame.pack(fill="x", padx=10, pady=2)
         
-        tk.Label(servo_frame, text="Winkel (0-180°):").pack(side=tk.LEFT)
+        tk.Label(servo_frame, text="Angle (0-180°):").pack(side=tk.LEFT)
         servo_angle = tk.Entry(servo_frame, width=5)
         servo_angle.insert(0, "0")
         servo_angle.pack(side=tk.LEFT)
         
-        servo_exec_btn = tk.Button(servo_frame, text="Servo ausführen")
+        servo_exec_btn = tk.Button(servo_frame, text="Execute Servo")
         servo_exec_btn.pack(side=tk.LEFT, padx=5)
         
         servo_add_btn = tk.Button(servo_frame, text="+", 
@@ -234,24 +235,24 @@ class GUIBuilder:
     @staticmethod
     def create_stepper_frame(parent, last_distance_value):
         """Creates stepper motor control frame"""
-        stepper_frame = tk.LabelFrame(parent, text="Schrittmotor-Steuerung")
+        stepper_frame = tk.LabelFrame(parent, text="Stepper Motor Control")
         stepper_frame.pack(fill="x", padx=10, pady=2)
         
-        tk.Label(stepper_frame, text="Distanz (cm):").pack(side=tk.LEFT)
+        tk.Label(stepper_frame, text="Distance (cm):").pack(side=tk.LEFT)
         stepper_length_cm = tk.Entry(stepper_frame, width=8, textvariable=last_distance_value)
         stepper_length_cm.pack(side=tk.LEFT)
         
-        tk.Label(stepper_frame, text="Richtung:").pack(side=tk.LEFT, padx=(10,0))
+        tk.Label(stepper_frame, text="Direction:").pack(side=tk.LEFT, padx=(10,0))
         stepper_dir = tk.Entry(stepper_frame, width=5)
         stepper_dir.insert(0, DEFAULT_DIRECTION)
         stepper_dir.pack(side=tk.LEFT)
         
-        tk.Label(stepper_frame, text="Geschwindigkeit:").pack(side=tk.LEFT, padx=(10,0))
+        tk.Label(stepper_frame, text="Speed:").pack(side=tk.LEFT, padx=(10,0))
         stepper_speed = tk.Entry(stepper_frame, width=5)
         stepper_speed.insert(0, DEFAULT_SPEED)
         stepper_speed.pack(side=tk.LEFT)
         
-        stepper_exec_btn = tk.Button(stepper_frame, text="Stepper ausführen")
+        stepper_exec_btn = tk.Button(stepper_frame, text="Execute Stepper")
         stepper_exec_btn.pack(side=tk.LEFT, padx=5)
         
         stepper_add_btn = tk.Button(stepper_frame, text="+", 
@@ -265,15 +266,15 @@ class GUIBuilder:
     @staticmethod
     def create_led_color_frame(parent):
         """Creates LED color control frame"""
-        led_color_frame = tk.LabelFrame(parent, text="LED-Farbe setzen")
+        led_color_frame = tk.LabelFrame(parent, text="Set LED Color")
         led_color_frame.pack(fill="x", padx=10, pady=2)
         
-        tk.Label(led_color_frame, text="Farbe (z.B. #FF0000):").pack(side=tk.LEFT)
+        tk.Label(led_color_frame, text="Color (e.g. #FF0000):").pack(side=tk.LEFT)
         led_color = tk.Entry(led_color_frame, width=10)
         led_color.insert(0, DEFAULT_LED_COLOR)
         led_color.pack(side=tk.LEFT)
         
-        led_exec_btn = tk.Button(led_color_frame, text="LED ausführen")
+        led_exec_btn = tk.Button(led_color_frame, text="Execute LED")
         led_exec_btn.pack(side=tk.LEFT, padx=5)
         
         led_add_btn = tk.Button(led_color_frame, text="+", 
@@ -286,15 +287,15 @@ class GUIBuilder:
     @staticmethod
     def create_led_brightness_frame(parent):
         """Creates LED brightness control frame"""
-        led_brightness_frame = tk.LabelFrame(parent, text="LED-Helligkeit setzen")
+        led_brightness_frame = tk.LabelFrame(parent, text="Set LED Brightness")
         led_brightness_frame.pack(fill="x", padx=10, pady=2)
         
-        tk.Label(led_brightness_frame, text="Helligkeit (0-100):").pack(side=tk.LEFT)
+        tk.Label(led_brightness_frame, text="Brightness (0-100):").pack(side=tk.LEFT)
         led_bright = tk.Entry(led_brightness_frame, width=5)
         led_bright.insert(0, DEFAULT_LED_BRIGHTNESS)
         led_bright.pack(side=tk.LEFT)
         
-        bright_exec_btn = tk.Button(led_brightness_frame, text="Helligkeit ausführen")
+        bright_exec_btn = tk.Button(led_brightness_frame, text="Execute Brightness")
         bright_exec_btn.pack(side=tk.LEFT, padx=5)
         
         bright_add_btn = tk.Button(led_brightness_frame, text="+", 
@@ -311,10 +312,10 @@ class GUIBuilder:
         button_frame.pack(fill="x", padx=10, pady=2)
         tk.Label(button_frame, text="Button Status:").pack(side=tk.LEFT)
         
-        button_exec_btn = tk.Button(button_frame, text="Ausführen")
+        button_exec_btn = tk.Button(button_frame, text="Execute")
         button_exec_btn.pack(side=tk.LEFT, padx=5)
         
-        button_add_btn = tk.Button(button_frame, text="Zur Queue")
+        button_add_btn = tk.Button(button_frame, text="Add to Queue")
         button_add_btn.pack(side=tk.LEFT)
         
         return button_frame, button_exec_btn, button_add_btn
@@ -327,10 +328,10 @@ class GUIBuilder:
         
         tk.Label(home_frame, text="Home:").pack(side=tk.LEFT)
         
-        home_exec_btn = tk.Button(home_frame, text="Ausführen")
+        home_exec_btn = tk.Button(home_frame, text="Execute")
         home_exec_btn.pack(side=tk.LEFT, padx=5)
         
-        home_add_btn = tk.Button(home_frame, text="Zur Queue")
+        home_add_btn = tk.Button(home_frame, text="Add to Queue")
         home_add_btn.pack(side=tk.LEFT)
         
         return home_frame, home_exec_btn, home_add_btn
@@ -341,13 +342,13 @@ class GUIBuilder:
         angle_calc_frame = tk.LabelFrame(parent, text="Angle Calculator Commands")
         angle_calc_frame.pack(fill="x", padx=10, pady=2)
         
-        show_calc_btn = tk.Button(angle_calc_frame, text="Angle Calculator anzeigen")
+        show_calc_btn = tk.Button(angle_calc_frame, text="Show Angle Calculator")
         show_calc_btn.pack(side=tk.LEFT, padx=5)
         
-        load_csv_btn = tk.Button(angle_calc_frame, text="CSV laden")
+        load_csv_btn = tk.Button(angle_calc_frame, text="Load CSV")
         load_csv_btn.pack(side=tk.LEFT, padx=5)
         
-        save_csv_btn = tk.Button(angle_calc_frame, text="CSV speichern")
+        save_csv_btn = tk.Button(angle_calc_frame, text="Save CSV")
         save_csv_btn.pack(side=tk.LEFT, padx=5)        
         return angle_calc_frame, show_calc_btn, load_csv_btn, save_csv_btn    
     @staticmethod
@@ -374,25 +375,25 @@ class GUIBuilder:
         queue_control_frame1 = tk.Frame(queue_frame)
         queue_control_frame1.pack(fill="x", padx=5, pady=2)
         
-        queue_exec_btn = tk.Button(queue_control_frame1, text="Queue ausführen", bg="lightgreen", font=("Arial", 9, "bold"))
+        queue_exec_btn = tk.Button(queue_control_frame1, text="Run Queue", bg="lightgreen", font=("Arial", 9, "bold"))
         queue_exec_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_pause_btn = tk.Button(queue_control_frame1, text="Pausieren", bg="orange")
+        queue_pause_btn = tk.Button(queue_control_frame1, text="Pause", bg="orange")
         queue_pause_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_exec_selected_btn = tk.Button(queue_control_frame1, text="Auswahl ausführen", bg="lightblue")
+        queue_exec_selected_btn = tk.Button(queue_control_frame1, text="Run Selected", bg="lightblue")
         queue_exec_selected_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_clear_btn = tk.Button(queue_control_frame1, text="Queue leeren", bg="lightcoral")
+        queue_clear_btn = tk.Button(queue_control_frame1, text="Clear Queue", bg="lightcoral")
         queue_clear_btn.pack(side=tk.LEFT, padx=2)
         
         # Queue control buttons - Row 2
         queue_control_frame2 = tk.Frame(queue_frame)
         queue_control_frame2.pack(fill="x", padx=5, pady=2)
         
-        queue_remove_btn = tk.Button(queue_control_frame2, text="Auswahl löschen", bg="salmon")
+        queue_remove_btn = tk.Button(queue_control_frame2, text="Remove Selected", bg="salmon")
         queue_remove_btn.pack(side=tk.LEFT, padx=2)        
-        queue_duplicate_btn = tk.Button(queue_control_frame2, text="Auswahl kopieren", bg="lightyellow")
+        queue_duplicate_btn = tk.Button(queue_control_frame2, text="Duplicate Selected", bg="lightyellow")
         queue_duplicate_btn.pack(side=tk.LEFT, padx=2)
         
         queue_edit_btn = tk.Button(queue_control_frame2, text="✎ Edit", width=8, bg="lightsteelblue", font=("Arial", 9, "bold"))
@@ -401,23 +402,23 @@ class GUIBuilder:
         queue_settings_btn = tk.Button(queue_control_frame2, text="⚙ Opt", width=8, bg="lightgray", font=("Arial", 9, "bold"))
         queue_settings_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_move_up_btn = tk.Button(queue_control_frame2, text="▲ Nach oben")
+        queue_move_up_btn = tk.Button(queue_control_frame2, text="▲ Up")
         queue_move_up_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_move_down_btn = tk.Button(queue_control_frame2, text="▼ Nach unten")
+        queue_move_down_btn = tk.Button(queue_control_frame2, text="▼ Down")
         queue_move_down_btn.pack(side=tk.LEFT, padx=2)
           # Queue control buttons - Row 3
         queue_control_frame3 = tk.Frame(queue_frame)
         queue_control_frame3.pack(fill="x", padx=5, pady=2)
         
-        queue_export_btn = tk.Button(queue_control_frame3, text="Warteschlange exportieren (CSV)", bg="#b0c4de", fg="black")
+        queue_export_btn = tk.Button(queue_control_frame3, text="Export queue (CSV)", bg="#b0c4de", fg="black")
         queue_export_btn.pack(side=tk.LEFT, padx=2)
         
-        queue_import_btn = tk.Button(queue_control_frame3, text="Warteschlange importieren (CSV)", bg="#b0c4de", fg="black")
+        queue_import_btn = tk.Button(queue_control_frame3, text="Import queue (CSV)", bg="#b0c4de", fg="black")
         queue_import_btn.pack(side=tk.LEFT, padx=2)
         
         # Repeat checkbox
-        repeat_checkbox = tk.Checkbutton(queue_control_frame3, text="Wiederholen", 
+        repeat_checkbox = tk.Checkbutton(queue_control_frame3, text="Repeat", 
                                         variable=repeat_queue_var)
         repeat_checkbox.pack(side=tk.RIGHT, padx=5)
         
@@ -597,10 +598,12 @@ class GUIBuilder:
         # Image Labels für beide Tabs
         servo_graph_img_label = tk.Label(tab1_frame, text="Servo Graph wird geladen...", 
                                         bg="lightgray", width=25, height=12)
+        servo_graph_img_label.config(text="Servo graph loading...")
         servo_graph_img_label.pack(fill="both", expand=True)
         
         servo_cone_img_label = tk.Label(tab2_frame, text="Servo Cone wird geladen...", 
                                        bg="lightgray", width=25, height=12)
+        servo_cone_img_label.config(text="Servo cone loading...")
         servo_cone_img_label.pack(fill="both", expand=True)
         
         # Image control buttons
@@ -620,7 +623,7 @@ class GUIBuilder:
     @staticmethod
     def create_settings_panel(parent, grid_mode=False):
         """Creates a settings panel with Home, Drive Up/Down controls"""
-        settings_frame = tk.LabelFrame(parent, text="Einstellungen", font=("Arial", 10, "bold"))
+        settings_frame = tk.LabelFrame(parent, text="Settings", font=("Arial", 10, "bold"))
         if grid_mode:
             settings_frame.grid(row=1, column=2, sticky="nsew", padx=5, pady=(5,0))
         else:
