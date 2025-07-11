@@ -1,43 +1,44 @@
-# I-Scan Control Software - Bereinigte Version
+# I-Scan Control Software - Cleaned Version
 
-## 📁 Finale Struktur (✅ Vollständig & Funktional)
+## 📁 Final Structure (✅ Complete & Functional)
 
 ```
 ControlScript/
-├── start_modular_version.bat          # Haupt-Startskript
-├── CLEANUP_SUMMARY.md                 # Diese Zusammenfassung
-├── Calculator_Angle_Maschine/         # 🧮 Mathematik & Visualisierung
-│   └── MathVisualisation/             # Visualisierungs-Tools
-│       ├── main.py                   # Haupt-Anwendung (CSV Export)
-│       ├── calculations.py           # Berechnungen
-│       ├── config.py                 # Konfiguration
-│       ├── export_commands.py        # Export-Funktionen
-│       ├── save_servo_graph.py       # Servo-Graph speichern
-│       ├── servo_interpolation.py    # Servo-Interpolation
-│       ├── README.md                 # Dokumentation
-│       ├── .gitignore                # Git-Ignorierung
-│       └── visualizations/           # Visualisierungs-Module
-│           ├── __init__.py           # Modul-Init
-│           ├── angle_progression.py  # Winkel-Progression
-│           ├── calculation_table.py  # Berechnungs-Tabelle
-│           ├── geometric.py          # Geometrische Visualisierung
-│           ├── point_calculation.py  # Punkt-Berechnungen
-│           └── servo_interpolation.py # Servo-Interpolation
-└── Modular Version/                   # 📹 Haupt-Kamera-System
-    ├── main_modular.py               # Hauptanwendung
-    ├── README.md                     # Hauptdokumentation
-    ├── requirements.txt              # Python-Abhängigkeiten
-    ├── config.py                     # Konfiguration
-    ├── gui_components.py             # GUI-Komponenten
-    ├── event_handlers.py             # Event-Handler
-    ├── webcam_helper.py              # Kamera-Helper
-    ├── api_client.py                 # API-Client
-    ├── device_control.py             # Geräte-Steuerung
+├── start_modular_version.bat          # Main start script
+├── CLEANUP_SUMMARY.md                 # This summary
+├── Calculator_Angle_Maschine/         # 🧮 Math & Visualization
+│   └── MathVisualisation/             # Visualization tools
+│       ├── main.py                   # Main application (CSV export)
+│       ├── calculations.py           # Calculations
+│       ├── config.py                 # Configuration
+│       ├── export_commands.py        # Export functions
+│       ├── save_servo_graph.py       # Save servo graph
+│       ├── servo_interpolation.py    # Servo interpolation
+│       ├── README.md                 # Documentation
+│       ├── .gitignore                # Git ignore
+│       └── visualizations/           # Visualization modules
+│           ├── __init__.py           # Module init
+│           ├── angle_progression.py  # Angle progression
+│           ├── calculation_table.py  # Calculation table
+│           ├── geometric.py          # Geometric visualization
+│           ├── point_calculation.py  # Point calculations
+│           └── servo_interpolation.py # Servo interpolation
+└── Modular Version/                   # 📹 Main camera system
+    ├── main_modular.py               # Main application
+    ├── README.md                     # Main documentation
+    ├── requirements.txt              # Python dependencies
+    ├── config.py                     # Configuration
+    ├── gui_components.py             # GUI components
+    ├── event_handlers.py             # Event handlers
+    ├── webcam_helper.py              # Camera helper
+    ├── api_client.py                 # API client
+    ├── device_control.py             # Device control
     ├── logger.py                     # Logging
-    ├── operation_queue.py            # Operations-Queue
-    ├── queue_operations.py           # Queue-Operationen
-    ├── angle_calculator_commands.py  # Winkel-Berechnungen
-    ├── servo_angle_calculator.py     # Servo-Berechnungen
+    ├── operation_queue.py            # Operations queue
+    ├── queue_operations.py           # Queue operations
+    ├── angle_calculator_commands.py  # Angle calculations
+    ├── servo_angle_calculator.py     # Servo calculations
+```
     ├── wizard_icon.png               # Icon
     └── camera/                       # Kamera-System
         ├── cameras_config.json       # JSON-Konfiguration

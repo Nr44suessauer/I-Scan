@@ -17,41 +17,41 @@ class JSONCameraConfig:
         self.load_config()
     
     def load_config(self) -> bool:
-        """Lade Konfiguration aus JSON-Datei"""
+        """Load configuration from JSON file"""
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     self.config_data = json.load(f)
-                print(f"JSON-Konfiguration geladen: {len(self.get_cameras())} Kameras")
+                print(f"JSON configuration loaded: {len(self.get_cameras())} cameras")
                 return True
             else:
-                print(f"Konfigurationsdatei nicht gefunden: {self.config_file}")
+                print(f"Configuration file not found: {self.config_file}")
                 self.create_default_config()
                 return False
         except Exception as e:
-            print(f"Fehler beim Laden der JSON-Konfiguration: {e}")
+            print(f"Error loading JSON configuration: {e}")
             return False
     
     def save_config(self) -> bool:
-        """Speichere Konfiguration in JSON-Datei"""
+        """Save configuration to JSON file"""
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config_data, f, indent=2, ensure_ascii=False)
-            print("JSON-Konfiguration gespeichert")
+            print("JSON configuration saved")
             return True
         except Exception as e:
-            print(f"Fehler beim Speichern der JSON-Konfiguration: {e}")
+            print(f"Error saving JSON configuration: {e}")
             return False
     
     def create_default_config(self):
-        """Erstelle Standard-Konfiguration"""
+        """Create default configuration"""
         self.config_data = {
             "cameras": [
                 {
                     "index": 0,
-                    "verbindung": "USB:0",
-                    "beschreibung": "Standard USB-Kamera",
-                    "name": "Kamera 1",
+                    "connection": "USB:0",
+                    "description": "Default USB camera",
+                    "name": "Camera 1",
                     "enabled": True,
                     "resolution": [640, 480],
                     "fps": 30
@@ -66,15 +66,15 @@ class JSONCameraConfig:
         self.save_config()
     
     def get_cameras(self) -> List[Dict]:
-        """Hole alle Kamera-Konfigurationen"""
+        """Get all camera configurations"""
         return self.config_data.get('cameras', [])
     
     def get_enabled_cameras(self) -> List[Dict]:
-        """Hole nur aktivierte Kameras"""
+        """Get only enabled cameras"""
         return [cam for cam in self.get_cameras() if cam.get('enabled', True)]
     
     def get_camera_by_index(self, index: int) -> Optional[Dict]:
-        """Hole Kamera nach Index"""
+        """Get camera by index"""
         for camera in self.get_cameras():
             if camera.get('index') == index:
                 return camera
@@ -159,25 +159,25 @@ class JSONCameraConfig:
             print(f"Fehler beim Aktualisieren der Einstellungen: {e}")
             return False
     
-    def parse_verbindung(self, verbindung: str) -> Dict:
-        """Parse Verbindungsstring und extrahiere Hardware-Interface"""
+    def parse_verbindung(self, connection: str) -> Dict:
+        """Parse connection string and extract hardware interface"""
         try:
-            if verbindung.startswith("USB:"):
-                device_index = int(verbindung.split(":")[1])
+            if connection.startswith("USB:"):
+                device_index = int(connection.split(":")[1])
                 return {
                     "type": "usb",
                     "device_index": device_index,
                     "interface": f"/dev/video{device_index}" if os.name != 'nt' else device_index
                 }
-            elif verbindung.startswith("IP:"):
-                ip_address = verbindung.split(":")[1]
+            elif connection.startswith("IP:"):
+                ip_address = connection.split(":")[1]
                 return {
                     "type": "network",
                     "ip_address": ip_address,
                     "interface": f"rtsp://{ip_address}/stream"
                 }
-            elif verbindung.startswith("COM:"):
-                com_port = verbindung.split(":")[1]
+            elif connection.startswith("COM:"):
+                com_port = connection.split(":")[1]
                 return {
                     "type": "serial",
                     "com_port": com_port,
@@ -186,17 +186,17 @@ class JSONCameraConfig:
             else:
                 # Fallback: versuche als direkte USB-Index
                 try:
-                    device_index = int(verbindung)
+                    device_index = int(connection)
                     return {
                         "type": "usb",
                         "device_index": device_index,
                         "interface": device_index
                     }
                 except ValueError:
-                    print(f"Unbekanntes Verbindungsformat: {verbindung}")
+                    print(f"Unknown connection format: {connection}")
                     return None
         except Exception as e:
-            print(f"Fehler beim Parsen der Verbindung '{verbindung}': {e}")
+            print(f"Error parsing connection '{connection}': {e}")
             return None
     
     def get_available_cameras(self) -> List[Dict]:

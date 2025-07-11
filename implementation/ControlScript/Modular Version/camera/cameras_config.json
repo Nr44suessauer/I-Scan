@@ -2,8 +2,8 @@
   "cameras": [
     {
       "index": 1,
-      "verbindung": "USB:0",
-      "beschreibung": "Zweitkamera USB Port 1",
+      "connection": "USB:0",
+      "description": "Second camera USB port 1",
       "name": "Web Cam",
       "enabled": true,
       "resolution": [
@@ -14,8 +14,8 @@
     },
     {
       "index": 2,
-      "verbindung": "USB:1",
-      "beschreibung": "Neue Kamera Beschreibung 2",
+      "connection": "USB:1",
+      "description": "New camera description 2",
       "name": "Kinect",
       "enabled": true,
       "resolution": [

@@ -44,7 +44,7 @@ class DeviceControl:
         
     def servo_cmd(self):
         """
-        Führt Servo-Befehl direkt aus
+        Executes servo command directly
         """
         try:
             angle = int(self.widgets['servo_angle'].get())
@@ -54,27 +54,27 @@ class DeviceControl:
             self.servo_angle_var.set(angle)
             self.widgets['update_position_label']()
         except Exception as e:
-            self.logger.log(f"Fehler: {e}")
+            self.logger.log(f"Error: {e}")
     
     def servo_auto_position_cmd(self):
         """
-        Führt automatische Servo-Positionierung basierend auf aktueller Y-Position aus
+        Executes automatic servo positioning based on current Y-position
         """
         try:
-            # Aktuelle Y-Position vom Stepper-Motor ermitteln
+            # Get current Y-position from stepper motor
             current_y = self.position.get()
             
-            # Servo-Winkel berechnen
+            # Calculate servo angle
             calculated_angle = self.servo_calculator.calculate_servo_angle_from_position(current_y)
             
-            # Detaillierte Informationen für das Log
+            # Detailed info for log
             angle_info = self.servo_calculator.get_angle_info(current_y)
             
-            # Servo-Winkel setzen
+            # Set servo angle
             base_url = self.base_url_var.get()
             ApiClient.set_servo_angle(calculated_angle, base_url)
             
-            # UI und Variablen aktualisieren
+            # Update UI and variables
             self.servo_angle_var.set(calculated_angle)
             self.widgets['servo_angle'].delete(0, 'end')
             self.widgets['servo_angle'].insert(0, str(calculated_angle))

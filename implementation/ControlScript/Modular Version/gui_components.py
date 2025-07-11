@@ -52,7 +52,7 @@ class GUIBuilder:
         """Creates diameter input frame"""
         diameter_frame = tk.Frame(parent)
         diameter_frame.pack(fill="x", padx=10, pady=2)
-        tk.Label(diameter_frame, text="Zahnraddurchmesser (mm):").pack(side=tk.LEFT)
+        tk.Label(diameter_frame, text="Gear diameter (mm):").pack(side=tk.LEFT)
         diameter_entry = tk.Entry(diameter_frame, width=10)
         diameter_entry.insert(0, DEFAULT_DIAMETER)
         diameter_entry.pack(side=tk.LEFT, padx=5)
@@ -67,7 +67,7 @@ class GUIBuilder:
         tk.Label(position_frame, text="Position (mm):").pack(side=tk.LEFT)
         position_label = tk.Label(position_frame, text="0.00", relief="sunken", width=10)
         position_label.pack(side=tk.LEFT, padx=5)        
-        tk.Label(position_frame, text="Servo Winkel (°):").pack(side=tk.LEFT, padx=(20,0))
+        tk.Label(position_frame, text="Servo angle (°):").pack(side=tk.LEFT, padx=(20,0))
         servo_angle_label = tk.Label(position_frame, text="0", relief="sunken", width=10)
         servo_angle_label.pack(side=tk.LEFT, padx=5)
         

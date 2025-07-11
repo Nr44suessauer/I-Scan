@@ -40,44 +40,41 @@ class Logger:
         Args:
             msg (str): Die zu protokollierende Nachricht
         """
-        # Nachrichtentyp bestimmen und Farbe basierend auf dem Inhalt auswählen
+        # Determine message type and select color based on content
         msg_lower = msg.lower()
-        if any(x in msg_lower for x in ["motor", "stepper", "schrittmotor", "steps"]):
-            color = "#1e90ff"  # Blau für Motor-/Stepper-Nachrichten
+        if any(x in msg_lower for x in ["motor", "stepper", "steps"]):
+            color = "#1e90ff"  # Blue for motor/stepper messages
         elif "servo" in msg_lower:
-            color = "#228B22"  # Grün für Servo-Nachrichten
+            color = "#228B22"  # Green for servo messages
         elif "button" in msg_lower:
-            color = "#ff8800"  # Orange für Button-Nachrichten
+            color = "#ff8800"  # Orange for button messages
         elif "led" in msg_lower or "color" in msg_lower or "brightness" in msg_lower:
-            color = "#c71585"  # Magenta für LED-Nachrichten
+            color = "#c71585"  # Magenta for LED messages
         else:
-            color = "#000000"  # Schwarz für andere Nachrichten
-            
-        # Nachricht zum Ausgabe-Widget mit der ausgewählten Farbe hinzufügen
+            color = "#000000"  # Black for other messages
+        # Add message to output widget with selected color
         self.output.config(state='normal')
         self.output.insert(tk.END, msg + "\n\n", (color,))
         self.output.tag_config(color, foreground=color)
         self.output.see(tk.END)
         self.output.config(state='disabled')
-        
-        # GUI nach jeder Protokollausgabe aktualisieren
+        # Update GUI after each log output
         try:
             self.update_callback()
         except Exception:
             pass
-            
-        # Protokollnachricht analysieren, um Position und Servo-Winkel zu aktualisieren
+        # Analyze log message to update position and servo angle
         self._update_from_log(msg)
     
     def _update_from_log(self, msg):
         """
-        Aktualisiert Position und Servo-Winkel basierend auf Protokollnachrichten
-        Analysiert verschiedene Formate von Protokollnachrichten, um die relevanten Werte zu extrahieren
+        Updates position and servo angle based on log messages
+        Analyzes various formats of log messages to extract relevant values
         
         Args:
-            msg (str): Die zu analysierende Protokollnachricht
+            msg (str): The log message to analyze
         """
-        # Format 1: Standardformat mit Positionsfeld
+        # Format 1: Standard format with position field
         # "Motor: 100 Steps, 0.21 cm, Direction down, Position: 10.50 cm"
         try:
             motor_match = re.search(r"Motor:.*Steps,.*cm, Direction .*, Position: ([-\d\.]+) cm", msg)

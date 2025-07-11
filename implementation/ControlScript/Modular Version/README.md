@@ -1,41 +1,42 @@
+
 # I-Scan Control Software
 
-Eine modulare Steuerungssoftware für das I-Scan System mit JSON-basierter Kamera-Konfiguration und Live-Streaming-Funktionalität.
+A modular control software for the I-Scan system with JSON-based camera configuration and live streaming functionality.
 
-## 🎯 Übersicht
+## 🎯 Overview
 
-Das I-Scan Control Software ist eine professionelle Anwendung zur Steuerung von Mess- und Kamerasystemen. Die Software bietet eine intuitive Benutzeroberfläche mit Echtzeit-Kamera-Streams, automatisierter Gerätesteuerung und flexibler JSON-basierter Konfiguration.
+The I-Scan Control Software is a professional application for controlling measurement and camera systems. The software provides an intuitive user interface with real-time camera streams, automated device control, and flexible JSON-based configuration.
 
-## 🚀 Hauptfunktionen
+## 🚀 Main Features
 
-- **📷 Multi-Kamera-System**: Unterstützung mehrerer USB-Kameras mit Live-Streaming
-- **⚙️ JSON-Konfiguration**: Flexible Kamera-Konfiguration über JSON-Editor
-- **🔄 Live-Reload**: Konfigurationsänderungen ohne Neustart anwenden
-- **🎛️ Hardware-Interface**: Steuerung von Servo-Motoren und Sensoren
-- **📊 Winkel-Berechnung**: Integrierte Berechnungsfunktionen
-- **🗂️ Queue-System**: Verwalten und Ausführen von Operationssequenzen
-- **📝 Logging**: Vollständige Protokollierung aller Aktionen
+- **📷 Multi-camera system**: Support for multiple USB cameras with live streaming
+- **⚙️ JSON configuration**: Flexible camera configuration via JSON editor
+- **🔄 Live reload**: Apply configuration changes without restart
+- **🎛️ Hardware interface**: Control of servo motors and sensors
+- **📊 Angle calculation**: Integrated calculation functions
+- **🗂️ Queue system**: Manage and execute operation sequences
+- **📝 Logging**: Complete logging of all actions
 
-## 🏗️ Architektur
+## 🏗️ Architecture
 
-Die Software folgt einer modularen Architektur mit klarer Trennung der Verantwortlichkeiten:
+The software follows a modular architecture with clear separation of responsibilities:
 
 ```
 I-Scan Control Software/
-├── main_modular.py          # Hauptanwendung
-├── camera/                  # Kamera-System (JSON-basiert)
-├── gui_components.py        # GUI-Komponenten
-├── event_handlers.py        # Event-Management
-├── queue_operations.py      # Operations-Queue
-├── config.py               # Konfiguration
-└── requirements.txt        # Python-Dependencies
+├── main_modular.py          # Main application
+├── camera/                  # Camera system (JSON-based)
+├── gui_components.py        # GUI components
+├── event_handlers.py        # Event management
+├── queue_operations.py      # Operations queue
+├── config.py                # Configuration
+└── requirements.txt         # Python dependencies
 ```
 
-## 📋 Systemanforderungen
+## 📋 System Requirements
 
-- **Python**: 3.8 oder höher
-- **Betriebssystem**: Windows 10/11
-- **Hardware**: USB-Kameras, Servo-Controller (optional)
+- **Python**: 3.8 or higher
+- **Operating system**: Windows 10/11
+- **Hardware**: USB cameras, servo controller (optional)
 - **Memory**: Minimum 4GB RAM
 
 ## 🔧 Installation

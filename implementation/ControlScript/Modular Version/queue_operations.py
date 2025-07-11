@@ -46,7 +46,7 @@ class QueueOperations:
             color_hex = self.app.led_color.get()
             if not color_hex.startswith("#"):
                 color_hex = "#" + color_hex
-            description = f"LED: Farbe auf {color_hex} setzen"
+            description = f"LED: Set color to {color_hex}"
             self.app.operation_queue.add('led_color', {'color': color_hex}, description)
         except Exception as e:
             self.app.logger.log(f"Fehler beim Hinzufügen zur Warteschlange: {e}")
@@ -55,19 +55,19 @@ class QueueOperations:
         """Add LED brightness operation to queue"""
         try:
             val = int(self.app.led_bright.get())
-            description = f"LED: Helligkeit auf {val}% setzen"
+            description = f"LED: Set brightness to {val}%"
             self.app.operation_queue.add('led_brightness', {'brightness': val}, description)
         except Exception as e:
             self.app.logger.log(f"Fehler beim Hinzufügen zur Warteschlange: {e}")
     
     def add_button_to_queue(self):
         """Add button status query to queue"""
-        description = "Button: Button-Status abfragen"
+        description = "Button: Query button status"
         self.app.operation_queue.add('button', {}, description)
     
     def add_home_to_queue(self):
         """Add home function to queue"""
-        description = "Home: Home-Funktion ausführen"
+        description = "Home: Execute home function"
         self.app.operation_queue.add('home', {}, description)
     
     def add_photo_to_queue(self):

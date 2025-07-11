@@ -14,7 +14,7 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext
 import time
 
-# Import configuration and components
+ # Import configuration and components
 from config import *
 from gui_components import GUIBuilder
 from event_handlers import EventHandlers
@@ -42,40 +42,40 @@ class ControlApp:
         self.root = tk.Tk()
         self.root.title(WINDOW_TITLE)
         self.setup_window_icon()
-        
+
         # Initialize variables
         self.init_variables()
-        
+
         # Initialize camera configuration (JSON-based)
         self.camera_config = JSONCameraConfig("cameras_config.json")
-        print("DEBUG: JSON Config loaded")
+        print("DEBUG: JSON config loaded")
         cameras = self.camera_config.get_enabled_cameras()
         print(f"DEBUG: Loaded cameras from JSON: {cameras}")
-        
+
         # Initialize JSON Camera Stream Manager
         self.camera_stream_manager = JSONCameraStreamManager("cameras_config.json")
-        
+
         # Setup available cameras based on JSON config
         self.setup_available_cameras_json()
-        
+
         # Initialize webcams based on available cameras (before GUI creation)
         self.setup_webcams_json()
-        
+
         # Create GUI components with the determined camera list
         self.create_all_widgets()
-        
+
         # Set default camera
         if self.available_cameras:
             self.current_camera_index = self.available_cameras[0]
             self.webcam = self.webcams[self.current_camera_index]
-        
+
         # Initialize backend modules
         self.init_backend_modules()
-        
+
         # Initialize helper classes
         self.event_handlers = EventHandlers(self)
         self.queue_ops = QueueOperations(self)
-        
+
         # Assign all callbacks
         self.event_handlers.assign_all_callbacks()
         
@@ -123,10 +123,10 @@ class ControlApp:
         
         print("JSON-Kamera-Setup:")
         for camera in enabled_cameras:
-            verbindung_info = self.camera_config.parse_verbindung(camera['verbindung'])
-            print(f"  Index {camera['index']}: {camera['name']} ({camera['verbindung']}) - {camera['beschreibung']}")
-            if verbindung_info:
-                print(f"    Hardware: {verbindung_info}")
+            connection_info = self.camera_config.parse_verbindung(camera['connection'])
+            print(f"  Index {camera['index']}: {camera['name']} ({camera['connection']}) - {camera['description']}")
+            if connection_info:
+                print(f"    Hardware: {connection_info}")
         
         # Setze verfügbare Kamera-Indices auf alle aktivierten Kameras aus JSON
         self.available_cameras = [cam['index'] for cam in enabled_cameras]
@@ -208,7 +208,7 @@ class ControlApp:
                 for cam_index in self.available_cameras:
                     # Check if camera is physically available
                     camera_info = self.camera_config.get_camera_by_index(cam_index)
-                    hardware_info = self.camera_config.parse_verbindung(camera_info['verbindung'])
+                    hardware_info = self.camera_config.parse_verbindung(camera_info['connection'])
                     
                     if hardware_info:
                         device_index = hardware_info.get('device_index', cam_index)
@@ -263,14 +263,14 @@ class ControlApp:
         
         for camera in enabled_cameras:
             cam_index = camera['index']
-            verbindung_info = self.camera_config.parse_verbindung(camera['verbindung'])
+            connection_info = self.camera_config.parse_verbindung(camera['connection'])
             
-            if verbindung_info and verbindung_info.get('type') == 'usb':
-                device_index = verbindung_info.get('device_index', 0)
+            if connection_info and connection_info.get('type') == 'usb':
+                device_index = connection_info.get('device_index', 0)
                 
                 # Erstelle nur Webcam-Instanz wenn physisch verfügbar
                 if device_index in getattr(self, 'physically_available_cameras', []):
-                    print(f"Initialisiere JSON-Kamera Index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
+                    print(f"Initialize JSON camera index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
                     
                     from webcam_helper import WebcamHelper
                     webcam = WebcamHelper(
@@ -825,15 +825,15 @@ Verfügbare Verbindungstypen:
             
             # Validate each camera
             for i, camera in enumerate(config_data["cameras"]):
-                required_fields = ["index", "verbindung", "name", "enabled"]
+                required_fields = ["index", "connection", "name", "enabled"]
                 for field in required_fields:
                     if field not in camera:
                         raise ValueError(f"Kamera {i}: Pflichtfeld '{field}' fehlt")
                 
-                # Validate verbindung format
-                verbindung = camera["verbindung"]
-                if not any(verbindung.startswith(prefix) for prefix in ["USB:", "RTSP:", "HTTP:"]):
-                    raise ValueError(f"Kamera {i}: Ungültiges Verbindungsformat '{verbindung}'. Verwenden Sie USB:, RTSP:, oder HTTP:")
+                # Validate connection format
+                connection = camera["connection"]
+                if not any(connection.startswith(prefix) for prefix in ["USB:", "RTSP:", "HTTP:"]):
+                    raise ValueError(f"Camera {i}: Invalid connection format '{connection}'. Use USB:, RTSP:, or HTTP:")
             
             messagebox.showinfo("Validierung", "✅ JSON-Konfiguration ist gültig!")
             return True
@@ -981,14 +981,14 @@ Verfügbare Verbindungstypen:
             # Try to get info from JSON config
             camera = self.camera_config.get_camera_by_index(cam_index)
             if camera:
-                hardware_info = self.camera_config.parse_verbindung(camera['verbindung'])
+                hardware_info = self.camera_config.parse_verbindung(camera['connection'])
                 device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
                 
                 return {
                     'name': camera.get('name', f"Camera {cam_index}"),
                     'bezeichnung': camera.get('name', f"Camera {cam_index}"),
                     'usb_label': f"USB-{device_index}",
-                    'beschreibung': camera.get('beschreibung', f"USB Camera {cam_index}")
+                    'description': camera.get('description', f"USB Camera {cam_index}")
                 }
         
         # Fallback to default values
@@ -996,7 +996,7 @@ Verfügbare Verbindungstypen:
             'name': f"Camera {cam_index}",
             'bezeichnung': f"Camera {cam_index}",
             'usb_label': f"USB-{cam_index}",
-            'beschreibung': f"USB Camera {cam_index}"
+            'description': f"USB Camera {cam_index}"
         }
     
     def start_auto_streams(self):

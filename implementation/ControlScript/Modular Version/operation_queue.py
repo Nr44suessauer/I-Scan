@@ -39,9 +39,9 @@ class OperationQueue:
         Fügt eine Operation zur Warteschlange hinzu
         
         Args:
-            operation_type (str): Der Typ der Operation (servo, stepper usw.)
-            params (dict): Die Parameter für die Operation
-            description (str): Eine menschenlesbare Beschreibung der Operation
+            operation_type (str): The type of operation (servo, stepper, etc.)
+            params (dict): The parameters for the operation
+            description (str): A human-readable description of the operation
         """
         self.operations.append({
             'type': operation_type,
@@ -49,20 +49,20 @@ class OperationQueue:
             'description': description
         })
         self.update_display()
-        self.logger.log(f"Zur Warteschlange hinzugefügt: {description}")
+        self.logger.log(f"Added to queue: {description}")
     
     def clear(self):
-        """Löscht alle Operationen aus der Warteschlange"""
+        """Clears all operations from the queue"""
         self.operations.clear()
         self.update_display()
-        self.logger.log("Operationswarteschlange gelöscht")
+        self.logger.log("Operation queue cleared")
     
     def import_from_csv(self, file_path):
         """
-        Importiert Operationen aus einer CSV-Datei in die Warteschlange
+        Imports operations from a CSV file into the queue
         
         Args:
-            file_path (str): Pfad zur CSV-Datei
+            file_path (str): Path to the CSV file
         """
         try:
             import csv
