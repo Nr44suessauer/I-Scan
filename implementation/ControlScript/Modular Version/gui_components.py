@@ -706,7 +706,7 @@ class GUIBuilder:
         photo_camera_combo.pack(side=tk.LEFT, padx=(2, 10))
         
         # Photo action buttons
-        photo_exec_btn = tk.Button(photo_frame, text="📷 Foto", 
+        photo_exec_btn = tk.Button(photo_frame, text="📷 Photo", 
                                   bg="lightcyan", fg="black", font=("Arial", 8, "bold"), width=8)
         photo_exec_btn.pack(side=tk.LEFT, padx=2)
         
