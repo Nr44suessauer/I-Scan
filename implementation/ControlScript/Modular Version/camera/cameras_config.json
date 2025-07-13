@@ -14,7 +14,7 @@
     },
     {
       "index": 2,
-      "connection": "USB:1",
+      "connection": "HTTP:http://192.168.178.100:4343/video",
       "description": "New camera description 2",
       "name": "Kinect",
       "enabled": true,
@@ -40,6 +40,30 @@
       "connection": "USB:4",
       "description": "New camera description 4",
       "name": "Camera 5",
+      "enabled": true,
+      "resolution": [
+        640,
+        480
+      ],
+      "fps": 30
+    },
+    {
+      "index": 5,
+      "connection": "USB:5",
+      "description": "New camera description 5",
+      "name": "Camera 6",
+      "enabled": true,
+      "resolution": [
+        640,
+        480
+      ],
+      "fps": 30
+    },
+    {
+      "index": 6,
+      "connection": "USB:6",
+      "description": "New camera description 6",
+      "name": "Camera 7",
       "enabled": true,
       "resolution": [
         640,

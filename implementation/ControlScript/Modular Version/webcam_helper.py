@@ -78,8 +78,12 @@ class CameraHelper:
         Returns:
             bool: True if successfully initialized, else False
         """
-        self.cap = cv2.VideoCapture(self.device_index)
+        # Support both integer device indices and string URLs
+        cap_source = self.device_index
+        self.cap = cv2.VideoCapture(cap_source)
         if not self.cap.isOpened():
+            self.cap = None
+            self.running = False
             return False
         self.running = True
         return True
@@ -125,14 +129,18 @@ class CameraHelper:
                     # Scale frame to square for display
                     self.current_frame = frame.copy()  # Copy original frame
                     frame_square = self._make_square_frame(frame, self.frame_size)
-                    # Convert from BGR to RGB for tkinter
-                    frame_rgb = cv2.cvtColor(frame_square, cv2.COLOR_BGR2RGB)
-                    # Convert to Pillow format
-                    img = Image.fromarray(frame_rgb)
-                    # Convert to Tkinter-compatible format
-                    img_tk = ImageTk.PhotoImage(image=img)
-                    # GUI update via after() for thread safety
-                    panel.after(0, self._update_panel, panel, img_tk)
+                else:
+                    # Kamera nicht verfügbar: leeres (schwarzes) Bild anzeigen
+                    min_target = min(self.frame_size)
+                    frame_square = np.zeros((min_target, min_target, 3), dtype=np.uint8)
+                # Convert from BGR to RGB for tkinter
+                frame_rgb = cv2.cvtColor(frame_square, cv2.COLOR_BGR2RGB)
+                # Convert to Pillow format
+                img = Image.fromarray(frame_rgb)
+                # Convert to Tkinter-compatible format
+                img_tk = ImageTk.PhotoImage(image=img)
+                # GUI update via after() for thread safety
+                panel.after(0, self._update_panel, panel, img_tk)
                 # Short wait to achieve desired framerate
                 time.sleep(delay / 1000.0)
             except Exception as e:

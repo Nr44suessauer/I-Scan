@@ -152,7 +152,7 @@ class JSONCameraConfig:
             print(f"Error updating settings: {e}")
             return False
     
-    def parse_connection(self, connection: str) -> Dict:
+    def parse_connection(self, connection: str) -> Optional[Dict]:
         """Parse connection string and extract hardware interface"""
         try:
             if connection.startswith("USB:"):
@@ -176,8 +176,22 @@ class JSONCameraConfig:
                     "com_port": com_port,
                     "interface": f"COM{com_port}"
                 }
+            elif connection.startswith("HTTP:"):
+                url = connection.split(":", 1)[1]
+                return {
+                    "type": "http",
+                    "url": url,
+                    "interface": url
+                }
+            elif connection.startswith("RTSP:"):
+                url = connection.split(":", 1)[1]
+                return {
+                    "type": "rtsp",
+                    "url": url,
+                    "interface": url
+                }
             else:
-                # Fallback: versuche als direkte USB-Index
+                # Fallback: try as direct USB index
                 try:
                     device_index = int(connection)
                     return {

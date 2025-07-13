@@ -258,47 +258,59 @@ class ControlApp:
     def setup_webcams_json(self):
         """Setup webcam instances based on JSON configuration (only for physically available cameras)"""
         self.webcams = {}
-        self.current_camera_index = 0
-        
-        # Hole alle aktivierten Kameras aus JSON
+        self.current_camera_index = None
+
+        # Get all enabled cameras from JSON
         enabled_cameras = self.camera_config.get_enabled_cameras()
-        
+
+        from webcam_helper import CameraHelper
         for camera in enabled_cameras:
-            cam_index = camera['index']
-            connection_info = self.camera_config.parse_connection(camera['connection'])
-            
-            if connection_info and connection_info.get('type') == 'usb':
-                device_index = connection_info.get('device_index', 0)
-                
-                # Erstelle nur Webcam-Instanz wenn physisch verfügbar
-                if device_index in getattr(self, 'physically_available_cameras', []):
-                    print(f"Initialized JSON camera index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
-                    
-                    from webcam_helper import CameraHelper
+            cam_index = camera.get('index')
+            connection_info = self.camera_config.parse_connection(camera.get('connection', ''))
+            if not connection_info:
+                print(f"Camera index {cam_index}: {camera.get('name', 'Unknown')} - OFFLINE - No connection info")
+                continue
+
+            cam_type = connection_info.get('type')
+            if cam_type == 'usb':
+                device_index = connection_info.get('device_index', None)
+                # Only add webcam if device_index is physically available
+                if device_index is not None and device_index in getattr(self, 'physically_available_cameras', []):
+                    print(f"Initialized JSON camera index {cam_index}: {camera.get('name', 'Unknown')} (USB-{device_index}) - ONLINE")
                     webcam = CameraHelper(
                         device_index=device_index,
                         frame_size=(150, 150),
                         com_port=f"USB-{device_index}",
-                        model=camera['name']
+                        model=camera.get('name', f"Camera {cam_index}")
                     )
                     self.webcams[cam_index] = webcam
                 else:
-                    print(f"Camera index {cam_index}: {camera['name']} (USB-{device_index}) - OFFLINE - No webcam instance created")
-          # Setze primäre Kamera auf erste verfügbare online Kamera
+                    print(f"Camera index {cam_index}: {camera.get('name', 'Unknown')} (USB-{device_index}) - OFFLINE - No webcam instance created")
+            elif cam_type in ['http', 'rtsp']:
+                url = connection_info.get('url', None)
+                if url:
+                    print(f"Initialized JSON camera index {cam_index}: {camera.get('name', 'Unknown')} ({cam_type.upper()}:{url}) - ONLINE")
+                    webcam = CameraHelper(
+                        device_index=url,
+                        frame_size=(150, 150),
+                        com_port=url,
+                        model=camera.get('name', f"Camera {cam_index}")
+                    )
+                    self.webcams[cam_index] = webcam
+                else:
+                    print(f"Camera index {cam_index}: {camera.get('name', 'Unknown')} ({cam_type}) - OFFLINE - No URL provided")
+            else:
+                print(f"Camera index {cam_index}: {camera.get('name', 'Unknown')} - Unsupported type '{cam_type}'")
+
+        # Set primary camera to first available online camera
+        self.current_camera_index = None
+        self.webcam = None
         if self.available_cameras and self.webcams:
-            # Find first camera that has a webcam instance (is online)
             for cam_index in self.available_cameras:
                 if cam_index in self.webcams:
                     self.current_camera_index = cam_index
                     self.webcam = self.webcams[cam_index]
                     break
-            else:
-                # No online cameras available
-                self.current_camera_index = None
-                self.webcam = None
-        else:
-            self.current_camera_index = None
-            self.webcam = None
     
     def create_all_widgets(self):
         """Create all GUI widgets using GUIBuilder"""
@@ -471,7 +483,6 @@ class ControlApp:
                     if webcam.start_stream(camera_label):
                         # Give stream time to initialize
                         time.sleep(0.5)
-                        
                         # Verify stream is running
                         if webcam.running:
                             # Don't override the label - let the stream display video frames
@@ -479,12 +490,25 @@ class ControlApp:
                             self.logger.log(f"📹 Camera {camera_index} stream started and initialized")
                             return True
                         else:
+                            # Show network error for HTTP/RTSP cameras
+                            cam_info = self.get_camera_info(camera_index)
+                            connection_info = self.camera_config.parse_connection(cam_info.get('connection', ''))
+                            cam_type = connection_info.get('type') if connection_info else None
+                            if cam_type in ['http', 'rtsp']:
+                                camera_label.config(text=f"{cam_info['usb_label']}\nNETWORK ERROR", bg="orange")
+                            else:
+                                camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
                             self.logger.log(f"⚠️ Camera {camera_index} stream could not be initialized")
                             return False
                     else:
                         # Update label to show error status
                         cam_info = self.get_camera_info(camera_index)
-                        camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
+                        connection_info = self.camera_config.parse_connection(cam_info.get('connection', ''))
+                        cam_type = connection_info.get('type') if connection_info else None
+                        if cam_type in ['http', 'rtsp']:
+                            camera_label.config(text=f"{cam_info['usb_label']}\nNETWORK ERROR", bg="orange")
+                        else:
+                            camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
                         self.logger.log(f"❌ Error starting camera {camera_index}")
                         return False
                 else:
@@ -646,11 +670,15 @@ class ControlApp:
                     camera_view_frame.pack_propagate(False)
                     camera_view_frame.pack(padx=2, pady=2)
 
-                    hardware_info = self.camera_config.parse_verbindung(
-                        self.camera_config.get_camera_by_index(cam_index)['connection']
-                    )
-                    device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
-                    is_online = device_index in getattr(self, 'physically_available_cameras', [])
+                    camera_obj = self.camera_config.get_camera_by_index(cam_index)
+                    if camera_obj and 'connection' in camera_obj:
+                        hardware_info = self.camera_config.parse_connection(camera_obj['connection'])
+                        device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+                        is_online = device_index in getattr(self, 'physically_available_cameras', [])
+                    else:
+                        hardware_info = None
+                        device_index = cam_index
+                        is_online = False
 
                     if is_online:
                         bg_color = "gray"
@@ -1190,11 +1218,15 @@ Available connection types:
             camera_view_frame.pack(padx=2, pady=2)
             
             # Check if camera is physically available
-            hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['connection']
-            )
-            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
-            is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            camera_obj = self.camera_config.get_camera_by_index(cam_index)
+            if camera_obj and 'connection' in camera_obj:
+                hardware_info = self.camera_config.parse_connection(camera_obj['connection'])
+                device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+                is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            else:
+                hardware_info = None
+                device_index = cam_index
+                is_online = False
             
             # Camera display label with online/offline status
             if is_online:
@@ -1228,22 +1260,26 @@ Available connection types:
         
         try:
             # Check if camera is physically available
-            hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['connection']
-            )
-            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
-            is_online = device_index in getattr(self, 'physically_available_cameras', [])
-            
+            camera_obj = self.camera_config.get_camera_by_index(cam_index)
+            if camera_obj and 'connection' in camera_obj:
+                hardware_info = self.camera_config.parse_connection(camera_obj['connection'])
+                device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+                is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            else:
+                hardware_info = None
+                device_index = cam_index
+                is_online = False
+
             camera_info = self.get_camera_info(cam_index)
             camera_label = self.camera_labels[cam_index]
-            
+
             # Check if camera stream is running - don't override video display
             if cam_index in self.webcams:
                 webcam = self.webcams[cam_index]
                 if hasattr(webcam, 'running') and webcam.running:
                     # Stream is running - don't override the video display
                     return
-            
+
             # Update color and text based on online status only if stream is not running
             if is_online:
                 bg_color = "gray"
@@ -1253,15 +1289,15 @@ Available connection types:
                 bg_color = "#8B0000"  # Dark red
                 status_text = "NICHT VERFÜGBAR"
                 fg_color = "white"
-            
+
             camera_label.configure(
                 text=f"{camera_info['usb_label']}\n{status_text}",
                 bg=bg_color,
                 fg=fg_color
             )
-            
+
         except Exception as e:
-            print(f"Fehler beim Aktualisieren der Kachel {cam_index}: {e}")
+            print(f"Error updating tile {cam_index}: {e}")
 
     def reinitialize_camera_streams(self):
         """
@@ -1381,41 +1417,45 @@ Available connection types:
             camera_view_frame.pack(padx=2, pady=2)
             
             # Online/Offline-Status prüfen
-            hardware_info = self.camera_config.parse_verbindung(
-                self.camera_config.get_camera_by_index(cam_index)['connection']
-            )
-            device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
-            is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            camera_obj = self.camera_config.get_camera_by_index(cam_index)
+            if camera_obj and 'connection' in camera_obj:
+                hardware_info = self.camera_config.parse_connection(camera_obj['connection'])
+                device_index = hardware_info.get('device_index', cam_index) if hardware_info else cam_index
+                is_online = device_index in getattr(self, 'physically_available_cameras', [])
+            else:
+                hardware_info = None
+                device_index = cam_index
+                is_online = False
             
             # Kamera-Label mit initialem Status erstellen
             if is_online:
                 bg_color = "gray"
-                status_text = "BEREIT"
+                status_text = "READY"
                 fg_color = "white"
             else:
-                bg_color = "#8B0000"  # Dunkelrot
-                status_text = "NICHT VERFÜGBAR"
+                bg_color = "#8B0000"  # Dark red
+                status_text = "NOT AVAILABLE"
                 fg_color = "white"
-            
+
             camera_label = tk.Label(camera_view_frame, 
                                    text=f"{camera_info['usb_label']}\n{status_text}", 
                                    bg=bg_color, fg=fg_color, relief="sunken", bd=1,
                                    font=("Arial", 8))
             camera_label.pack(fill="both", expand=True)
-            
-            # Referenzen speichern
+
+            # Store references
             if not hasattr(self, 'camera_labels'):
                 self.camera_labels = {}
             if not hasattr(self, 'camera_frames'):
                 self.camera_frames = {}
-                
+
             self.camera_labels[cam_index] = camera_label
             self.camera_frames[cam_index] = {
                 'frame': camera_frame,
                 'view_frame': camera_view_frame
             }
-            
-            print(f"  Kamera {cam_index} GUI erstellt - {'ONLINE' if is_online else 'OFFLINE'}")
+
+            print(f"  Camera {cam_index} GUI created - {'ONLINE' if is_online else 'OFFLINE'}")
         
         # Grid-Gewichte für gleichmäßige Skalierung setzen
         for c in range(cols):
