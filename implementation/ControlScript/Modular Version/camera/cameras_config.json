@@ -46,30 +46,6 @@
         480
       ],
       "fps": 30
-    },
-    {
-      "index": 5,
-      "connection": "USB:5",
-      "description": "New camera description 5",
-      "name": "Camera 6",
-      "enabled": true,
-      "resolution": [
-        640,
-        480
-      ],
-      "fps": 30
-    },
-    {
-      "index": 6,
-      "connection": "USB:6",
-      "description": "New camera description 6",
-      "name": "Camera 7",
-      "enabled": true,
-      "resolution": [
-        640,
-        480
-      ],
-      "fps": 30
     }
   ],
   "settings": {
