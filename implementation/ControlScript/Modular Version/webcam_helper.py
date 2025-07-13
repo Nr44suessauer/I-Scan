@@ -26,7 +26,9 @@ class CameraHelper:
     @staticmethod
     def detect_available_cameras(max_cameras=10):
         """
-        Detect all available cameras in the system
+        Detect all available cameras in the system (USB only).
+        This method scans for available USB cameras by trying to open each index.
+        HTTP cameras are not detected here, as they require a URL.
         
         Args:
             max_cameras (int): Maximum number of camera indices to test
@@ -51,12 +53,41 @@ class CameraHelper:
         
         return available_cameras if available_cameras else [0]  # Fallback to index 0
     
-    def __init__(self, device_index=0, frame_size=(320, 240), com_port=None, model=None):
+    @staticmethod
+    def parse_device_index(connection):
         """
-        Initialize the webcam with the given device index and frame size
+        Parse the connection string from JSON and return the correct device_index for CameraHelper.
+        Supports USB (e.g. 'USB:0') and HTTP (e.g. 'HTTP:http://ip:port').
+        For HTTP, ensures the URL ends with '/video' for DroidCam compatibility.
         
         Args:
-            device_index (int): Index of the camera to use (default: 0)
+            connection (str): The connection string to parse
+        Returns:
+            int or str: The parsed device index or URL
+        """
+        if isinstance(connection, str) and connection.upper().startswith("HTTP:"):
+            # Extract the URL after 'HTTP:' and ensure it ends with '/video'
+            url = connection[5:]
+            if not url.endswith("/video"):
+                url += "/video"
+            return url
+        elif isinstance(connection, str) and connection.upper().startswith("USB:"):
+            # Extract the USB camera index
+            try:
+                return int(connection.split(":", 1)[1])
+            except Exception:
+                return 0
+        else:
+            # Return as-is (could be int or str)
+            return connection
+
+    def __init__(self, device_index=0, frame_size=(320, 240), com_port=None, model=None):
+        """
+        Initialize the webcam or HTTP stream with the given device index or URL and frame size.
+        device_index can be an int (USB camera index) or str (HTTP URL).
+        
+        Args:
+            device_index (int or str): Index of the camera or HTTP URL
             frame_size (tuple): Size of the displayed frame (width, height)
             com_port (str, optional): COM port of the camera
             model (str, optional): Model name of the camera
@@ -73,15 +104,21 @@ class CameraHelper:
     
     def start_camera(self):
         """
-        Start and initialize the camera
-        
+        Start and initialize the camera (supports USB and HTTP sources).
+        For HTTP, uses the URL directly. For USB, uses the index.
         Returns:
             bool: True if successfully initialized, else False
         """
-        # Support both integer device indices and string URLs
         cap_source = self.device_index
-        self.cap = cv2.VideoCapture(cap_source)
-        if not self.cap.isOpened():
+        # If device_index is an HTTP URL, use it directly
+        if isinstance(cap_source, str) and cap_source.lower().startswith("http"):
+            # Open HTTP stream (e.g. DroidCam)
+            self.cap = cv2.VideoCapture(cap_source)
+        else:
+            # Open USB camera
+            self.cap = cv2.VideoCapture(cap_source)
+        if not self.cap or not self.cap.isOpened():
+            print(f"Error opening stream: {cap_source}")
             self.cap = None
             self.running = False
             return False
@@ -114,8 +151,10 @@ class CameraHelper:
     
     def stream_loop(self, panel, fps=30):
         """
-        Main loop for the camera stream
-        Runs in a separate thread to avoid blocking the GUI
+        Main loop for the camera stream (USB or HTTP).
+        Runs in a separate thread to avoid blocking the GUI.
+        Continuously reads frames and updates the Tkinter panel.
+        If the stream fails, shows a black image.
         
         Args:
             panel: The label widget for displaying the stream
@@ -130,7 +169,7 @@ class CameraHelper:
                     self.current_frame = frame.copy()  # Copy original frame
                     frame_square = self._make_square_frame(frame, self.frame_size)
                 else:
-                    # Kamera nicht verfügbar: leeres (schwarzes) Bild anzeigen
+                    # Camera not available: show black image
                     min_target = min(self.frame_size)
                     frame_square = np.zeros((min_target, min_target, 3), dtype=np.uint8)
                 # Convert from BGR to RGB for tkinter
@@ -149,8 +188,9 @@ class CameraHelper:
     
     def _update_panel(self, panel, img_tk):
         """
-        Thread-safe GUI update method
-        Executed by the main thread
+        Thread-safe GUI update method for Tkinter panel.
+        Ensures the panel exists and is valid before updating the image.
+        If the panel is destroyed, stops the stream.
         """
         try:
             # Check several conditions before updating
@@ -256,3 +296,4 @@ class CameraHelper:
         if self.cap:
             self.cap.release()
             self.cap = None
+

@@ -37,6 +37,8 @@ class ControlApp:
     """
     
     def __init__(self):
+        # ...existing code...
+        self.refresh_pending = False  # Debounce flag for camera config refresh
         """Initialize the application"""
         # Create main window
         self.root = tk.Tk()
@@ -245,8 +247,13 @@ class ControlApp:
                     webcam = self.webcams[cam_index]
                     if hasattr(webcam, 'start_stream'):
                         try:
-                            webcam.start_stream()
-                            print(f"Stream started for camera {cam_index}")
+                            # Pass the correct panel (camera label) to start_stream
+                            panel = self.camera_labels.get(cam_index)
+                            if panel is not None:
+                                webcam.start_stream(panel)
+                                print(f"Stream started for camera {cam_index}")
+                            else:
+                                print(f"No panel found for camera {cam_index}, cannot start stream.")
                         except Exception as e:
                             print(f"Error starting stream for camera {cam_index}: {e}")
             
@@ -564,24 +571,24 @@ class ControlApp:
         """
         Refresh camera configuration after JSON changes
         This method is called as a callback when the JSON is updated
+        Debounced: Only one refresh allowed per event window.
         """
+        if self.refresh_pending:
+            print("Camera config refresh already pending, skipping duplicate call.")
+            return
+        self.refresh_pending = True
         try:
             print("Refreshing camera configuration after JSON change...")
-            
             # Stop all current camera streams first
             self.stop_all_camera_streams()
-            
             # Reload camera configuration from JSON
             self.camera_config = JSONCameraConfig("cameras_config.json")
-            
             # Determine new available cameras based on JSON config
             self.setup_available_cameras_json()
-            
             # Recreate webcam instances with new configuration
             self.setup_webcams_json()
-              # Refresh only camera streams without rebuilding GUI
+            # Refresh only camera streams without rebuilding GUI
             self.root.after(100, self.refresh_camera_streams_only)
-            
             # Update current camera selection if needed
             if self.available_cameras:
                 # If current camera is still available, keep it
@@ -589,15 +596,18 @@ class ControlApp:
                     # Switch to first available camera
                     self.current_camera_index = self.available_cameras[0]
                     self.webcam = self.webcams[self.current_camera_index]
-            
             # Update photo camera combo box with new configuration
             self.update_photo_camera_combo()
-        
             print(f"Camera configuration refreshed successfully - {len(self.available_cameras)} cameras available")
-            
         except Exception as e:
             print(f"Error during camera configuration refresh: {e}")
             self.logger.log(f"⚠️ Fehler beim Aktualisieren der Kamera-Konfiguration: {e}")
+        finally:
+            # Reset flag after a short delay to allow future refreshes
+            self.root.after(1000, self._reset_refresh_flag)
+
+    def _reset_refresh_flag(self):
+        self.refresh_pending = False
 
     def stop_all_camera_streams(self):
         """Stop all running camera streams before reconfiguration"""

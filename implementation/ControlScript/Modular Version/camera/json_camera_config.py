@@ -178,6 +178,9 @@ class JSONCameraConfig:
                 }
             elif connection.startswith("HTTP:"):
                 url = connection.split(":", 1)[1]
+                # Ensure /video is appended for DroidCam streams
+                if not url.endswith("/video"):
+                    url += "/video"
                 return {
                     "type": "http",
                     "url": url,
