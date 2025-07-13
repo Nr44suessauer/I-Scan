@@ -466,58 +466,61 @@ class ControlApp:
     def update_current_camera_info(self):
         """Update the current camera info label with detailed information"""
         if hasattr(self, 'current_camera_label') and hasattr(self, 'current_camera_index'):
-            camera_info = self.get_camera_info(self.current_camera_index)
-            info_text = f"{camera_info['name']} ({camera_info['usb_label']})"
-            self.current_camera_label.config(text=info_text)
+            # Only update if the label widget still exists (not destroyed)
+            try:
+                if self.current_camera_label.winfo_exists():
+                    camera_info = self.get_camera_info(self.current_camera_index)
+                    info_text = f"{camera_info['name']} ({camera_info['usb_label']})"
+                    self.current_camera_label.config(text=info_text)
+            except Exception as e:
+                # Silently ignore if widget is invalid
+                pass
 
     def start_camera_stream(self, camera_index):
         """
         Start stream for a specific camera index and ensure it's properly initialized
         """
         import time
-        
         try:
             if camera_index in self.available_cameras and camera_index in self.webcams:
                 webcam = self.webcams[camera_index]
-                
                 # Check if stream is already running
                 if webcam.running:
                     self.logger.log(f"📹 Kamera {camera_index} Stream bereits aktiv")
                     return True
-                  # Start the stream
+                # Start the stream
                 if camera_index in self.camera_labels:
                     camera_label = self.camera_labels[camera_index]
-                    if webcam.start_stream(camera_label):
-                        # Give stream time to initialize
-                        time.sleep(0.5)
-                        # Verify stream is running
-                        if webcam.running:
-                            # Don't override the label - let the stream display video frames
-                            # The stream_loop in webcam_helper will update the label with video
-                            self.logger.log(f"📹 Camera {camera_index} stream started and initialized")
+                    # For HTTP/RTSP cameras, start stream in a non-blocking way
+                    cam_info = self.get_camera_info(camera_index)
+                    connection_info = self.camera_config.parse_connection(cam_info.get('connection', ''))
+                    cam_type = connection_info.get('type') if connection_info else None
+                    if cam_type in ['http', 'rtsp']:
+                        # Start stream and immediately return, let the thread handle initialization
+                        started = webcam.start_stream(camera_label)
+                        if started:
+                            self.logger.log(f"📹 Camera {camera_index} stream started (network, non-blocking)")
                             return True
                         else:
-                            # Show network error for HTTP/RTSP cameras
-                            cam_info = self.get_camera_info(camera_index)
-                            connection_info = self.camera_config.parse_connection(cam_info.get('connection', ''))
-                            cam_type = connection_info.get('type') if connection_info else None
-                            if cam_type in ['http', 'rtsp']:
-                                camera_label.config(text=f"{cam_info['usb_label']}\nNETWORK ERROR", bg="orange")
-                            else:
-                                camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
+                            camera_label.config(text=f"{cam_info['usb_label']}\nNETWORK ERROR", bg="orange")
                             self.logger.log(f"⚠️ Camera {camera_index} stream could not be initialized")
                             return False
                     else:
-                        # Update label to show error status
-                        cam_info = self.get_camera_info(camera_index)
-                        connection_info = self.camera_config.parse_connection(cam_info.get('connection', ''))
-                        cam_type = connection_info.get('type') if connection_info else None
-                        if cam_type in ['http', 'rtsp']:
-                            camera_label.config(text=f"{cam_info['usb_label']}\nNETWORK ERROR", bg="orange")
+                        # For USB cameras, keep short sleep for initialization
+                        started = webcam.start_stream(camera_label)
+                        if started:
+                            time.sleep(0.2)  # Reduced sleep for USB
+                            if webcam.running:
+                                self.logger.log(f"📹 Camera {camera_index} stream started and initialized")
+                                return True
+                            else:
+                                camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
+                                self.logger.log(f"⚠️ Camera {camera_index} stream could not be initialized")
+                                return False
                         else:
                             camera_label.config(text=f"{cam_info['usb_label']}\nERROR", bg="lightcoral")
-                        self.logger.log(f"❌ Error starting camera {camera_index}")
-                        return False
+                            self.logger.log(f"❌ Error starting camera {camera_index}")
+                            return False
                 else:
                     self.logger.log(f"❌ No label found for camera {camera_index}")
                     return False
