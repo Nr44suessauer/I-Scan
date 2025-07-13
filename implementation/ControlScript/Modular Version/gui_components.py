@@ -97,7 +97,7 @@ class GUIBuilder:
         return output_container, output, log_frame    @staticmethod
     def create_webcam_frame(parent, available_cameras=None, webcams_dict=None, grid_mode=False, position="full"):
         """Creates webcam display frame with compact grid layout for multiple cameras"""
-        from webcam_helper import WebcamHelper
+        from webcam_helper import CameraHelper
         from tkinter import ttk
         
         webcam_frame = tk.LabelFrame(parent, text="Camera Streams", font=("Arial", 9, "bold"))
@@ -119,11 +119,11 @@ class GUIBuilder:
         
         # Detect available cameras - use provided list or auto-detect
         if available_cameras is None:
-            available_cameras = WebcamHelper.detect_available_cameras()
+            available_cameras = CameraHelper.detect_available_cameras()
         
         if not available_cameras:
             # If no cameras detected, try to detect at least one
-            available_cameras = WebcamHelper.detect_available_cameras()
+            available_cameras = CameraHelper.detect_available_cameras()
             if not available_cameras:
                 available_cameras = [0]  # Fallback to index 0
         
@@ -583,7 +583,7 @@ class GUIBuilder:
         image_frame = tk.LabelFrame(parent_container, text="Pictures", font=("Arial", 10, "bold"))
         image_frame.grid(row=0, column=2, sticky="nsew", padx=5)
         
-        # Tab-Notebook für Bildwechsel
+        # Tab-Notebook for image switching
         image_notebook = ttk.Notebook(image_frame)
         image_notebook.pack(fill="both", expand=True, padx=5, pady=5)
         

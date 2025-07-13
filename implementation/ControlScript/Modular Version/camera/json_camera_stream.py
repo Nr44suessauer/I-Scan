@@ -40,23 +40,23 @@ class CameraStream:
         print(f"CameraStream created: {self.name} ({self.connection})")
     
     def connect(self) -> bool:
-        """Verbinde zur Kamera"""
+        """Connect to the camera"""
         try:
             if self.hardware_interface.get('type') == 'usb':
                 device_index = self.hardware_interface.get('device_index', 0)
                 self.cap = cv2.VideoCapture(device_index)
                 
                 if not self.cap.isOpened():
-                    print(f"Fehler: Kann USB-Kamera {device_index} nicht öffnen")
+                    print(f"Error: Cannot open USB camera {device_index}")
                     return False
                 
-                # Setze Auflösung wenn konfiguriert
+                # Set resolution if configured
                 if 'resolution' in self.config:
                     width, height = self.config['resolution']
                     self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
                     self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
                 
-                # Setze FPS wenn konfiguriert
+                # Set FPS if configured
                 if 'fps' in self.config:
                     self.cap.set(cv2.CAP_PROP_FPS, self.config['fps'])
                 
@@ -64,7 +64,7 @@ class CameraStream:
                 return True
             
             elif self.hardware_interface.get('type') == 'network':
-                # Netzwerk-Kamera (RTSP, HTTP, etc.)
+                # Network camera (RTSP, HTTP, etc.)
                 stream_url = self.hardware_interface.get('interface')
                 self.cap = cv2.VideoCapture(stream_url)
                 
@@ -80,7 +80,7 @@ class CameraStream:
                 return False
                 
         except Exception as e:
-            print(f"Fehler beim Verbinden zur Kamera {self.name}: {e}")
+            print(f"Error connecting to camera {self.name}: {e}")
             return False
     
     def disconnect(self):
@@ -92,9 +92,9 @@ class CameraStream:
         print(f"Camera {self.name} disconnected")
     
     def start_stream(self) -> bool:
-        """Starte Stream"""
+        """Start stream"""
         if self.running:
-            print(f"Stream für {self.name} läuft bereits")
+            print(f"Stream for {self.name} is already running")
             return True
         
         if not self.cap or not self.cap.isOpened():
@@ -104,37 +104,37 @@ class CameraStream:
         self.running = True
         self.thread = threading.Thread(target=self._stream_loop, daemon=True)
         self.thread.start()
-        print(f"Stream für {self.name} gestartet")
+        print(f"Stream for {self.name} started")
         return True
     
     def stop_stream(self):
-        """Stoppe Stream"""
+        """Stop stream"""
         if self.running:
             self.running = False
             if self.thread:
                 self.thread.join(timeout=2)
-            print(f"Stream für {self.name} gestoppt")
+            print(f"Stream for {self.name} stopped")
     
     def _stream_loop(self):
-        """Stream-Loop (läuft in separatem Thread)"""
+        """Stream loop (runs in separate thread)"""
         while self.running:
             try:
                 if not self.cap or not self.cap.isOpened():
-                    print(f"Kamera {self.name} nicht verbunden")
+                    print(f"Camera {self.name} not connected")
                     break
                 
                 ret, frame = self.cap.read()
                 if not ret:
-                    print(f"Kein Frame von Kamera {self.name} erhalten")
+                    print(f"No frame received from camera {self.name}")
                     time.sleep(0.1)
                     continue
                 
-                # Frame sicher speichern
+                # Safely store frame
                 with self.frame_lock:
                     self.current_frame = frame.copy()
                     self.frames_captured += 1
                     
-                    # FPS berechnen
+                    # Calculate FPS
                     current_time = time.time()
                     if self.last_frame_time > 0:
                         time_diff = current_time - self.last_frame_time
@@ -142,37 +142,37 @@ class CameraStream:
                             self.fps_actual = 1.0 / time_diff
                     self.last_frame_time = current_time
                 
-                # Callback aufrufen wenn vorhanden
+                # Call callback if available
                 if self.on_frame_callback:
                     self.on_frame_callback(self.index, frame)
                 
-                # Kurze Pause um CPU zu schonen
+                # Short pause to save CPU
                 time.sleep(0.01)
                 
             except Exception as e:
-                print(f"Fehler im Stream-Loop für {self.name}: {e}")
+                print(f"Error in stream loop for {self.name}: {e}")
                 time.sleep(0.5)
     
     def get_frame(self):
-        """Hole aktuellen Frame (thread-safe)"""
+        """Get current frame (thread-safe)"""
         with self.frame_lock:
             return self.current_frame.copy() if self.current_frame is not None else None
     
     def take_photo(self):
-        """Mache Foto"""
+        """Take photo"""
         frame = self.get_frame()
         if frame is not None:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = f"photo_{self.name}_{timestamp}.jpg"
             cv2.imwrite(filename, frame)
-            print(f"Foto gespeichert: {filename}")
+            print(f"Photo saved: {filename}")
             return filename
         else:
-            print(f"Kein Frame für Foto von {self.name} verfügbar")
+            print(f"No frame available for photo from {self.name}")
             return None
     
     def get_status(self) -> Dict:
-        """Hole Stream-Status"""
+        """Get stream status"""
         return {
             'name': self.name,
             'index': self.index,
@@ -186,48 +186,48 @@ class CameraStream:
 
 
 class JSONCameraStreamManager:
-    """Manager für alle Kamera-Streams basierend auf JSON-Konfiguration"""
+    """Manager for all camera streams based on JSON configuration"""
     def __init__(self, config_file: str = "cameras_config.json"):
         self.config = JSONCameraConfig(config_file)
         self.streams: Dict[int, CameraStream] = {}
         self.gui_callbacks: Dict[int, Callable] = {}
         
-        print("JSONCameraStreamManager initialisiert")
+        print("JSONCameraStreamManager initialized")
     
     def reload_config(self):
-        """Lade Konfiguration neu"""
-        print("Lade Kamera-Konfiguration neu...")
+        """Reload configuration"""
+        print("Reloading camera configuration...")
         self.config.load_config()
         self.update_streams()
     
     def update_streams(self):
-        """Aktualisiere Streams basierend auf Konfiguration"""
-        print("Aktualisiere Kamera-Streams...")
+        """Update streams based on configuration"""
+        print("Updating camera streams...")
         
-        # Hole verfügbare Kameras aus Konfiguration
+        # Get available cameras from configuration
         available_cameras = self.config.get_available_cameras()
         current_indices = set(self.streams.keys())
         new_indices = set(cam['index'] for cam in available_cameras)
         
-        # Entferne nicht mehr konfigurierte Streams
+        # Remove streams no longer configured
         for index in current_indices - new_indices:
-            print(f"Entferne Stream für Kamera {index}")
+            print(f"Removing stream for camera {index}")
             self.streams[index].disconnect()
             del self.streams[index]
         
-        # Füge neue Streams hinzu
+        # Add new streams
         for camera_config in available_cameras:
             index = camera_config['index']
             if index not in self.streams:
-                print(f"Erstelle neuen Stream für Kamera {index}")
+                print(f"Creating new stream for camera {index}")
                 callback = self.gui_callbacks.get(index)
                 self.streams[index] = CameraStream(camera_config, callback)
         
-        print(f"Streams aktualisiert: {len(self.streams)} aktive Streams")
+        print(f"Streams updated: {len(self.streams)} active streams")
     
     def start_all_streams(self):
-        """Starte alle konfigurierten Streams"""
-        print("Starte alle Kamera-Streams...")
+        """Start all configured streams"""
+        print("Starting all camera streams...")
         
         self.update_streams()
         
@@ -236,29 +236,29 @@ class JSONCameraStreamManager:
             if stream.start_stream():
                 started_count += 1
         
-        print(f"{started_count} von {len(self.streams)} Streams gestartet")
+        print(f"{started_count} of {len(self.streams)} streams started")
         return started_count
     
     def stop_all_streams(self):
-        """Stoppe alle Streams"""
-        print("Stoppe alle Kamera-Streams...")
+        """Stop all streams"""
+        print("Stopping all camera streams...")
         
         for index, stream in self.streams.items():
             stream.stop_stream()
         
-        print("Alle Streams gestoppt")
+        print("All streams stopped")
     
     def get_stream(self, index: int) -> Optional[CameraStream]:
-        """Hole Stream nach Index"""
+        """Get stream by index"""
         return self.streams.get(index)
     
     def get_all_streams(self) -> Dict[int, CameraStream]:
-        """Hole alle Streams"""
+        """Get all streams"""
         return self.streams.copy()
     
     def take_photo_all(self):
-        """Mache Foto von allen Kameras"""
-        print("Mache Fotos von allen Kameras...")
+        """Take photo from all cameras"""
+        print("Taking photos from all cameras...")
         
         photos = {}
         for index, stream in self.streams.items():
@@ -267,32 +267,32 @@ class JSONCameraStreamManager:
                 if filename:
                     photos[index] = filename
         
-        print(f"Fotos erstellt: {len(photos)} Kameras")
+        print(f"Photos created: {len(photos)} cameras")
         return photos
     
     def get_status_all(self) -> Dict[int, Dict]:
-        """Hole Status aller Streams"""
+        """Get status of all streams"""
         status = {}
         for index, stream in self.streams.items():
             status[index] = stream.get_status()
         return status
     
     def set_gui_callback(self, index: int, callback: Callable):
-        """Setze GUI-Callback für bestimmte Kamera"""
+        """Set GUI callback for specific camera"""
         self.gui_callbacks[index] = callback
         if index in self.streams:
             self.streams[index].on_frame_callback = callback
     
     def refresh_camera(self, index: int):
-        """Aktualisiere spezifische Kamera"""
+        """Refresh specific camera"""
         if index in self.streams:
             stream = self.streams[index]
             was_running = stream.running
             
-            # Stoppe und trenne
+            # Stop and disconnect
             stream.disconnect()
             
-            # Aktualisiere Konfiguration
+            # Update configuration
             camera_config = None
             for cam in self.config.get_available_cameras():
                 if cam['index'] == index:
@@ -300,19 +300,19 @@ class JSONCameraStreamManager:
                     break
             
             if camera_config:
-                # Erstelle neuen Stream
+                # Create new stream
                 callback = self.gui_callbacks.get(index)
                 self.streams[index] = CameraStream(camera_config, callback)
                 
-                # Starte wieder wenn vorher aktiv
+                # Restart if previously active
                 if was_running:
                     self.streams[index].start_stream()
                 
-                print(f"Kamera {index} aktualisiert")
+                print(f"Camera {index} refreshed")
             else:
-                # Kamera wurde aus Konfiguration entfernt
+                # Camera was removed from configuration
                 del self.streams[index]
-                print(f"Kamera {index} entfernt")
+                print(f"Camera {index} removed")
     
     def add_camera_to_config(self, index: int, connection: str, description: str, name: str = None):
         """Add new camera to configuration"""

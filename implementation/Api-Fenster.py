@@ -30,7 +30,7 @@ DEFAULT_DIRECTION = "1"
 DEFAULT_LED_COLOR = "#B00B69"
 DEFAULT_LED_BRIGHTNESS = "69"
 
-class WebcamHelper:
+class CameraHelper:
     """
     Klasse zur Steuerung einer Webcam über OpenCV
     Bietet Methoden zum Anzeigen des Kamera-Streams und Aufnehmen von Bildern
@@ -60,8 +60,8 @@ class WebcamHelper:
         self.running = True
         return True
     
-    def stoppen(self):
-        """Kamera-Stream stoppen und Ressourcen freigeben"""
+    def stop_camera(self):
+        """Stop camera stream and release resources"""
         self.running = False
         if self.thread:
             self.thread.join(timeout=1.0)
@@ -69,7 +69,7 @@ class WebcamHelper:
             self.cap.release()
         self.cap = None
     
-    def frame_lesen(self):
+    def read_frame(self):
         """Einzelnes Frame von der Kamera lesen"""
         if self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
@@ -88,7 +88,7 @@ class WebcamHelper:
         delay = max(1, int(1000 / fps))
         
         while self.running:
-            frame = self.frame_lesen()
+            frame = self.read_frame()
             if frame is not None:
                 # Bild auf die gewünschte Größe skalieren
                 frame = cv2.resize(frame, self.frame_size)
@@ -109,7 +109,7 @@ class WebcamHelper:
             # Pause für FPS-Begrenzung
             time.sleep(delay / 1000.0)
     
-    def stream_starten(self, panel):
+    def start_stream(self, panel):
         """
         Kamerastream in einem separaten Thread starten
         
@@ -864,7 +864,7 @@ class ControlApp:
         self.repeat_queue = tk.BooleanVar(value=False)  # Repeat-Flag
         
         # Webcam Initialisieren
-        self.webcam = WebcamHelper(device_index=0, frame_size=(320, 240))
+        self.webcam = CameraHelper(device_index=0, frame_size=(320, 240))
         
         # Create GUI elements
         self.create_widgets()
@@ -1379,7 +1379,7 @@ class ControlApp:
 
     def start_camera(self):
         """Startet die Kameraansicht"""
-        success = self.webcam.stream_starten(self.cam_label)
+        success = self.webcam.start_stream(self.cam_label)
         if success:
             self.logger.log("Kamera gestartet")
         else:
@@ -1389,7 +1389,7 @@ class ControlApp:
     
     def stop_camera(self):
         """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
-        self.webcam.stoppen()
+        self.webcam.stop_camera()
         self.cam_label.config(text="Kamera gestoppt", image="")
         self.logger.log("Kamera gestoppt")
     
@@ -1409,7 +1409,7 @@ class ControlApp:
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
         if hasattr(self, 'webcam'):
-            self.webcam.stoppen()
+            self.webcam.stop_camera()
         self.root.destroy()
 
     def assign_callbacks(self):
@@ -1617,7 +1617,7 @@ class ControlApp:
 
     def start_camera(self):
         """Startet die Kameraansicht"""
-        success = self.webcam.stream_starten(self.cam_label)
+        success = self.webcam.start_stream(self.cam_label)
         if success:
             self.logger.log("Kamera gestartet")
         else:
@@ -1627,7 +1627,7 @@ class ControlApp:
     
     def stop_camera(self):
         """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
-        self.webcam.stoppen()
+        self.webcam.stop_camera()
         self.cam_label.config(text="Kamera gestoppt", image="")
         self.logger.log("Kamera gestoppt")
     
@@ -1647,7 +1647,7 @@ class ControlApp:
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
         if hasattr(self, 'webcam'):
-            self.webcam.stoppen()
+            self.webcam.stop_camera()
         self.root.destroy()
 
     def assign_callbacks(self):
@@ -1874,7 +1874,7 @@ PS C:\Users\Marc\Desktop\I-Scan>
 
     def start_camera(self):
         """Startet die Kameraansicht"""
-        success = self.webcam.stream_starten(self.cam_label)
+        success = self.webcam.start_stream(self.cam_label)
         if success:
             self.logger.log("Kamera gestartet")
         else:
@@ -1884,7 +1884,7 @@ PS C:\Users\Marc\Desktop\I-Scan>
     
     def stop_camera(self):
         """Stoppt die Kameraansicht und gibt die Ressourcen frei"""
-        self.webcam.stoppen()
+        self.webcam.stop_camera()
         self.cam_label.config(text="Kamera gestoppt", image="")
         self.logger.log("Kamera gestoppt")
     
@@ -1904,7 +1904,7 @@ PS C:\Users\Marc\Desktop\I-Scan>
     def on_closing(self):
         """Methode zum sauberen Schließen des Programms"""
         if hasattr(self, 'webcam'):
-            self.webcam.stoppen()
+            self.webcam.stop_camera()
         self.root.destroy()
 
 # Hauptausführungslogik

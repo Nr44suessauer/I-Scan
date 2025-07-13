@@ -26,7 +26,7 @@ from api_client import ApiClient
 from logger import Logger
 from device_control import DeviceControl
 from operation_queue import OperationQueue
-from webcam_helper import WebcamHelper
+from webcam_helper import CameraHelper
 from angle_calculator_commands import AngleCalculatorInterface
 
 
@@ -134,8 +134,8 @@ class ControlApp:
         print(f"JSON configuration: {len(enabled_cameras)} cameras configured: {self.available_cameras}")
         
         # Additionally: Detect physically available cameras for online status
-        from webcam_helper import WebcamHelper
-        physically_available = WebcamHelper.detect_available_cameras()
+        from webcam_helper import CameraHelper
+        physically_available = CameraHelper.detect_available_cameras()
         self.physically_available_cameras = physically_available
         print(f"Physically available cameras: {physically_available}")
         print(f"Physically available cameras: {physically_available}")
@@ -274,8 +274,8 @@ class ControlApp:
                 if device_index in getattr(self, 'physically_available_cameras', []):
                     print(f"Initialized JSON camera index {cam_index}: {camera['name']} (USB-{device_index}) - ONLINE")
                     
-                    from webcam_helper import WebcamHelper
-                    webcam = WebcamHelper(
+                    from webcam_helper import CameraHelper
+                    webcam = CameraHelper(
                         device_index=device_index,
                         frame_size=(150, 150),
                         com_port=f"USB-{device_index}",
@@ -468,7 +468,7 @@ class ControlApp:
                   # Start the stream
                 if camera_index in self.camera_labels:
                     camera_label = self.camera_labels[camera_index]
-                    if webcam.stream_starten(camera_label):
+                    if webcam.start_stream(camera_label):
                         # Give stream time to initialize
                         time.sleep(0.5)
                         
@@ -600,7 +600,7 @@ class ControlApp:
                             webcam.stop_stream()
                             print(f"Stream für Kamera {cam_index} gestoppt")
                     except Exception as e:
-                        print(f"Fehler beim Stoppen des Streams für Kamera {cam_index}: {e}")
+                        print(f"Error stopping stream for camera {cam_index}: {e}")
             
             # Clear existing camera grid elements
             for cam_index in list(self.camera_frames.keys()):
@@ -691,7 +691,7 @@ class ControlApp:
         
         # Create configuration window
         config_window = tk.Toplevel(self.root)
-        config_window.title("JSON Kamera-Konfiguration Editor")
+        config_window.title("JSON Camera Configuration Editor")
         config_window.geometry("800x600")
         config_window.resizable(True, True)
         
@@ -704,17 +704,17 @@ class ControlApp:
         main_frame.pack(fill="both", expand=True)
         
         # Title
-        title_label = tk.Label(main_frame, text="Kamera-Konfiguration (JSON)", 
+        title_label = tk.Label(main_frame, text="Camera Configuration (JSON)", 
                               font=("Arial", 14, "bold"))
         title_label.pack(pady=(0, 10))
         
         # Instructions
         info_text = """
-Bearbeiten Sie die JSON-Konfiguration direkt unten. 
-Verfügbare Verbindungstypen:
-- USB:0, USB:1, USB:2... für USB-Kameras
-- RTSP:rtsp://ip:port/stream für Netzwerk-Kameras
-- HTTP:http://ip:port/stream für HTTP-Streams
+Edit the JSON configuration directly below.
+Available connection types:
+- USB:0, USB:1, USB:2... for USB cameras
+- RTSP:rtsp://ip:port/stream for network cameras
+- HTTP:http://ip:port/stream for HTTP streams
         """
         info_label = tk.Label(main_frame, text=info_text.strip(), 
                              justify="left", wraplength=760)
@@ -724,7 +724,7 @@ Verfügbare Verbindungstypen:
         editor_frame = tk.Frame(main_frame)
         editor_frame.pack(fill="both", expand=True, pady=(0, 10))
         
-        editor_label = tk.Label(editor_frame, text="JSON-Konfiguration:", font=("Arial", 10, "bold"))
+        editor_label = tk.Label(editor_frame, text="JSON Configuration:", font=("Arial", 10, "bold"))
         editor_label.pack(anchor="w")
         
         # Text editor with scrollbar
@@ -752,7 +752,7 @@ Verfügbare Verbindungstypen:
         # Validate button
         validate_btn = tk.Button(
             button_frame, 
-            text="JSON Validieren", 
+            text="Validate JSON", 
             command=lambda: self.validate_json_config(self.json_editor),
             bg="lightblue"
         )
@@ -761,7 +761,7 @@ Verfügbare Verbindungstypen:
         # Add camera button
         add_camera_btn = tk.Button(
             button_frame, 
-            text="+ Kamera hinzufügen", 
+            text="+ Add Camera", 
             command=lambda: self.add_camera_template(self.json_editor),
             bg="lightgreen"
         )
@@ -770,7 +770,7 @@ Verfügbare Verbindungstypen:
         # Reset button
         reset_btn = tk.Button(
             button_frame, 
-            text="Zurücksetzen", 
+            text="Reset", 
             command=lambda: self.reset_json_editor(self.json_editor),
             bg="orange"
         )
@@ -779,14 +779,14 @@ Verfügbare Verbindungstypen:
         # Cancel button
         cancel_btn = tk.Button(
             button_frame, 
-            text="Abbrechen", 
+            text="Cancel", 
             command=config_window.destroy
         )
         cancel_btn.pack(side="right", padx=(5, 0))
           # Save button
         save_btn = tk.Button(
             button_frame, 
-            text="Speichern", 
+            text="Save", 
             command=lambda: self.save_json_config(self.json_editor, config_window),
             bg="lightgreen",
             font=("Arial", 10, "bold")
@@ -796,7 +796,7 @@ Verfügbare Verbindungstypen:
         # Save and reload button
         save_reload_btn = tk.Button(
             button_frame, 
-            text="Speichern & Live-Reload", 
+            text="Save & Live-Reload", 
             command=lambda: self.save_and_reload_json_config(self.json_editor, config_window),
             bg="orange",
             font=("Arial", 9)
@@ -1030,7 +1030,7 @@ Verfügbare Verbindungstypen:
                             cam_info = self.get_camera_info(cam_index)
                             self.camera_labels[cam_index].config(text=f"{cam_info['usb_label']}\nOFFLINE", bg="gray")
                 except Exception as e:
-                    self.logger.log(f"❌ Fehler beim Stoppen von Kamera {cam_index}: {e}")
+                    self.logger.log(f"❌ Error stopping camera {cam_index}: {e}")
         
         self.logger.log(f"⏹️ {stopped_count} Kamera-Streams gestoppt")
 
@@ -1271,7 +1271,7 @@ Verfügbare Verbindungstypen:
         print("=== KOMPLETTE NEU-INITIALISIERUNG DES KAMERA-SYSTEMS ===")
         
         try:
-            # Schritt 1: Alle laufenden Streams stoppen und Webcam-Instanzen freigeben
+            # Step 1: Stop all running streams and release camera instances
             print("Schritt 1: Stoppe alle Streams und gebe Ressourcen frei...")
             if hasattr(self, 'webcams'):
                 for cam_index, webcam in self.webcams.items():
@@ -1283,7 +1283,7 @@ Verfügbare Verbindungstypen:
                             webcam.release()
                             print(f"  Ressourcen für Kamera {cam_index} freigegeben")
                     except Exception as e:
-                        print(f"  Fehler beim Stoppen/Freigeben von Kamera {cam_index}: {e}")
+                        print(f"  Error stopping/releasing camera {cam_index}: {e}")
             
             # Schritt 2: Alle Kamera-GUI-Elemente entfernen
             print("Schritt 2: Entferne alle Kamera-GUI-Elemente...")
@@ -1324,7 +1324,7 @@ Verfügbare Verbindungstypen:
             # Schritt 5: Photo-Combo aktualisieren
             self.update_photo_camera_combo()
             
-            # Schritt 6: Auto-Streams starten (wenn aktiviert)
+            # Step 6: Start auto-streams (if enabled)
             if hasattr(self, 'auto_stream_var') and self.auto_stream_var.get():
                 print("Schritt 6: Starte Auto-Streams...")
                 self.root.after(1000, self.start_auto_streams)  # 1 Sekunde warten für GUI-Setup
