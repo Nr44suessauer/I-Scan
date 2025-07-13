@@ -603,7 +603,7 @@ class ControlApp:
             print(f"Error during camera configuration refresh: {e}")
             self.logger.log(f"⚠️ Fehler beim Aktualisieren der Kamera-Konfiguration: {e}")
         finally:
-            # Reset flag after a short delay to allow future refreshes
+            # Reset flag after a short delay to allow future refreshs
             self.root.after(1000, self._reset_refresh_flag)
 
     def _reset_refresh_flag(self):
@@ -690,19 +690,9 @@ class ControlApp:
                         device_index = cam_index
                         is_online = False
 
-                    if is_online:
-                        bg_color = "gray"
-                        status_text = "OFFLINE"  # Will be updated when stream starts
-                        fg_color = "white"
-                    else:
-                        bg_color = "#8B0000"
-                        status_text = "NICHT VERFÜGBAR"
-                        fg_color = "white"
 
-                    camera_label = tk.Label(camera_view_frame, 
-                                           text=f"{camera_info['usb_label']}\n{status_text}", 
-                                           bg=bg_color, fg=fg_color, relief="sunken", bd=1,
-                                           font=("Arial", 8))
+                    # Show only raw video stream, no banner or status text
+                    camera_label = tk.Label(camera_view_frame, bg="black", relief="sunken", bd=1)
                     camera_label.pack(fill="both", expand=True)
 
                     self.camera_labels[cam_index] = camera_label
@@ -958,8 +948,7 @@ Available connection types:
             success = self.camera_config.save_config()
             
             if success:
-                messagebox.showinfo("Success", "✅ Configuration saved successfully!\n\nChanges will be applied on next start.")
-                # Close the window
+                # Success messagebox removed as requested
                 window.destroy()
                 # Just log the change, no immediate refresh to avoid GUI conflicts
                 self.logger.log("📷 Camera configuration saved. Restart required for changes.")
@@ -972,34 +961,28 @@ Available connection types:
         """Save JSON configuration and apply changes immediately (live-reload)"""
         import json
         from tkinter import messagebox
-        
+
         # First validate
         if not self.validate_json_config(editor):
             return
-        
+
         try:
             # Get the JSON text
             json_text = editor.get("1.0", "end-1c")
             config_data = json.loads(json_text)
-            
+
             # Save to file
             self.camera_config.config_data = config_data
             success = self.camera_config.save_config()
-            
+
             if success:
-                # Close the window first to avoid widget access issues
                 window.destroy()
-                
-                # Show success message
-                messagebox.showinfo("Success", "✅ Configuration saved successfully!\n\nChanges will be applied immediately.")
-                
-                # Apply changes immediately with a small delay to ensure window is closed
+                # Only trigger one refresh after saving
+                self.refresh_pending = False
                 self.root.after(500, self.refresh_camera_configuration)
-                
                 self.logger.log("📷 Camera configuration saved and applied live.")
             else:
                 messagebox.showerror("Error", "❌ Error saving configuration!")
-                
         except Exception as e:
             messagebox.showerror("Error", f"Error saving:\n{e}")
     
@@ -1438,19 +1421,9 @@ Available connection types:
                 is_online = False
             
             # Kamera-Label mit initialem Status erstellen
-            if is_online:
-                bg_color = "gray"
-                status_text = "READY"
-                fg_color = "white"
-            else:
-                bg_color = "#8B0000"  # Dark red
-                status_text = "NOT AVAILABLE"
-                fg_color = "white"
 
-            camera_label = tk.Label(camera_view_frame, 
-                                   text=f"{camera_info['usb_label']}\n{status_text}", 
-                                   bg=bg_color, fg=fg_color, relief="sunken", bd=1,
-                                   font=("Arial", 8))
+            # Show only raw video stream, no banner or status text
+            camera_label = tk.Label(camera_view_frame, bg="black", relief="sunken", bd=1)
             camera_label.pack(fill="both", expand=True)
 
             # Store references

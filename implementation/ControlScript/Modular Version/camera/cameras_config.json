@@ -15,8 +15,8 @@
     {
       "index": 2,
       "connection": "HTTP:http://192.168.178.100:4747",
-      "description": "New camera description 2",
-      "name": "Kinect",
+      "description": "DroidCam app",
+      "name": "MobilePhone DroidCam",
       "enabled": true,
       "resolution": [
         640,
@@ -26,8 +26,8 @@
     {
       "index": 3,
       "connection": "HTTP:http://192.168.178.100:8080",
-      "description": "New camera description 3",
-      "name": "Camera 4",
+      "description": "IP Webcam app",
+      "name": "MobilePhone IP Webcam",
       "enabled": true,
       "resolution": [
         640,
