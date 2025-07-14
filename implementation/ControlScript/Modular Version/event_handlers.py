@@ -95,7 +95,7 @@ class EventHandlers:
             
             # Stop current camera if running
             if hasattr(self.app, 'webcam') and self.app.webcam.running:
-                self.app.webcam.stoppen()
+                self.app.webcam.stop_camera()
             # Switch to the selected camera
             if current_tab < len(self.app.available_cameras):
                 camera_index = self.app.available_cameras[current_tab]
@@ -108,7 +108,7 @@ class EventHandlers:
                 if not self.app.webcam.running:
                     # Get the correct camera label for this tab
                     camera_panel = self.app.camera_labels[current_tab]
-                    self.app.webcam.stream_starten(camera_panel)
+                    self.app.webcam.start_stream(camera_panel)
                     self.app.logger.log(f"Camera {camera_index} automatically started")
                 
                 self.app.logger.log(f"Switched to Camera {camera_index}")
@@ -123,7 +123,7 @@ class EventHandlers:
             current_tab = self.app.camera_notebook.index(self.app.camera_notebook.select())
             # Get the current camera label from the selected tab
             current_camera_label = self.app.camera_labels[current_tab]
-            result = self.app.webcam.stream_starten(current_camera_label)
+            result = self.app.webcam.start_stream(current_camera_label)
             if result:
                 self.app.logger.log(f"Camera {self.app.current_camera_index} started")
             else:
@@ -133,7 +133,7 @@ class EventHandlers:
     
     def on_stop_camera(self):
         """Stop camera"""
-        self.app.webcam.stoppen()
+        self.app.webcam.stop_camera()
         # Update camera info to show stopped state
         if hasattr(self.app, 'current_camera_label'):
             self.app.current_camera_label.config(text="Camera stopped")
@@ -169,7 +169,7 @@ class EventHandlers:
                     # Use the selected camera for taking photo
                     if camera_index in self.app.webcams:
                         webcam = self.app.webcams[camera_index]
-                        success = webcam.shoot_pic(delay=self.app.global_delay)
+                        success = webcam.capture_image(delay=self.app.global_delay)
                         if success:
                             self.app.logger.log(f"Photo taken from camera {camera_index}")
                         else:
@@ -180,7 +180,7 @@ class EventHandlers:
                     self.app.logger.log("No camera selected")
             else:
                 # Fallback to default behavior if no combo box available
-                success = self.app.webcam.shoot_pic(delay=self.app.global_delay)
+                success = self.app.webcam.capture_image(delay=self.app.global_delay)
                 if success:
                     self.app.logger.log("Photo taken")
                 else:
@@ -203,9 +203,9 @@ class EventHandlers:
         """Set camera device index"""
         try:
             idx = int(self.app.camera_device_index_var.get())
-            self.app.webcam.stoppen()
-            from webcam_helper import WebcamHelper
-            self.app.webcam = WebcamHelper(device_index=idx, frame_size=(320, 240))
+            self.app.webcam.stop_camera()
+            from webcam_helper import CameraHelper
+            self.app.webcam = CameraHelper(device_index=idx, frame_size=(320, 240))
             self.app.widgets['webcam'] = self.app.webcam
             self.app.logger.log(f"Camera device index set to {idx}. Camera reinitialized.")
         except Exception as e:
@@ -859,7 +859,7 @@ class EventHandlers:
             
             # Stop current camera if running
             if hasattr(self.app, 'webcam') and self.app.webcam and self.app.webcam.running:
-                self.app.webcam.stoppen()
+                self.app.webcam.stop_camera()
             
             # Switch to the selected camera
             if selected_camera in self.app.available_cameras:

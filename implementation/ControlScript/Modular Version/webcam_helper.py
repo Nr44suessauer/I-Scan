@@ -17,50 +17,80 @@ from PIL import Image, ImageTk
 import numpy as np
 
 
-class WebcamHelper:
+class CameraHelper:
     """
-    Klasse zur Steuerung einer Webcam über OpenCV
-    Bietet Methoden zum Anzeigen des Kamera-Streams und Aufnehmen von Bildern
+    Class for controlling a webcam via OpenCV
+    Provides methods for displaying the camera stream and capturing images
     """
     
     @staticmethod
     def detect_available_cameras(max_cameras=10):
         """
-        Erkennt alle verfügbaren Kameras im System
+        Detect all available cameras in the system (USB only).
+        This method scans for available USB cameras by trying to open each index.
+        HTTP cameras are not detected here, as they require a URL.
         
         Args:
-            max_cameras (int): Maximale Anzahl zu testender Kamera-Indizes
-            
+            max_cameras (int): Maximum number of camera indices to test
         Returns:
-            list: Liste der verfügbaren Kamera-Indizes
+            list: List of available camera indices
         """
         available_cameras = []
         
-        # OpenCV-Fehlermeldungen unterdrücken
+        # Suppress OpenCV error messages
         cv2.setLogLevel(0)  # 0 = silent
         
         for i in range(max_cameras):
             cap = cv2.VideoCapture(i)
             if cap.isOpened():
-                # Teste ob wir tatsächlich Frames lesen können
+                # Test if we can actually read frames
                 ret, frame = cap.read()
                 if ret and frame is not None:
                     available_cameras.append(i)
                 cap.release()
-          # OpenCV-Logging wieder auf Standard setzen
+        # Reset OpenCV logging to default
         cv2.setLogLevel(1)  # 1 = error level
         
-        return available_cameras if available_cameras else [0]  # Fallback auf Index 0
+        return available_cameras if available_cameras else [0]  # Fallback to index 0
     
-    def __init__(self, device_index=0, frame_size=(320, 240), com_port=None, model=None):
+    @staticmethod
+    def parse_device_index(connection):
         """
-        Initialisiert die Webcam mit dem angegebenen Geräteindex und Framegröße
+        Parse the connection string from JSON and return the correct device_index for CameraHelper.
+        Supports USB (e.g. 'USB:0') and HTTP (e.g. 'HTTP:http://ip:port').
+        For HTTP, ensures the URL ends with '/video' for DroidCam compatibility.
         
         Args:
-            device_index (int): Index der zu verwendenden Kamera (Standard: 0)
-            frame_size (tuple): Größe des angezeigten Frames (Breite, Höhe)
-            com_port (str, optional): COM-Port der Kamera
-            model (str, optional): Modellbezeichnung der Kamera
+            connection (str): The connection string to parse
+        Returns:
+            int or str: The parsed device index or URL
+        """
+        if isinstance(connection, str) and connection.upper().startswith("HTTP:"):
+            # Extract the URL after 'HTTP:' and ensure it ends with '/video'
+            url = connection[5:]
+            if not url.endswith("/video"):
+                url += "/video"
+            return url
+        elif isinstance(connection, str) and connection.upper().startswith("USB:"):
+            # Extract the USB camera index
+            try:
+                return int(connection.split(":", 1)[1])
+            except Exception:
+                return 0
+        else:
+            # Return as-is (could be int or str)
+            return connection
+
+    def __init__(self, device_index=0, frame_size=(320, 240), com_port=None, model=None):
+        """
+        Initialize the webcam or HTTP stream with the given device index or URL and frame size.
+        device_index can be an int (USB camera index) or str (HTTP URL).
+        
+        Args:
+            device_index (int or str): Index of the camera or HTTP URL
+            frame_size (tuple): Size of the displayed frame (width, height)
+            com_port (str, optional): COM port of the camera
+            model (str, optional): Model name of the camera
         """
         self.device_index = device_index
         self.frame_size = frame_size
@@ -70,41 +100,48 @@ class WebcamHelper:
         self.running = False
         self.current_frame = None
         self.thread = None
-        self.bild_zaehler = 0
+        self.image_counter = 0
     
-    def starten(self):
+    def start_camera(self):
         """
-        Kamera starten und initialisieren
-        
+        Start and initialize the camera (supports USB and HTTP sources).
+        For HTTP, uses the URL directly. For USB, uses the index.
         Returns:
-            bool: True bei erfolgreicher Initialisierung, sonst False
+            bool: True if successfully initialized, else False
         """
-        self.cap = cv2.VideoCapture(self.device_index)
-        if not self.cap.isOpened():
+        cap_source = self.device_index
+        # If device_index is an HTTP URL, use it directly
+        if isinstance(cap_source, str) and cap_source.lower().startswith("http"):
+            # Open HTTP stream (e.g. DroidCam)
+            self.cap = cv2.VideoCapture(cap_source)
+        else:
+            # Open USB camera
+            self.cap = cv2.VideoCapture(cap_source)
+        if not self.cap or not self.cap.isOpened():
+            print(f"Error opening stream: {cap_source}")
+            self.cap = None
+            self.running = False
             return False
-        
         self.running = True
         return True
     
-    def stoppen(self):
+    def stop_camera(self):
         """
-        Kamera-Stream stoppen und Ressourcen freigeben
+        Stop the camera stream and release resources
         """
         self.running = False
         if self.thread:
             self.thread.join(timeout=1.0)
-        
         if self.cap:
             self.cap.release()
-        
         self.cap = None
     
-    def frame_lesen(self):
+    def read_frame(self):
         """
-        Einzelnes Frame von der Kamera lesen
+        Read a single frame from the camera
         
         Returns:
-            numpy.ndarray: Das gelesene Frame oder None bei Fehler
+            numpy.ndarray: The read frame or None on error
         """
         if self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
@@ -114,96 +151,98 @@ class WebcamHelper:
     
     def stream_loop(self, panel, fps=30):
         """
-        Haupt-Loop für den Kamera-Stream
-        Läuft in einem separaten Thread, um die GUI nicht zu blockieren
+        Main loop for the camera stream (USB or HTTP).
+        Runs in a separate thread to avoid blocking the GUI.
+        Continuously reads frames and updates the Tkinter panel.
+        If the stream fails, shows a black image.
         
         Args:
-            panel: Das Label-Widget zur Anzeige des Streams
-            fps (int): Gewünschte Bildrate für den Stream        """
+            panel: The label widget for displaying the stream
+            fps (int): Desired frame rate for the stream
+        """
         delay = max(1, int(1000 / fps))
-        
         while self.running:
             try:
-                frame = self.frame_lesen()
+                frame = self.read_frame()
                 if frame is not None:
-                    # Frame für die Anzeige quadratisch skalieren
-                    self.current_frame = frame.copy()  # Original-Frame kopieren
+                    # Scale frame to square for display
+                    self.current_frame = frame.copy()  # Copy original frame
                     frame_square = self._make_square_frame(frame, self.frame_size)
-                    
-                    # Von BGR zu RGB für tkinter konvertieren
-                    frame_rgb = cv2.cvtColor(frame_square, cv2.COLOR_BGR2RGB)
-                    
-                    # In Pillow-Format konvertieren
-                    img = Image.fromarray(frame_rgb)
-                    
-                    # In Tkinter-kompatibles Format konvertieren
-                    img_tk = ImageTk.PhotoImage(image=img)
-                    
-                    # GUI-Update über after() für Thread-Sicherheit
-                    panel.after(0, self._update_panel, panel, img_tk)
-                  # Kurz warten, um die gewünschte Framerate zu erreichen
+                else:
+                    # Camera not available: show black image
+                    min_target = min(self.frame_size)
+                    frame_square = np.zeros((min_target, min_target, 3), dtype=np.uint8)
+                # Convert from BGR to RGB for tkinter
+                frame_rgb = cv2.cvtColor(frame_square, cv2.COLOR_BGR2RGB)
+                # Convert to Pillow format
+                img = Image.fromarray(frame_rgb)
+                # Convert to Tkinter-compatible format
+                img_tk = ImageTk.PhotoImage(image=img)
+                # GUI update via after() for thread safety
+                panel.after(0, self._update_panel, panel, img_tk)
+                # Short wait to achieve desired framerate
                 time.sleep(delay / 1000.0)
             except Exception as e:
-                print(f"Fehler im Stream-Loop: {e}")
+                print(f"Unexpected error in stream loop: {e}")
                 break
     
     def _update_panel(self, panel, img_tk):
         """
-        Thread-sichere GUI-Update-Methode
-        Wird vom Haupt-Thread ausgeführt
+        Thread-safe GUI update method for Tkinter panel.
+        Ensures the panel exists and is valid before updating the image.
+        If the panel is destroyed, stops the stream.
         """
         try:
-            # Prüfe mehrere Bedingungen bevor Update
+            # Check several conditions before updating
             if (self.running and 
                 hasattr(panel, 'winfo_exists') and 
                 panel.winfo_exists() and
                 hasattr(panel, 'config')):
                 panel.config(image=img_tk)
-                panel.image = img_tk  # Referenz behalten, um Garbage Collection zu verhindern
+                panel.image = img_tk  # Keep reference to prevent garbage collection
         except Exception as e:
-            # Stream stoppen wenn Widget nicht mehr existiert oder ungültig ist
+            # Stop stream if widget no longer exists or is invalid
             error_msg = str(e).lower()
             if any(x in error_msg for x in ["invalid command name", "application has been destroyed", "bad window path"]):
-                self.running = False  # Stream stoppen
+                self.running = False  # Stop stream
             else:
-                print(f"Unerwarteter GUI-Update-Fehler: {e}")
+                print(f"Unexpected GUI update error: {e}")
                 self.running = False
 
-    def stream_starten(self, panel):
+    def start_stream(self, panel):
         """
-        Kamerastream in einem separaten Thread starten
+        Start camera stream in a separate thread
         
         Args:
-            panel: Das Label-Widget zur Anzeige des Streams
-            
+            panel: The label widget for displaying the stream
         Returns:
-            bool: True bei erfolgreicher Initialisierung, sonst False
+            bool: True if successfully initialized, else False
         """
-        if self.starten():
+        if self.start_camera():
             self.thread = threading.Thread(target=self.stream_loop, args=(panel,))
-            self.thread.daemon = True  # Thread als Daemon setzen, damit er mit dem Hauptprogramm beendet wird
+            self.thread.daemon = True  # Set thread as daemon so it ends with main program
             self.thread.start()
             return True
         return False
     
-    def shoot_pic(self, delay=0.2):
+    def capture_image(self, delay=0.2):
         """
-        Nimmt das aktuelle Kamerabild auf und speichert es als PNG-Datei im Ordner 'pictures'.
-        Führt nach der Aufnahme ein Delay aus.
-        Gibt den Pfad zur gespeicherten Datei zurück.
+        Capture the current camera image and save it as a PNG file in the 'pictures' folder.
+        Performs a delay after capture.
+        Returns the path to the saved file.
         
         Args:
-            delay (float): Pause nach der Aufnahme in Sekunden (Standard: 0.2)
+            delay (float): Pause after capture in seconds (default: 0.2)
         """
-        # Kurzes Delay vor der Aufnahme, damit die Kamera ein neues Frame liefern kann
+        # Short delay before capture so camera can provide a new frame
         time.sleep(delay)
-        # Versuche, ein aktuelles Frame direkt von der Kamera zu lesen
-        frame = self.frame_lesen()
+        # Try to read a current frame directly from the camera
+        frame = self.read_frame()
         if frame is not None:
             pictures_dir = os.path.join(os.getcwd(), "pictures")
             os.makedirs(pictures_dir, exist_ok=True)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"foto_{timestamp}.png"
+            filename = f"photo_{timestamp}.png"
             filepath = os.path.join(pictures_dir, filename)
             cv2.imwrite(filepath, frame)
             return filepath
@@ -211,56 +250,50 @@ class WebcamHelper:
     
     def _make_square_frame(self, frame, target_size):
         """
-        Erstellt einen quadratischen Frame aus dem Input-Frame
-        Behält das Seitenverhältnis bei und fügt schwarze Balken hinzu
+        Create a square frame from the input frame
+        Maintains aspect ratio and adds black bars if needed
         
         Args:
-            frame: Input-Frame von der Kamera
-            target_size: Tuple (width, height) für die Zielgröße
-            
+            frame: Input frame from the camera
+            target_size: Tuple (width, height) for target size
         Returns:
-            Square frame mit schwarzen Balken falls nötig
+            Square frame with black bars if needed
         """
         height, width = frame.shape[:2]
         target_width, target_height = target_size
         
-        # Bestimme die kleinere Dimension für quadratische Skalierung  
+        # Determine the smaller dimension for square scaling
         min_target = min(target_width, target_height)
-        
-        # Berechne Skalierungsfaktor basierend auf der größeren Dimension des Originals
+        # Calculate scale factor based on the larger original dimension
         scale_factor = min_target / max(width, height)
-        
-        # Neue Dimensionen berechnen
+        # Calculate new dimensions
         new_width = int(width * scale_factor)
         new_height = int(height * scale_factor)
-        
-        # Frame skalieren
+        # Scale frame
         resized_frame = cv2.resize(frame, (new_width, new_height))
-        
-        # Quadratischen Hintergrund erstellen (schwarz)
+        # Create square background (black)
         square_frame = np.zeros((min_target, min_target, 3), dtype=np.uint8)
-          # Zentrierte Position berechnen
+        # Calculate centered position
         start_x = (min_target - new_width) // 2
         start_y = (min_target - new_height) // 2
-        
-        # Resized frame in die Mitte des quadratischen Frames platzieren
+        # Place resized frame in the center of the square frame
         square_frame[start_y:start_y + new_height, start_x:start_x + new_width] = resized_frame
-        
         return square_frame
     
     def stop_stream(self):
         """
-        Stoppe den Kamerastream sicher
+        Safely stop the camera stream
         """
         self.running = False
         if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1.0)  # Warte max 1 Sekunde
+            self.thread.join(timeout=1.0)  # Wait max 1 second
     
     def release(self):
         """
-        Gib alle Kamera-Ressourcen frei
+        Release all camera resources
         """
         self.stop_stream()
         if self.cap:
             self.cap.release()
             self.cap = None
+
