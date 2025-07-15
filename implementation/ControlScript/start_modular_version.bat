@@ -206,12 +206,5 @@ echo Application finished.
 echo ================================================
 echo Press any key to exit...
 pause
-echo.
-echo ================================================
-echo Application finished.
-echo ================================================
-echo Press any key to exit...
-pause
 echo Cleaning up temp install logs...
-cd ..
-if exist "%LOGDIR%" rmdir /s /q "%LOGDIR%"
+
