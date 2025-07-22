@@ -30,7 +30,7 @@
 |-------------|-----|-------------|
 | GET | `http://192.168.178.77/getButtonState` | Retrieves the current status of the button (pressed or not) |
 
-## Miscellaneous
+## diverse
 
 | HTTP Method | URL | Description |
 |-------------|-----|-------------|
