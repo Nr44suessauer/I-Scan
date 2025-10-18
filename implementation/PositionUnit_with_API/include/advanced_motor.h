@@ -23,8 +23,9 @@ typedef struct {
     int currentSpeed;
     bool isHomed;
     bool isEnabled;
-    bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
     bool usePhysicalHome;       // Status für Homing-Modus
+    bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
+
     unsigned long lastMoveTime;
 } AdvancedMotorStatus;
 
@@ -40,8 +41,9 @@ private:
     bool isMoving;
     bool isEnabled;
     bool isHomed;
-    bool isButtonHomingActive;  // Button-Homing-Modus aktiv
     bool usePhysicalHome;       // True: Physisches Home mit Button, False: Virtuelles Home
+    bool isButtonHomingActive;  // Button-Homing-Modus aktiv
+
     
     int stepsPerRevolution;
     int currentSpeedRPM;
@@ -81,10 +83,11 @@ public:
     void home();
     void setHome();
     void calibrate();
-    void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
-    void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
     void setUsePhysicalHome(bool usePhysical);  // Setzt den Homing-Modus
     bool getUsePhysicalHome();     // Gibt den aktuellen Homing-Modus zurück
+    void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
+    void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
+
     
     // Status-Funktionen
     int getCurrentPosition();
@@ -92,6 +95,7 @@ public:
     bool getIsMoving();
     bool getIsEnabled();
     bool getIsHomed();
+
     int getCurrentSpeed();
     AdvancedMotorStatus getStatus();
     
@@ -119,5 +123,6 @@ void handleAdvancedMotorStop();
 void handleAdvancedMotorHome();
 void handleAdvancedMotorJog();
 void handleAdvancedMotorCalibrate();
+
 
 #endif // ADVANCED_MOTOR_H
