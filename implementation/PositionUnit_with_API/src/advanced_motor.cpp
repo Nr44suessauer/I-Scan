@@ -16,6 +16,13 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     usePhysicalHome = true;        // Standard: Physisches Home mit Button
     isButtonHomingActive = false;  // Button-Homing-Modus initial deaktiviert
     
+    // Row Counter Initialisierung
+    isRowCounterActive = false;
+    currentRows = 0;
+    targetRows = 0;
+    lastButtonState = true;        // true = nicht gedrückt (INPUT_PULLUP)
+    rowCounterState = ROW_COUNTER_IDLE;
+    
     currentSpeedRPM = DEFAULT_SPEED_RPM;
     stepDelayMicros = 0;
     lastStepTime = 0;
@@ -114,7 +121,12 @@ void AdvancedStepperMotor::performStep() {
 
 // Bestimmte Anzahl von Schritten bewegen
 void AdvancedStepperMotor::moveSteps(int steps) {
-    if (!isEnabled || steps == 0) return;
+    if (steps == 0) return;
+    
+    // Motor automatisch aktivieren wenn eine Bewegung angefordert wird
+    if (!isEnabled) {
+        enable();
+    }
     
     isMoving = true;
     setDirection(steps > 0);
@@ -316,6 +328,9 @@ AdvancedMotorStatus AdvancedStepperMotor::getStatus() {
     status.isEnabled = isEnabled;
     status.usePhysicalHome = usePhysicalHome;             // Homing-Modus hinzugefügt
     status.isButtonHomingActive = isButtonHomingActive;  // Neuer Status hinzugefügt
+    status.isRowCounterActive = isRowCounterActive;      // Row Counter Status
+    status.currentRows = currentRows;                    // Aktuelle Rows
+    status.targetRows = targetRows;                      // Ziel-Rows
 
     status.lastMoveTime = millis();
     
@@ -337,6 +352,48 @@ void AdvancedStepperMotor::setMicrostepping(int factor) {
 
 // Non-blocking Bewegungen
 void AdvancedStepperMotor::update() {
+    // Row Counter Verarbeitung
+    if (isRowCounterActive) {
+        bool currentButtonState = getButtonState(); // true = nicht gedrückt
+        bool buttonPressed = !currentButtonState;   // true = gedrückt
+        
+        // Edge Detection für Button-Zustandsänderungen
+        bool buttonJustPressed = lastButtonState && !currentButtonState;  // Flanke von HIGH zu LOW
+        
+        // Zeit-Variable für alle cases verfügbar machen
+        unsigned long currentTime = micros();
+        
+        switch (rowCounterState) {
+            case ROW_COUNTER_MOVING:
+                // Kontinuierliche Schritte in Fahrtrichtung
+                if (currentTime - lastStepTime >= stepDelayMicros) {
+                    digitalWrite(stepPin, HIGH);
+                    delayMicroseconds(1);
+                    digitalWrite(stepPin, LOW);
+                    currentPosition++;
+                    lastStepTime = currentTime;
+                }
+                
+                // Prüfe ob Home-Button gedrückt wurde
+                if (buttonJustPressed) {
+                    currentRows++;
+                    Serial.printf("Row %d von %d abgeschlossen (Button gedrückt)\n", currentRows, targetRows);
+                    
+                    if (currentRows >= targetRows) {
+                        Serial.println("Ziel-Rows erreicht!");
+                        stopRowCounter();
+                    } else {
+                        // Weiter fahren für nächste Row
+                        Serial.println("Fahre weiter für nächste Row...");
+                    }
+                }
+                break;
+        }
+        
+        lastButtonState = currentButtonState;
+        return; // Wenn Row Counter aktiv ist, andere Funktionen überspringen
+    }
+    
     // Button-Homing-Modus überwachen
     if (isButtonHomingActive) {
         // Prüfe Button-Zustand (getButtonState() gibt false zurück wenn Button gedrückt)
@@ -415,6 +472,83 @@ void AdvancedStepperMotor::startNonBlockingMoveSteps(int steps) {
 }
 
 // Homing-Modus setzen/abfragen
+
+// Row Counter Funktionen
+bool AdvancedStepperMotor::startRowCounter(int targetRowCount) {
+    if (!isHomed) {
+        Serial.println("Motor muss erst gehomed werden");
+        return false;
+    }
+    
+    if (isRowCounterActive) {
+        Serial.println("Row Counter bereits aktiv");
+        return false;
+    }
+    
+    if (targetRowCount <= 0 || targetRowCount > 1000) {
+        Serial.println("Ungültige Row-Anzahl (1-1000)");
+        return false;
+    }
+    
+    Serial.printf("Row Counter initialisiert - Ziel: %d Rows\n", targetRowCount);
+    isRowCounterActive = false; // Noch nicht aktiv, nur initialisiert
+    currentRows = 0;
+    targetRows = targetRowCount;
+    lastButtonState = getButtonState();
+    rowCounterState = ROW_COUNTER_IDLE;
+    return true;
+}
+
+bool AdvancedStepperMotor::goRowCounter() {
+    if (targetRows <= 0) {
+        Serial.println("Row Counter nicht initialisiert - bitte zuerst 'Start Row Counter' drücken");
+        return false;
+    }
+    
+    if (isRowCounterActive) {
+        Serial.println("Row Counter bereits aktiv");
+        return false;
+    }
+    
+    if (!isHomed) {
+        Serial.println("Motor muss erst gehomed werden");
+        return false;
+    }
+    
+    Serial.printf("Row Counter gestartet - Ziel: %d Rows\n", targetRows);
+    isRowCounterActive = true;
+    currentRows = 0;
+    lastButtonState = getButtonState();
+    rowCounterState = ROW_COUNTER_MOVING;
+    
+    // Geschwindigkeit wird von Web-Handler gesetzt (basierend auf User-Eingabe)
+    // Keine feste Geschwindigkeit hier setzen
+    
+    // Richtung für Bewegung setzen (hier vorwärts)
+    setDirection(true); // Uhrzeigersinn
+    return true;
+}
+
+void AdvancedStepperMotor::stopRowCounter() {
+    if (!isRowCounterActive) return;
+    
+    Serial.printf("Row Counter gestoppt - %d von %d Rows erreicht\n", currentRows, targetRows);
+    isRowCounterActive = false;
+    rowCounterState = ROW_COUNTER_IDLE;
+    stop();
+}
+
+bool AdvancedStepperMotor::isRowCounterRunning() {
+    return isRowCounterActive;
+}
+
+int AdvancedStepperMotor::getCurrentRows() {
+    return currentRows;
+}
+
+int AdvancedStepperMotor::getTargetRows() {
+    return targetRows;
+}
 
 
 // Setup-Funktion

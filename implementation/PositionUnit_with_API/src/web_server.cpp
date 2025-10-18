@@ -14,6 +14,7 @@ void handleMotorControl();
 void handleGetButtonState(); // New function declaration for button status
 void handleBrightness(); // New function declaration for brightness control
 void handleSetHomingMode();     // Neue Funktion für Homing-Modus setzen
+void handleRowCounter();        // Row Counter API function declaration
 
 
 
@@ -198,6 +199,32 @@ const char* html = R"rawliteral(
         </div>
       </div>
 
+      <!-- Row Counter Section -->
+      <div class="control-container">
+        <h3>📊 Row Counter</h3>
+        <div class="function-row">
+          <span class="description">Fährt in kleinen Schritten und zählt Rows (Home-Button Zyklen)</span>
+        </div>
+        <div class="input-row" style="margin: 15px 0;">
+          <label for="rowsInput">Anzahl Rows:</label>
+          <input type="number" id="rowsInput" min="1" max="1000" value="10" style="width: 80px; margin: 0 10px;">
+        </div>
+        <div class="status-display" style="margin: 15px 0;">
+          <div class="status-item">
+            <div class="status-label">Aktuelle Rows</div>
+            <div class="status-value" id="currentRows">0</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Ziel Rows</div>
+            <div class="status-value" id="targetRows">0</div>
+          </div>
+        </div>
+        <div class="btn-grid">
+          <button class="btn btn-success" onclick="startRowCounter()">▶️ Start</button>
+          <button class="btn btn-primary" onclick="goRowCounter()">🎯 Go</button>
+        </div>
+      </div>
+
 
 
 
@@ -303,6 +330,27 @@ const char* html = R"rawliteral(
             <div class="status-label">Button Pin</div>
             <div class="status-value">Pin 45</div>
           </div>
+          <div class="status-item">
+            <div class="status-label">IP Address</div>
+            <div class="status-value" id="ipAddress">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code for Web Interface -->
+      <div class="control-container">
+        <h3>📱 Web Interface QR Code</h3>
+        <div style="text-align: center; margin: 20px 0;">
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; display: inline-block;">
+            <img id="qrCodeImage" src="" alt="QR Code wird generiert..." style="max-width: 200px; height: auto; border: 2px solid #ddd; border-radius: 8px;">
+            <div style="margin-top: 10px; font-size: 14px; color: #666;">
+              Scannen Sie den QR-Code mit Ihrem Smartphone<br>
+              für direkten Zugriff auf die Web-Oberfläche
+            </div>
+          </div>
+          <div style="margin-top: 15px;">
+            <button class="btn btn-secondary" onclick="generateQRCode()">🔄 QR Code aktualisieren</button>
+          </div>
         </div>
       </div>
     </div>
@@ -382,10 +430,16 @@ const char* html = R"rawliteral(
           // Toggle-Status aktualisieren
           document.getElementById('physicalHomeToggle').checked = data.usePhysicalHome || false;
           
+          // Row Counter Status aktualisieren
+          document.getElementById('currentRows').textContent = data.currentRows || 0;
+          document.getElementById('targetRows').textContent = data.targetRows || 0;
+          
           // Status-Text je nach Zustand
           let statusText = 'Ready';
           
-          if (data.isMoving) {
+          if (data.isRowCounterActive) {
+              statusText = 'Row Counting Active (' + data.currentRows + '/' + data.targetRows + ')';
+          } else if (data.isMoving) {
               statusText = 'Moving';
           } else if (data.isHomed) {
               statusText = 'Ready (Home)';
@@ -495,6 +549,43 @@ const char* html = R"rawliteral(
         });
     }
     
+    // Row Counter Functions
+    function startRowCounter() {
+      const targetRows = document.getElementById('rowsInput').value || 10;
+      
+      if (targetRows < 1 || targetRows > 1000) {
+        document.getElementById('status').innerHTML = 'Status: Invalid target rows (1-1000)';
+        return;
+      }
+      
+      document.getElementById('status').innerHTML = 'Status: Initializing row counter...';
+      
+      fetch('/rowCounter?action=start&targetRows=' + targetRows)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error starting row counter';
+        });
+    }
+    
+    function goRowCounter() {
+      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+      document.getElementById('status').innerHTML = 'Status: Starting row counting...';
+      
+      fetch('/rowCounter?action=go&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error in row counting';
+        });
+    }
+    
 
     
     // Servo Functions
@@ -592,12 +683,25 @@ const char* html = R"rawliteral(
         });
     }
     
+    // QR Code functions
+    function generateQRCode() {
+      const currentUrl = window.location.href;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}`;
+      
+      document.getElementById('qrCodeImage').src = qrCodeUrl;
+      document.getElementById('ipAddress').textContent = window.location.host;
+    }
+    
     // Color preview event listener
     document.addEventListener('DOMContentLoaded', function() {
       const hexInput = document.getElementById('hexInput');
       if (hexInput) {
         hexInput.addEventListener('input', updateColorPreview);
       }
+      
+      // IP-Adresse anzeigen und QR-Code generieren
+      document.getElementById('ipAddress').textContent = window.location.host;
+      generateQRCode();
     });
   </script>
 </body>
@@ -622,6 +726,7 @@ void setupWebServer() {
   server.on("/motorJog", HTTP_GET, handleAdvancedMotorJog);
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
   server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // Neue Route für Homing-Modus
+  server.on("/rowCounter", HTTP_GET, handleRowCounter);                     // Row Counter API Route
 
 
 
@@ -792,7 +897,7 @@ void handleAdvancedMotorControl() {
     advancedMotor.moveSmoothly(steps, speed);
     
     server.send(200, "text/plain", "Smooth movement completed");
-    
+
   } else if (action == "acceleratedMove" && server.hasArg("steps")) {
     int steps = server.arg("steps").toInt();
     int startSpeed = server.hasArg("startSpeed") ? server.arg("startSpeed").toInt() : 20;
@@ -826,7 +931,10 @@ void handleAdvancedMotorStatus() {
     "\"isHomed\":" + String(status.isHomed ? "true" : "false") + ","
     "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ","
     "\"usePhysicalHome\":" + String(status.usePhysicalHome ? "true" : "false") + ","
-    "\"isButtonHomingActive\":" + String(status.isButtonHomingActive ? "true" : "false") + ""
+    "\"isButtonHomingActive\":" + String(status.isButtonHomingActive ? "true" : "false") + ","
+    "\"isRowCounterActive\":" + String(advancedMotor.isRowCounterRunning() ? "true" : "false") + ","
+    "\"currentRows\":" + String(advancedMotor.getCurrentRows()) + ","
+    "\"targetRows\":" + String(advancedMotor.getTargetRows()) + ""
     "}";
   
   server.send(200, "application/json", jsonResponse);
@@ -886,10 +994,80 @@ void handleSetHomingMode() {
 
 // Button Homing Handler
 
-
-
-
-
+// Row Counter API Handler
+void handleRowCounter() {
+  String action = server.arg("action");
+  
+  if (action == "start") {
+    if (!server.hasArg("targetRows")) {
+      server.send(400, "text/plain", "Missing 'targetRows' parameter");
+      return;
+    }
+    
+    int targetRows = server.arg("targetRows").toInt();
+    if (targetRows <= 0 || targetRows > 1000) {
+      server.send(400, "text/plain", "Invalid targetRows. Must be between 1 and 1000");
+      return;
+    }
+    
+    bool success = advancedMotor.startRowCounter(targetRows);
+    if (success) {
+      server.send(200, "text/plain", "Row Counter started with target: " + String(targetRows));
+    } else {
+      server.send(400, "text/plain", "Cannot start Row Counter. Motor must be homed first");
+    }
+    
+  } else if (action == "go") {
+    // Geschwindigkeit vom Speed-Slider übernehmen, falls vorhanden
+    int speed = 60; // Default-Geschwindigkeit
+    if (server.hasArg("speed")) {
+      speed = server.arg("speed").toInt();
+      if (speed < 1 || speed > 120) {
+        speed = 60; // Fallback auf Standardwert bei ungültiger Eingabe
+      }
+    }
+    
+    bool success = advancedMotor.goRowCounter();
+    if (success) {
+      // Geschwindigkeit nach dem Start setzen
+      advancedMotor.setSpeed(speed);
+      server.send(200, "text/plain", "Row Counter started with " + String(speed) + " RPM");
+    } else {
+      server.send(400, "text/plain", "Row Counter is not ready or already running");
+    }
+    
+  } else if (action == "stop") {
+    advancedMotor.stopRowCounter();
+    server.send(200, "text/plain", "Row Counter stopped");
+    
+  } else if (action == "status") {
+    String jsonResponse = 
+      "{"
+      "\"isRunning\":" + String(advancedMotor.isRowCounterRunning() ? "true" : "false") + ","
+      "\"currentRows\":" + String(advancedMotor.getCurrentRows()) + ","
+      "\"targetRows\":" + String(advancedMotor.getTargetRows()) + ","
+      "\"isHomed\":" + String(advancedMotor.getStatus().isHomed ? "true" : "false") + ","
+      "\"isEnabled\":" + String(advancedMotor.getStatus().isEnabled ? "true" : "false") + ""
+      "}";
+    server.send(200, "application/json", jsonResponse);
+    
+  } else if (action == "debug") {
+    // Debug-Informationen für Troubleshooting
+    AdvancedMotorStatus status = advancedMotor.getStatus();
+    String debugResponse = 
+      "Row Counter Debug Info:\n"
+      "- isHomed: " + String(status.isHomed ? "YES" : "NO") + "\n"
+      "- isEnabled: " + String(status.isEnabled ? "YES" : "NO") + "\n"
+      "- isRowCounterRunning: " + String(advancedMotor.isRowCounterRunning() ? "YES" : "NO") + "\n"
+      "- targetRows: " + String(advancedMotor.getTargetRows()) + "\n"
+      "- currentRows: " + String(advancedMotor.getCurrentRows()) + "\n"
+      "- currentPosition: " + String(status.currentPosition);
+    server.send(200, "text/plain", debugResponse);
+    
+  } else {
+    server.send(400, "text/plain", "Invalid action. Use 'start', 'go', 'stop', 'status', or 'debug'");
+  }
+}
 
 // Handle not found (404)
 void handleNotFound() {

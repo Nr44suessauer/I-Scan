@@ -25,6 +25,9 @@ typedef struct {
     bool isEnabled;
     bool usePhysicalHome;       // Status für Homing-Modus
     bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
+    bool isRowCounterActive;    // Row Counter aktiv
+    int currentRows;            // Aktuelle Anzahl Rows
+    int targetRows;             // Ziel-Anzahl Rows
 
     unsigned long lastMoveTime;
 } AdvancedMotorStatus;
@@ -43,6 +46,16 @@ private:
     bool isHomed;
     bool usePhysicalHome;       // True: Physisches Home mit Button, False: Virtuelles Home
     bool isButtonHomingActive;  // Button-Homing-Modus aktiv
+    
+    // Row Counter Variablen
+    bool isRowCounterActive;    // Row Counter aktiv
+    int currentRows;            // Aktuelle Anzahl Rows
+    int targetRows;             // Ziel-Anzahl Rows
+    bool lastButtonState;       // Letzter Button-Zustand für Edge-Detection
+    enum RowCounterState {
+        ROW_COUNTER_IDLE,
+        ROW_COUNTER_MOVING      // Kontinuierliche Bewegung bis Button gedrückt wird
+    } rowCounterState;
 
     
     int stepsPerRevolution;
@@ -87,6 +100,14 @@ public:
     bool getUsePhysicalHome();     // Gibt den aktuellen Homing-Modus zurück
     void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
     void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
+    
+    // Row Counter Funktionen
+    bool startRowCounter(int targetRows); // Initialisiert den Row Counter mit Ziel-Anzahl
+    bool goRowCounter();           // Startet den Row Counter Prozess
+    void stopRowCounter();         // Stoppt den Row Counter
+    bool isRowCounterRunning();    // Prüft ob Row Counter aktiv ist
+    int getCurrentRows();          // Gibt aktuelle Row-Anzahl zurück
+    int getTargetRows();           // Gibt Ziel-Row-Anzahl zurück
 
     
     // Status-Funktionen
@@ -123,6 +144,7 @@ void handleAdvancedMotorStop();
 void handleAdvancedMotorHome();
 void handleAdvancedMotorJog();
 void handleAdvancedMotorCalibrate();
+void handleRowCounter(); // Neue Web-API für Row Counter
 
 
 #endif // ADVANCED_MOTOR_H
