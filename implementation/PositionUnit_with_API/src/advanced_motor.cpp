@@ -1,4 +1,5 @@
 #include "advanced_motor.h"
+#include "button_control.h"  // Für Button-Zustand
 
 // Globale Instanz des erweiterten Motors
 AdvancedStepperMotor advancedMotor(STEP_PIN, DIR_PIN, ENABLE_PIN, STEPS_PER_REVOLUTION);
@@ -12,6 +13,8 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     isMoving = false;
     isEnabled = false;
     isHomed = false;
+    isButtonHomingActive = false;  // Button-Homing-Modus initial deaktiviert
+    usePhysicalHome = true;        // Standard: Physisches Home mit Button
     currentSpeedRPM = DEFAULT_SPEED_RPM;
     stepDelayMicros = 0;
     lastStepTime = 0;
@@ -53,7 +56,15 @@ void AdvancedStepperMotor::disable() {
     if (enablePin >= 0) {
         digitalWrite(enablePin, HIGH); // HIGH = disabled
     }
+    setPinsIdle(); // Pins in Ruhezustand setzen
     Serial.println("Motor deaktiviert");
+}
+
+// Pins in Ruhezustand setzen (kein Strom)
+void AdvancedStepperMotor::setPinsIdle() {
+    digitalWrite(stepPin, LOW);  // STEP Pin auf LOW
+    digitalWrite(dirPin, LOW);   // DIR Pin auf LOW
+    Serial.println("Motor-Pins in Ruhezustand (LOW)");
 }
 
 // Geschwindigkeit setzen (RPM)
@@ -118,6 +129,7 @@ void AdvancedStepperMotor::moveSteps(int steps) {
     targetPosition = currentPosition;
     isMoving = false;
     
+    setPinsIdle(); // Pins in Ruhezustand setzen nach Bewegung
     Serial.printf("Bewegung abgeschlossen. Neue Position: %d\n", currentPosition);
 }
 
@@ -237,7 +249,8 @@ void AdvancedStepperMotor::jogContinuous(bool direction, int rpm) {
 void AdvancedStepperMotor::stop() {
     isMoving = false;
     targetPosition = currentPosition;
-    Serial.println("Motor gestoppt");
+    setPinsIdle(); // Pins in Ruhezustand setzen
+    Serial.println("Motor gestoppt - Pins auf LOW");
 }
 
 // Notfall-Stopp
@@ -249,10 +262,16 @@ void AdvancedStepperMotor::emergencyStop() {
 
 // Home-Position anfahren
 void AdvancedStepperMotor::home() {
-    Serial.println("Fahre zur Home-Position...");
-    moveTo(0);
-    isHomed = true;
-    Serial.println("Home-Position erreicht");
+    if (usePhysicalHome) {
+        Serial.println("Fahre zur physischen Home-Position (bis Button gedrückt)...");
+        startButtonHomingMode();
+    } else {
+        Serial.println("Fahre zur virtuellen Home-Position (Position 0)...");
+        Serial.println("Verwende aktuelle Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+        moveTo(0);
+        isHomed = true;
+        Serial.println("Virtuelle Home-Position erreicht");
+    }
 }
 
 // Aktuelle Position als Home setzen
@@ -274,6 +293,28 @@ void AdvancedStepperMotor::calibrate() {
     Serial.println("Motor-Kalibrierung abgeschlossen");
 }
 
+// Button-Homing-Modus starten (fährt bis Button gedrückt wird)
+void AdvancedStepperMotor::startButtonHomingMode() {
+    Serial.println("Button-Homing-Modus gestartet - Motor fährt bis Button gedrückt wird");
+    Serial.println("Verwende aktuelle Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+    isButtonHomingActive = true;
+    // Sicherstellen, dass Step-Delay aktuell ist
+    calculateStepDelay();
+    // Richtung explizit setzen
+    setDirection(false); // Richtung Home (gegen Uhrzeigersinn angenommen)
+    Serial.println("Step Delay: " + String(stepDelayMicros) + " Mikrosekunden");
+}
+
+// Button-Homing-Modus stoppen
+void AdvancedStepperMotor::stopButtonHomingMode() {
+    if (isButtonHomingActive) {
+        Serial.println("Button-Homing-Modus gestoppt");
+        isButtonHomingActive = false;
+        stop();
+        setHome(); // Aktuelle Position als Home-Position setzen
+    }
+}
+
 // Status-Funktionen
 int AdvancedStepperMotor::getCurrentPosition() { return currentPosition; }
 int AdvancedStepperMotor::getTargetPosition() { return targetPosition; }
@@ -291,6 +332,8 @@ AdvancedMotorStatus AdvancedStepperMotor::getStatus() {
     status.currentSpeed = currentSpeedRPM;
     status.isHomed = isHomed;
     status.isEnabled = isEnabled;
+    status.isButtonHomingActive = isButtonHomingActive;  // Neuer Status hinzugefügt
+    status.usePhysicalHome = usePhysicalHome;             // Homing-Modus hinzugefügt
     status.lastMoveTime = millis();
     
     return status;
@@ -311,8 +354,34 @@ void AdvancedStepperMotor::setMicrostepping(int factor) {
 
 // Non-blocking Bewegungen
 void AdvancedStepperMotor::update() {
-    // Diese Funktion kann für non-blocking Bewegungen verwendet werden
-    // Momentan noch nicht implementiert
+    // Button-Homing-Modus überwachen
+    if (isButtonHomingActive) {
+        // Prüfe Button-Zustand (getButtonState() gibt false zurück wenn Button gedrückt)
+        bool buttonPressed = !getButtonState(); // Invertieren, da getButtonState() true = nicht gedrückt
+        
+        if (buttonPressed) {
+            // Button wurde gedrückt - sofort stoppen und als Home setzen
+            Serial.println("Button gedrückt! Home-Position erreicht");
+            stopButtonHomingMode();
+        } else {
+            // Button nicht gedrückt - weiter fahren mit aktueller Geschwindigkeit
+            // Verwende stepDelayMicros direkt ohne Verdopplung für maximale Geschwindigkeit
+            unsigned long currentTime = micros();
+            if (currentTime - lastStepTime >= stepDelayMicros) {
+                // STEP Pin HIGH
+                digitalWrite(stepPin, HIGH);
+                // Minimaler Delay nur für saubere Flanke - reduziert auf 1 Mikrosekunde
+                delayMicroseconds(1);
+                // STEP Pin LOW
+                digitalWrite(stepPin, LOW);
+                
+                currentPosition--; // Richtung Home (negativ)
+                lastStepTime = currentTime;
+            }
+        }
+    }
+    
+    // Weitere non-blocking Bewegungen können hier implementiert werden
 }
 
 void AdvancedStepperMotor::startNonBlockingMoveTo(int position) {
@@ -323,6 +392,16 @@ void AdvancedStepperMotor::startNonBlockingMoveTo(int position) {
 void AdvancedStepperMotor::startNonBlockingMoveSteps(int steps) {
     targetPosition = currentPosition + steps;
     // Implementation für non-blocking Bewegung
+}
+
+// Homing-Modus setzen/abfragen
+void AdvancedStepperMotor::setUsePhysicalHome(bool usePhysical) {
+    usePhysicalHome = usePhysical;
+    Serial.println("Homing-Modus gesetzt auf: " + String(usePhysical ? "Physisches Home (Button)" : "Virtuelles Home (Position 0)"));
+}
+
+bool AdvancedStepperMotor::getUsePhysicalHome() {
+    return usePhysicalHome;
 }
 
 // Setup-Funktion

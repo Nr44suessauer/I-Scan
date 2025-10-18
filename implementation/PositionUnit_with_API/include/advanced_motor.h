@@ -23,6 +23,8 @@ typedef struct {
     int currentSpeed;
     bool isHomed;
     bool isEnabled;
+    bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
+    bool usePhysicalHome;       // Status für Homing-Modus
     unsigned long lastMoveTime;
 } AdvancedMotorStatus;
 
@@ -38,6 +40,8 @@ private:
     bool isMoving;
     bool isEnabled;
     bool isHomed;
+    bool isButtonHomingActive;  // Button-Homing-Modus aktiv
+    bool usePhysicalHome;       // True: Physisches Home mit Button, False: Virtuelles Home
     
     int stepsPerRevolution;
     int currentSpeedRPM;
@@ -54,6 +58,7 @@ public:
     void begin();
     void enable();
     void disable();
+    void setPinsIdle();  // Neue Funktion: Pins in Ruhezustand setzen
     
     // Grundlegende Bewegungsfunktionen
     void setSpeed(int rpm);
@@ -76,6 +81,10 @@ public:
     void home();
     void setHome();
     void calibrate();
+    void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
+    void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
+    void setUsePhysicalHome(bool usePhysical);  // Setzt den Homing-Modus
+    bool getUsePhysicalHome();     // Gibt den aktuellen Homing-Modus zurück
     
     // Status-Funktionen
     int getCurrentPosition();

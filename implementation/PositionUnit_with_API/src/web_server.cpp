@@ -13,6 +13,9 @@ void handleServoControl();
 void handleMotorControl(); 
 void handleGetButtonState(); // New function declaration for button status
 void handleBrightness(); // New function declaration for brightness control
+void handleButtonHomingStart(); // Neue Funktion für Button-Homing Start
+void handleButtonHomingStop();  // Neue Funktion für Button-Homing Stop
+void handleSetHomingMode();     // Neue Funktion für Homing-Modus setzen
 
 // WebServer configuration
 const uint16_t HTTP_PORT = 80;
@@ -66,7 +69,6 @@ const char* html = R"rawliteral(
     .status-value { font-size: 18px; color: #333; }
     
     /* Motor-specific Styles */
-    .jog-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
     .position-input { padding: 10px; font-size: 16px; width: 100px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
     
     /* LED Control Styles */
@@ -81,11 +83,22 @@ const char* html = R"rawliteral(
     .color-preview { width: 50px; height: 50px; border-radius: 50%; margin: 10px auto; border: 1px solid #ddd; }
     .hex-input { padding: 10px; font-size: 16px; width: 140px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
     
+    /* Toggle Switch Styles */
+    .function-row { margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    .switch-label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .switch-text { font-weight: bold; color: #333; }
+    .description { display: block; margin-top: 8px; font-size: 12px; color: #666; font-style: italic; }
+    
+    .slider-toggle { position: relative; width: 50px; height: 25px; background: #ccc; border-radius: 25px; transition: 0.3s; }
+    .slider-toggle:before { content: ""; position: absolute; width: 21px; height: 21px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+    input[type="checkbox"] { display: none; }
+    input[type="checkbox"]:checked + .slider-toggle { background: #2196F3; }
+    input[type="checkbox"]:checked + .slider-toggle:before { transform: translateX(25px); }
+    
     /* Responsive Design */
     @media (max-width: 768px) {
       .container { padding: 10px; }
       .btn-grid { grid-template-columns: 1fr; }
-      .jog-controls { grid-template-columns: 1fr; }
       .status-display { grid-template-columns: 1fr; }
     }
   </style>
@@ -135,7 +148,7 @@ const char* html = R"rawliteral(
         <h3>⚡ Speed Control</h3>
         <div class="slider-wrapper">
           <label>Speed:</label>
-          <input type="range" id="speedSlider" min="1" max="300" value="60" oninput="updateSpeedValue(this.value)">
+          <input type="range" id="speedSlider" min="1" max="120" value="60" oninput="updateSpeedValue(this.value)">
           <span id="speedValue">60</span> RPM
         </div>
       </div>
@@ -170,6 +183,14 @@ const char* html = R"rawliteral(
       <!-- Advanced Functions -->
       <div class="control-container">
         <h3>🔧 Advanced Functions</h3>
+        <div class="function-row">
+          <label class="switch-label">
+            <input type="checkbox" id="physicalHomeToggle" checked onchange="toggleHomingMode(this.checked)">
+            <span class="slider-toggle"></span>
+            <span class="switch-text">🎯 Physical Home (Button)</span>
+          </label>
+          <span class="description">When enabled: Home to button position. When disabled: Home to virtual position (0)</span>
+        </div>
         <div class="btn-grid">
           <button class="btn btn-primary" onclick="homeMotor()">🏠 Home Position</button>
           <button class="btn btn-warning" onclick="calibrateMotor()">🔧 Calibrate</button>
@@ -177,14 +198,15 @@ const char* html = R"rawliteral(
         </div>
       </div>
 
-      <!-- Jog Control -->
+      <!-- Button Homing -->
       <div class="control-container">
-        <h3>🕹️ Jog Control</h3>
-        <div class="jog-controls">
-          <button class="btn btn-success" onmousedown="startJog(false)" onmouseup="stopJog()">⬅️ Jog Left</button>
-          <button class="btn btn-danger" onclick="stopMotor()">⏹️ Stop</button>
-          <button class="btn btn-success" onmousedown="startJog(true)" onmouseup="stopJog()">➡️ Jog Right</button>
+        <h3>🎯 Button Homing</h3>
+        <p>Motor fährt bis Button gedrückt wird und setzt dann Home-Position</p>
+        <div class="btn-grid">
+          <button class="btn btn-info" id="startHomingBtn" onclick="startButtonHoming()">▶️ Homing Start</button>
+          <button class="btn btn-secondary" id="stopHomingBtn" onclick="stopButtonHoming()" disabled>⏹️ Homing Stop</button>
         </div>
+        <div id="homingStatus" class="status-display"></div>
       </div>
     </div>
 
@@ -301,7 +323,6 @@ const char* html = R"rawliteral(
   <script>
     // Globale Variablen
     let motorStatusInterval;
-    let currentJogDirection = false;
     
     // Tab-Funktionalität
     function openTab(evt, tabName) {
@@ -364,8 +385,30 @@ const char* html = R"rawliteral(
           document.getElementById('currentPosition').textContent = data.currentPosition || 0;
           document.getElementById('targetPosition').textContent = data.targetPosition || 0;
           document.getElementById('currentSpeed').textContent = (data.currentSpeed || 60) + ' RPM';
-          document.getElementById('motorStatus').textContent = data.isMoving ? 'Moving' : 
-                                                               data.isHomed ? 'Ready (Home)' : 'Ready';
+          
+          // Toggle-Status aktualisieren
+          document.getElementById('physicalHomeToggle').checked = data.usePhysicalHome || false;
+          
+          // Status-Text je nach Zustand
+          let statusText = 'Ready';
+          if (data.isButtonHomingActive) {
+            statusText = 'Button Homing Active';
+            document.getElementById('homingStatus').innerHTML = '🔄 Homing läuft - warte auf Button...';
+            document.getElementById('startHomingBtn').disabled = true;
+            document.getElementById('stopHomingBtn').disabled = false;
+          } else {
+            document.getElementById('homingStatus').innerHTML = '';
+            document.getElementById('startHomingBtn').disabled = false;
+            document.getElementById('stopHomingBtn').disabled = true;
+            
+            if (data.isMoving) {
+              statusText = 'Moving';
+            } else if (data.isHomed) {
+              statusText = 'Ready (Home)';
+            }
+          }
+          
+          document.getElementById('motorStatus').textContent = statusText;
         })
         .catch(error => {
           console.error('Error retrieving motor status:', error);
@@ -408,7 +451,10 @@ const char* html = R"rawliteral(
     function homeMotor() {
       document.getElementById('status').innerHTML = 'Status: Motor moving to home position...';
       
-      fetch('/motorHome')
+      // Geschwindigkeit vom Speed-Slider übernehmen
+      const speed = document.getElementById('speedSlider').value;
+      
+      fetch('/motorHome?speed=' + speed)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -430,6 +476,43 @@ const char* html = R"rawliteral(
         })
         .catch(error => {
           document.getElementById('status').innerHTML = 'Status: Error in calibration';
+        });
+    }
+    
+    function startButtonHoming() {
+      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+      document.getElementById('status').innerHTML = 'Status: Button homing started...';
+      document.getElementById('homingStatus').innerHTML = 'Homing aktiv - Warte auf Button...';
+      document.getElementById('startHomingBtn').disabled = true;
+      document.getElementById('stopHomingBtn').disabled = false;
+      
+      fetch('/motorButtonHomingStart?speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error starting button homing';
+          document.getElementById('startHomingBtn').disabled = false;
+          document.getElementById('stopHomingBtn').disabled = true;
+        });
+    }
+    
+    function stopButtonHoming() {
+      document.getElementById('status').innerHTML = 'Status: Button homing stopped...';
+      document.getElementById('homingStatus').innerHTML = '';
+      document.getElementById('startHomingBtn').disabled = false;
+      document.getElementById('stopHomingBtn').disabled = true;
+      
+      fetch('/motorButtonHomingStop')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error stopping button homing';
         });
     }
     
@@ -463,32 +546,18 @@ const char* html = R"rawliteral(
       }
     }
     
-    // Jog Functions
-    function startJog(direction) {
-      currentJogDirection = direction;
-      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+    function toggleHomingMode(usePhysical) {
+      const mode = usePhysical ? 'physical' : 'virtual';
+      document.getElementById('status').innerHTML = `Status: Setting homing mode to ${mode}...`;
       
-      document.getElementById('status').innerHTML = 'Status: Jog mode active (' + (direction ? 'right' : 'left') + ')';
-      
-      fetch('/motorJog?direction=' + (direction ? '1' : '0') + '&speed=' + speed)
+      fetch(`/setHomingMode?mode=${mode}`)
         .then(response => response.text())
         .then(data => {
-          // Jog started
-        })
-        .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error starting jog';
-        });
-    }
-    
-    function stopJog() {
-      fetch('/motorStop')
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('status').innerHTML = 'Status: Jog stopped';
+          document.getElementById('status').innerHTML = 'Status: ' + data;
           updateMotorStatus();
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error stopping jog';
+          document.getElementById('status').innerHTML = 'Status: Error setting homing mode';
         });
     }
     
@@ -616,6 +685,9 @@ void setupWebServer() {
   server.on("/motorHome", HTTP_GET, handleAdvancedMotorHome);
   server.on("/motorJog", HTTP_GET, handleAdvancedMotorJog);
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
+  server.on("/motorButtonHomingStart", HTTP_GET, handleButtonHomingStart);  // Neue Route
+  server.on("/motorButtonHomingStop", HTTP_GET, handleButtonHomingStop);    // Neue Route
+  server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // Neue Route für Homing-Modus
   
   server.onNotFound(handleNotFound);
 
@@ -815,7 +887,9 @@ void handleAdvancedMotorStatus() {
     "\"isMoving\":" + String(status.isMoving ? "true" : "false") + ","
     "\"currentSpeed\":" + String(status.currentSpeed) + ","
     "\"isHomed\":" + String(status.isHomed ? "true" : "false") + ","
-    "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ""
+    "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ","
+    "\"isButtonHomingActive\":" + String(status.isButtonHomingActive ? "true" : "false") + ","
+    "\"usePhysicalHome\":" + String(status.usePhysicalHome ? "true" : "false") + ""
     "}";
   
   server.send(200, "application/json", jsonResponse);
@@ -827,6 +901,15 @@ void handleAdvancedMotorStop() {
 }
 
 void handleAdvancedMotorHome() {
+  // Geschwindigkeit vom Speed-Slider übernehmen, falls vorhanden
+  if (server.hasArg("speed")) {
+    int speed = server.arg("speed").toInt();
+    if (speed > 0 && speed <= 120) {  // Validierung entsprechend dem Slider-Maximum
+      advancedMotor.setSpeed(speed);
+      Serial.println("Home-Geschwindigkeit auf " + String(speed) + " RPM gesetzt");
+    }
+  }
+  
   advancedMotor.home();
   server.send(200, "text/plain", "Motor moved to home position");
 }
@@ -848,6 +931,41 @@ void handleAdvancedMotorJog() {
 void handleAdvancedMotorCalibrate() {
   advancedMotor.calibrate();
   server.send(200, "text/plain", "Motor calibrated");
+}
+
+// Button Homing Handler
+void handleButtonHomingStart() {
+  // Speed-Parameter aus der Anfrage lesen
+  int speed = 60; // Standard-Geschwindigkeit
+  if (server.hasArg("speed")) {
+    speed = server.arg("speed").toInt();
+    speed = constrain(speed, 1, 120); // Geschwindigkeit auf 120 RPM begrenzt
+  }
+  
+  // Geschwindigkeit setzen und Button-Homing starten
+  advancedMotor.setSpeed(speed);
+  advancedMotor.startButtonHomingMode();
+  
+  server.send(200, "text/plain", "Button homing started with " + String(speed) + " RPM - Motor fährt bis Button gedrückt wird");
+}
+
+void handleButtonHomingStop() {
+  advancedMotor.stopButtonHomingMode();
+  server.send(200, "text/plain", "Button homing stopped");
+}
+
+void handleSetHomingMode() {
+  String mode = server.arg("mode");
+  
+  if (mode == "physical") {
+    advancedMotor.setUsePhysicalHome(true);
+    server.send(200, "text/plain", "Homing mode set to Physical Home (Button)");
+  } else if (mode == "virtual") {
+    advancedMotor.setUsePhysicalHome(false);
+    server.send(200, "text/plain", "Homing mode set to Virtual Home (Position 0)");
+  } else {
+    server.send(400, "text/plain", "Invalid mode. Use 'physical' or 'virtual'");
+  }
 }
 
 // Handle not found (404)

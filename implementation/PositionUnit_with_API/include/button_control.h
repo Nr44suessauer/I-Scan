@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // Button pin definition
-#define BUTTON_PIN 12     // Button input pin
+#define BUTTON_PIN 45     // Button input pin
 
 // Function prototypes
 void setupButton();

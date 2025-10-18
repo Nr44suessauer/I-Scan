@@ -43,8 +43,11 @@ void loop() {
   // Update motor (für non-blocking Operationen)
   updateMotor();
   
+  // Update button state (for continuous monitoring)
+  getButtonState();
+  
   // Check WiFi connection
   checkWiFiConnection();
   
-  delay(10); // Short pause for stability improvement
+  delay(1); // Minimaler Delay für Stabilität - reduziert von 10ms auf 1ms für bessere Motor-Performance
 }
