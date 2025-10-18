@@ -4,6 +4,7 @@
 #include "led_control.h"
 #include "servo_control.h"  // Include servo header
 #include "motor.h"          // Include motor header
+#include "advanced_motor.h" // Include advanced motor header
 #include "button_control.h" // Include button header
 
 void setup() {
@@ -19,7 +20,8 @@ void setup() {
   setupServo();  // Initialize servo
   
   // Motor setup
-  setupMotor();  // Initialize stepper motor
+  setupMotor();  // Initialize stepper motor (legacy)
+  setupAdvancedMotor();  // Initialize advanced stepper motor
   
   // Button setup
   setupButton(); // Initialize button
@@ -37,6 +39,9 @@ void setup() {
 void loop() {
   // Handle server requests
   handleWebServerRequests();
+  
+  // Update motor (für non-blocking Operationen)
+  updateMotor();
   
   // Check WiFi connection
   checkWiFiConnection();

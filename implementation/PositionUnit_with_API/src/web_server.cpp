@@ -2,6 +2,7 @@
 #include "servo_control.h" 
 #include "motor.h" 
 #include "button_control.h" // Include for button functionality
+#include "advanced_motor.h" // Include for advanced motor control
 
 // Function declarations
 void handleRoot();
@@ -17,19 +18,58 @@ void handleBrightness(); // New function declaration for brightness control
 const uint16_t HTTP_PORT = 80;
 WebServer server(HTTP_PORT);
 
-// HTML webpage with buttons for LED control
+// Enhanced HTML interface for motor control
 const char* html = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RGB LED Control</title>
+  <title>ESP32 Advanced Motor Control</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
-    h1, h2 { color: #333; }
-    .container { max-width: 600px; margin: 0 auto; }
-    .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
-    .btn { display: block; width: 100%; padding: 20px 0; border: none; border-radius: 5px; color: white; font-size: 16px; cursor: pointer; }
+    h1, h2, h3 { color: #333; }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    /* Tab-Styling */
+    .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; border-radius: 5px 5px 0 0; }
+    .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; }
+    .tab button:hover { background-color: #ddd; }
+    .tab button.active { background-color: #ccc; }
+    .tabcontent { display: none; padding: 20px; border: 1px solid #ccc; border-top: none; background-color: white; border-radius: 0 0 5px 5px; }
+    .tabcontent.active { display: block; }
+    
+    /* Button-Styling */
+    .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0; }
+    .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 5px; color: white; font-size: 14px; cursor: pointer; transition: 0.3s; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .btn-primary { background-color: #2196F3; }
+    .btn-success { background-color: #4CAF50; }
+    .btn-warning { background-color: #FF9800; }
+    .btn-danger { background-color: #f44336; }
+    .btn-secondary { background-color: #6c757d; }
+    
+    /* Container-Styling */
+    .control-container { margin: 20px 0; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .control-container h3 { margin-top: 0; color: #2196F3; border-bottom: 2px solid #2196F3; padding-bottom: 10px; }
+    
+    /* Slider-Styling */
+    .slider-container { margin: 15px 0; }
+    .slider-wrapper { display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
+    input[type="range"] { flex: 1; min-width: 200px; max-width: 400px; height: 8px; border-radius: 5px; background: #ddd; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #2196F3; cursor: pointer; }
+    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #2196F3; cursor: pointer; border: none; }
+    
+    /* Status Display */
+    .status-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    .status-item { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; }
+    .status-label { font-weight: bold; color: #666; margin-bottom: 5px; }
+    .status-value { font-size: 18px; color: #333; }
+    
+    /* Motor-specific Styles */
+    .jog-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+    .position-input { padding: 10px; font-size: 16px; width: 100px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
+    
+    /* LED Control Styles */
     .btn-red { background-color: #f44336; }
     .btn-green { background-color: #4CAF50; }
     .btn-blue { background-color: #2196F3; }
@@ -38,207 +78,446 @@ const char* html = R"rawliteral(
     .btn-orange { background-color: #FF9800; }
     .btn-white { background-color: #FFFFFF; color: black; border: 1px solid #ddd; }
     
-    /* Hex input styling */
-    .input-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .input-container h2 { margin-top: 0; color: #444; }
     .color-preview { width: 50px; height: 50px; border-radius: 50%; margin: 10px auto; border: 1px solid #ddd; }
     .hex-input { padding: 10px; font-size: 16px; width: 140px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
-    .btn-submit { padding: 10px 15px; margin-left: 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .btn-submit:hover { background: #0b7dda; }
     
-    /* Servo styling */
-    .slider-container { margin: 15px 0; }
-    input[type="range"] { width: 80%; max-width: 400px; }
-    .angle-display { font-weight: bold; font-size: 18px; margin: 10px 0; }
-    
-    /* Button status styling */
-    .button-status-container { margin: 30px 0; padding: 15px; background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .status-indicator { width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-    .status-on { background-color: #4CAF50; }
-    .status-off { background-color: #f44336; }
-    .status-text { font-weight: bold; font-size: 18px; display: inline-block; vertical-align: middle; }
-    
-    /* Brightness slider styling */
-    .brightness-container { margin: 15px 0; }
-    .brightness-value { font-weight: bold; font-size: 18px; display: inline-block; width: 40px; }
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container { padding: 10px; }
+      .btn-grid { grid-template-columns: 1fr; }
+      .jog-controls { grid-template-columns: 1fr; }
+      .status-display { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>ESP32 PositionUnit Control</h1>
+    <h1>🔧 ESP32 PositionUnit - Advanced Control</h1>
     
-    <!-- Button status -->
-    <div class="button-status-container">
-      <h2>Button Status (Pin 12)</h2>
-      <div>
-        <span id="buttonIndicator" class="status-indicator status-off"></span>
-        <span id="buttonStatus" class="status-text">Not pressed</span>
-      </div>
-      <button class="btn-submit" style="margin-top: 10px;" onclick="refreshButtonStatus()">Refresh Status</button>
-    </div>
-    
-    <!-- Servo control -->
-    <div class="input-container">
-      <h2>Servo Positioning</h2>
-      <div class="slider-container">
-        <input type="range" id="servoSlider" min="0" max="180" value="90" oninput="updateServoValue(this.value)">
-      </div>
-      <p class="angle-display">Angle: <span id="servoValue">90</span>°</p>
-      <button class="btn-submit" onclick="setServoAngle()">Position Servo</button>
+    <!-- Tab Navigation -->
+    <div class="tab">
+      <button class="tablinks active" onclick="openTab(event, 'MotorTab')">🔩 Motor Control</button>
+      <button class="tablinks" onclick="openTab(event, 'ServoTab')">🔄 Servo Control</button>
+      <button class="tablinks" onclick="openTab(event, 'LEDTab')">💡 LED Control</button>
+      <button class="tablinks" onclick="openTab(event, 'StatusTab')">📊 Status & Info</button>
     </div>
 
-    <!-- Motor control with extended speed control -->
-    <div class="input-container">
-      <h2>Stepper Motor Control</h2>
-      <div class="slider-container">
-        <input type="range" id="motorSlider" min="-500" max="500" value="0" oninput="updateMotorValue(this.value)">
-      </div>
-      <p class="angle-display">Position: <span id="motorValue">0</span></p>
-      <button class="btn-submit" onclick="setMotorPosition()">Position Motor</button>
+    <!-- Motor Control Tab -->
+    <div id="MotorTab" class="tabcontent active">
+      <h2>🔩 Advanced Stepper Motor Control</h2>
       
-      <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-        <button class="btn-submit" onclick="moveMotorSteps(100, 1)">100 steps forward</button>
-        <button class="btn-submit" onclick="moveMotorSteps(100, -1)">100 steps backward</button>
-        <button class="btn-submit" onclick="moveFullRotation(1)">1 rotation forward</button>
-        <button class="btn-submit" onclick="moveFullRotation(-1)">1 rotation backward</button>
+      <!-- Motor Status -->
+      <div class="control-container">
+        <h3>📊 Motor Status</h3>
+        <div class="status-display" id="motorStatusDisplay">
+          <div class="status-item">
+            <div class="status-label">Position</div>
+            <div class="status-value" id="currentPosition">0</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Target Position</div>
+            <div class="status-value" id="targetPosition">0</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Speed</div>
+            <div class="status-value" id="currentSpeed">60 RPM</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Status</div>
+            <div class="status-value" id="motorStatus">Ready</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="updateMotorStatus()">Update Status</button>
       </div>
-      
-      <div style="margin-top: 15px;">
-        <label for="speedSlider">Speed:</label>
-        <input type="range" id="speedSlider" min="0" max="100" value="70" oninput="updateSpeedValue(this.value)">
-        <span id="speedValue">70</span>%
-        <div style="margin-top: 5px; font-size: 12px;">
-          <span>0% (slow) to 100% (maximum speed)</span>
+
+      <!-- Speed Control -->
+      <div class="control-container">
+        <h3>⚡ Speed Control</h3>
+        <div class="slider-wrapper">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="300" value="60" oninput="updateSpeedValue(this.value)">
+          <span id="speedValue">60</span> RPM
+        </div>
+      </div>
+
+      <!-- Positioning -->
+      <div class="control-container">
+        <h3>🎯 Absolute Positioning</h3>
+        <div class="slider-wrapper">
+          <label>Position:</label>
+          <input type="range" id="positionSlider" min="-5000" max="5000" value="0" oninput="updatePositionValue(this.value)">
+          <span id="positionValue">0</span> Steps
+        </div>
+        <div style="margin: 15px 0;">
+          <input type="number" id="positionInput" class="position-input" placeholder="Position" value="0">
+          <button class="btn btn-primary" onclick="moveToPosition()">Move to Position</button>
+        </div>
+      </div>
+
+      <!-- Relative Movement -->
+      <div class="control-container">
+        <h3>➡️ Relative Movement</h3>
+        <div class="btn-grid">
+          <button class="btn btn-success" onclick="moveRelative(-1000)">⬅️ 1000 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(-100)">⬅️ 100 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(-10)">⬅️ 10 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(10)">➡️ 10 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(100)">➡️ 100 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(1000)">➡️ 1000 Steps</button>
+        </div>
+      </div>
+
+      <!-- Advanced Functions -->
+      <div class="control-container">
+        <h3>🔧 Advanced Functions</h3>
+        <div class="btn-grid">
+          <button class="btn btn-primary" onclick="homeMotor()">🏠 Home Position</button>
+          <button class="btn btn-warning" onclick="calibrateMotor()">🔧 Calibrate</button>
+          <button class="btn btn-danger" onclick="emergencyStop()">🛑 EMERGENCY STOP</button>
+        </div>
+      </div>
+
+      <!-- Jog Control -->
+      <div class="control-container">
+        <h3>🕹️ Jog Control</h3>
+        <div class="jog-controls">
+          <button class="btn btn-success" onmousedown="startJog(false)" onmouseup="stopJog()">⬅️ Jog Left</button>
+          <button class="btn btn-danger" onclick="stopMotor()">⏹️ Stop</button>
+          <button class="btn btn-success" onmousedown="startJog(true)" onmouseup="stopJog()">➡️ Jog Right</button>
         </div>
       </div>
     </div>
-    
-    <!-- Color control -->
-    <h2>RGB LED Control</h2>
-    
-    <!-- New: Brightness slider -->
-    <div class="input-container">
-      <h2>LED Brightness</h2>
-      <div class="brightness-container">
-        <input type="range" id="brightnessSlider" min="0" max="255" value="5" oninput="updateBrightnessValue(this.value)">
-        <span class="brightness-value" id="brightnessValue">5</span>
+
+    <!-- Servo Control Tab -->
+    <div id="ServoTab" class="tabcontent">
+      <h2>🔄 Servo Control</h2>
+      
+      <div class="control-container">
+        <h3>Servo Positioning</h3>
+        <div class="slider-wrapper">
+          <label>Angle:</label>
+          <input type="range" id="servoSlider" min="0" max="180" value="90" oninput="updateServoValue(this.value)">
+          <span id="servoValue">90</span>°
+        </div>
+        <button class="btn btn-primary" onclick="setServoAngle()">Set Position</button>
       </div>
-      <button class="btn-submit" onclick="setBrightness()">Apply Brightness</button>
+      
+      <div class="control-container">
+        <h3>Predefined Positions</h3>
+        <div class="btn-grid">
+          <button class="btn btn-success" onclick="setServoPreset(0)">0° (Left)</button>
+          <button class="btn btn-success" onclick="setServoPreset(45)">45°</button>
+          <button class="btn btn-success" onclick="setServoPreset(90)">90° (Center)</button>
+          <button class="btn btn-success" onclick="setServoPreset(135)">135°</button>
+          <button class="btn btn-success" onclick="setServoPreset(180)">180° (Right)</button>
+        </div>
+      </div>
     </div>
-    
-    <div class="input-container">
-      <h2>Custom Color</h2>
-      <div id="colorPreview" class="color-preview"></div>
-      <input type="text" id="hexInput" class="hex-input" placeholder="#FF0000" maxlength="7" value="#FF0000"/>
-      <button class="btn-submit" onclick="changeHexColor()">Apply</button>
+
+    <!-- LED Control Tab -->
+    <div id="LEDTab" class="tabcontent">
+      <h2>💡 LED Control</h2>
+      
+      <!-- Brightness -->
+      <div class="control-container">
+        <h3>Brightness</h3>
+        <div class="slider-wrapper">
+          <label>Brightness:</label>
+          <input type="range" id="brightnessSlider" min="0" max="255" value="5" oninput="updateBrightnessValue(this.value)">
+          <span id="brightnessValue">5</span>
+        </div>
+        <button class="btn btn-primary" onclick="setBrightness()">Set Brightness</button>
+      </div>
+
+      <!-- Custom Color -->
+      <div class="control-container">
+        <h3>Custom Color</h3>
+        <div id="colorPreview" class="color-preview"></div>
+        <input type="text" id="hexInput" class="hex-input" placeholder="#FF0000" maxlength="7" value="#FF0000"/>
+        <button class="btn btn-primary" onclick="changeHexColor()">Set Color</button>
+      </div>
+
+      <!-- Predefined Colors -->
+      <div class="control-container">
+        <h3>Predefined Colors</h3>
+        <div class="btn-grid">
+          <button class="btn btn-red" onclick="changeColor(0)">Red</button>
+          <button class="btn btn-green" onclick="changeColor(1)">Green</button>
+          <button class="btn btn-blue" onclick="changeColor(2)">Blue</button>
+          <button class="btn btn-yellow" onclick="changeColor(3)">Yellow</button>
+          <button class="btn btn-purple" onclick="changeColor(4)">Purple</button>
+          <button class="btn btn-orange" onclick="changeColor(5)">Orange</button>
+          <button class="btn btn-white" onclick="changeColor(6)">White</button>
+        </div>
+      </div>
     </div>
-    
-    <p>Or choose a predefined color:</p>
-    <div class="btn-grid">
-      <button class="btn btn-red" onclick="changeColor(0)">Red</button>
-      <button class="btn btn-green" onclick="changeColor(1)">Green</button>
-      <button class="btn btn-blue" onclick="changeColor(2)">Blue</button>
-      <button class="btn btn-yellow" onclick="changeColor(3)">Yellow</button>
-      <button class="btn btn-purple" onclick="changeColor(4)">Purple</button>
-      <button class="btn btn-orange" onclick="changeColor(5)">Orange</button>
-      <button class="btn btn-white" onclick="changeColor(6)">White</button>
+
+    <!-- Status Tab -->
+    <div id="StatusTab" class="tabcontent">
+      <h2>📊 System Status & Information</h2>
+      
+      <!-- Button Status -->
+      <div class="control-container">
+        <h3>Button Status (Pin 45)</h3>
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-label">Status</div>
+            <div class="status-value" id="buttonStatus">Not pressed</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshButtonStatus()">Update Status</button>
+      </div>
+
+      <!-- System Information -->
+      <div class="control-container">
+        <h3>System Information</h3>
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-label">Motor Pins</div>
+            <div class="status-value">Dir: 36, Step: 37</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Servo Pin</div>
+            <div class="status-value">Pin 2</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">LED Pins</div>
+            <div class="status-value">R:48, G:35, B:36</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Button Pin</div>
+            <div class="status-value">Pin 45</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <p id="status">Status: Ready</p>
+
+    <!-- Status Display -->
+    <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: #333; color: white; padding: 10px; border-radius: 5px; z-index: 1000;">
+      <span id="status">Status: System ready</span>
+    </div>
   </div>
   
   <script>
-    // Button status variables
-    let buttonPollingActive = true;
-    let lastButtonState = false;
+    // Globale Variablen
+    let motorStatusInterval;
+    let currentJogDirection = false;
     
-    // Query button status on page load
+    // Tab-Funktionalität
+    function openTab(evt, tabName) {
+      var i, tabcontent, tablinks;
+      tabcontent = document.getElementsByClassName("tabcontent");
+      for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+      }
+      tablinks = document.getElementsByClassName("tablinks");
+      for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+      }
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+      
+      // Update motor status automatically when Motor tab is opened
+      if (tabName === 'MotorTab') {
+        startMotorStatusUpdates();
+      } else {
+        stopMotorStatusUpdates();
+      }
+    }
+    
+    // Update motor status automatically
+    function startMotorStatusUpdates() {
+      updateMotorStatus();
+      if (motorStatusInterval) clearInterval(motorStatusInterval);
+      motorStatusInterval = setInterval(updateMotorStatus, 2000);
+    }
+    
+    function stopMotorStatusUpdates() {
+      if (motorStatusInterval) {
+        clearInterval(motorStatusInterval);
+        motorStatusInterval = null;
+      }
+    }
+    
+    // Page Load Event
     document.addEventListener('DOMContentLoaded', function() {
       updateColorPreview();
       refreshButtonStatus();
+      updateMotorStatus();
+      startMotorStatusUpdates();
     });
-
-    // Faster button status polling (every 200ms instead of 1 second)
-    setInterval(function() {
-      if (buttonPollingActive) {
-        refreshButtonStatus();
-      }
-    }, 200);
     
-    // Fetch button status from server
-    function refreshButtonStatus() {
-      fetch('/getButtonState')
+    // Motor Functions
+    function updateSpeedValue(val) {
+      document.getElementById('speedValue').textContent = val;
+    }
+    
+    function updatePositionValue(val) {
+      document.getElementById('positionValue').textContent = val;
+      document.getElementById('positionInput').value = val;
+    }
+    
+    function updateMotorStatus() {
+      fetch('/motorStatus')
         .then(response => response.json())
         .then(data => {
-          const buttonIndicator = document.getElementById('buttonIndicator');
-          const buttonStatus = document.getElementById('buttonStatus');
-          
-          // Update only if the status has changed
-          if (data.pressed !== lastButtonState) {
-            // INVERTED: We show the opposite of the actual status
-            if (!data.pressed) {  // If button is NOT pressed (data.pressed = false)
-              buttonIndicator.className = 'status-indicator status-off';
-              buttonStatus.textContent = 'Not pressed';
-            } else {  // If button is pressed (data.pressed = true)
-              buttonIndicator.className = 'status-indicator status-on';
-              buttonStatus.textContent = 'Pressed';
-            }
-            lastButtonState = data.pressed;
-          }
+          document.getElementById('currentPosition').textContent = data.currentPosition || 0;
+          document.getElementById('targetPosition').textContent = data.targetPosition || 0;
+          document.getElementById('currentSpeed').textContent = (data.currentSpeed || 60) + ' RPM';
+          document.getElementById('motorStatus').textContent = data.isMoving ? 'Moving' : 
+                                                               data.isHomed ? 'Ready (Home)' : 'Ready';
         })
         .catch(error => {
-          console.error('Error fetching button status:', error);
-          buttonPollingActive = false; // Stop polling on error
-          setTimeout(() => { buttonPollingActive = true; }, 5000); // Retry after 5 seconds
-        });
-    }
-
-    // Update color preview when input changes
-    document.getElementById('hexInput').addEventListener('input', function() {
-      updateColorPreview();
-    });
-
-    // Live color preview
-    function updateColorPreview() {
-      var hexValue = document.getElementById('hexInput').value;
-      // Add # if not present
-      if (hexValue.charAt(0) !== '#') {
-        hexValue = '#' + hexValue;
-        document.getElementById('hexInput').value = hexValue;
-      }
-      document.getElementById('colorPreview').style.backgroundColor = hexValue;
-    }
-
-    function changeColor(colorIndex) {
-      document.getElementById('status').innerHTML = 'Status: Changing color...';
-      fetch('/color?index=' + colorIndex)
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
-        })
-        .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error changing color';
+          console.error('Error retrieving motor status:', error);
         });
     }
     
-    function changeHexColor() {
-      var hexValue = document.getElementById('hexInput').value;
-      // Add # if not present
-      if (hexValue.charAt(0) !== '#') {
-        hexValue = '#' + hexValue;
-      }
+    function moveToPosition() {
+      const position = parseInt(document.getElementById('positionInput').value) || 0;
+      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
       
-      document.getElementById('status').innerHTML = 'Status: Changing color...';
-      fetch('/hexcolor?hex=' + encodeURIComponent(hexValue))
+      document.getElementById('status').innerHTML = 'Status: Motor moving to position ' + position + '...';
+      
+      fetch('/advancedMotor?action=moveTo&position=' + position + '&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error in positioning';
+        });
+    }
+    
+    function moveRelative(steps) {
+      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+      
+      document.getElementById('status').innerHTML = 'Status: Motor moving ' + steps + ' steps...';
+      
+      fetch('/advancedMotor?action=moveRelative&steps=' + steps + '&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error in relative movement';
+        });
+    }
+    
+    function homeMotor() {
+      document.getElementById('status').innerHTML = 'Status: Motor moving to home position...';
+      
+      fetch('/motorHome')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error moving to home';
+        });
+    }
+    
+    function calibrateMotor() {
+      document.getElementById('status').innerHTML = 'Status: Motor calibrating...';
+      
+      fetch('/motorCalibrate')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error in calibration';
+        });
+    }
+    
+    function stopMotor() {
+      document.getElementById('status').innerHTML = 'Status: Motor stopping...';
+      
+      fetch('/motorStop')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error stopping motor';
+        });
+    }
+    
+    function emergencyStop() {
+      if (confirm('Execute emergency stop? This will disable the motor completely.')) {
+        document.getElementById('status').innerHTML = 'Status: EMERGENCY STOP executed!';
+        
+        fetch('/advancedMotor?action=emergencyStop')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('status').innerHTML = 'Status: ' + data;
+            updateMotorStatus();
+          })
+          .catch(error => {
+            document.getElementById('status').innerHTML = 'Status: Error in emergency stop';
+          });
+      }
+    }
+    
+    // Jog Functions
+    function startJog(direction) {
+      currentJogDirection = direction;
+      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+      
+      document.getElementById('status').innerHTML = 'Status: Jog mode active (' + (direction ? 'right' : 'left') + ')';
+      
+      fetch('/motorJog?direction=' + (direction ? '1' : '0') + '&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          // Jog started
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error starting jog';
+        });
+    }
+    
+    function stopJog() {
+      fetch('/motorStop')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: Jog stopped';
+          updateMotorStatus();
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error stopping jog';
+        });
+    }
+    
+    // Servo Functions
+    function updateServoValue(val) {
+      document.getElementById('servoValue').textContent = val;
+    }
+    
+    function setServoAngle() {
+      const angle = document.getElementById('servoSlider').value;
+      document.getElementById('status').innerHTML = 'Status: Servo positioning...';
+      
+      fetch('/setServo?angle=' + angle)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error changing color';
+          document.getElementById('status').innerHTML = 'Status: Error in servo control';
         });
     }
     
-    // New functions for brightness control
+    function setServoPreset(angle) {
+      document.getElementById('servoSlider').value = angle;
+      document.getElementById('servoValue').textContent = angle;
+      setServoAngle();
+    }
+    
+    // LED Functions
     function updateBrightnessValue(val) {
       document.getElementById('brightnessValue').textContent = val;
     }
@@ -257,84 +536,64 @@ const char* html = R"rawliteral(
         });
     }
     
-    // Function to update displayed servo angle
-    function updateServoValue(val) {
-      document.getElementById('servoValue').textContent = val;
+    function updateColorPreview() {
+      var hexValue = document.getElementById('hexInput').value;
+      if (hexValue.charAt(0) !== '#') {
+        hexValue = '#' + hexValue;
+        document.getElementById('hexInput').value = hexValue;
+      }
+      document.getElementById('colorPreview').style.backgroundColor = hexValue;
     }
     
-    // Function to set servo angle
-    function setServoAngle() {
-      const angle = document.getElementById('servoSlider').value;
-      document.getElementById('status').innerHTML = 'Status: Positioning servo...';
-      
-      fetch('/setServo?angle=' + angle)
+    function changeColor(colorIndex) {
+      document.getElementById('status').innerHTML = 'Status: Changing color...';
+      fetch('/color?index=' + colorIndex)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error in servo control';
-        });
-    }
-
-    // Function to update displayed motor value
-    function updateMotorValue(val) {
-      document.getElementById('motorValue').textContent = val;
-    }
-    
-    // Function to set motor position
-    function setMotorPosition() {
-      const position = document.getElementById('motorSlider').value;
-      document.getElementById('status').innerHTML = 'Status: Positioning motor...';
-      
-      fetch('/setMotor?position=' + position)
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
-        })
-        .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error in motor control';
+          document.getElementById('status').innerHTML = 'Status: Error changing color';
         });
     }
     
-    // Function for a full rotation
-    function moveFullRotation(direction) {
-      document.getElementById('status').innerHTML = 'Status: Motor is performing a fast full rotation...';
+    function changeHexColor() {
+      var hexValue = document.getElementById('hexInput').value;
+      if (hexValue.charAt(0) !== '#') {
+        hexValue = '#' + hexValue;
+      }
       
-      // The 28BYJ-48 requires 4096 steps for a full revolution
-      const steps = 4096;
-      const speed = parseInt(document.getElementById('speedSlider').value);
-      
-      fetch('/setMotor?steps=' + steps + '&direction=' + direction + '&speed=' + speed)
+      document.getElementById('status').innerHTML = 'Status: Changing color...';
+      fetch('/hexcolor?hex=' + encodeURIComponent(hexValue))
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error in motor control';
+          document.getElementById('status').innerHTML = 'Status: Error changing color';
         });
     }
-
-    // Function to update displayed speed value
-    function updateSpeedValue(val) {
-      document.getElementById('speedValue').textContent = val;
-    }
-
-    // Function to move motor by specific steps with speed
-    function moveMotorSteps(steps, direction) {
-      document.getElementById('status').innerHTML = 'Status: Motor is moving...';
-      
-      const speed = parseInt(document.getElementById('speedSlider').value);
-      
-      fetch('/setMotor?steps=' + steps + '&direction=' + direction + '&speed=' + speed)
-        .then(response => response.text())
+    
+    // Button Status
+    function refreshButtonStatus() {
+      fetch('/getButtonState')
+        .then(response => response.json())
         .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
+          const buttonStatus = document.getElementById('buttonStatus');
+          buttonStatus.textContent = data.pressed ? 'Pressed' : 'Not pressed';
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error in motor control';
+          console.error('Error retrieving button status:', error);
         });
     }
+    
+    // Color preview event listener
+    document.addEventListener('DOMContentLoaded', function() {
+      const hexInput = document.getElementById('hexInput');
+      if (hexInput) {
+        hexInput.addEventListener('input', updateColorPreview);
+      }
+    });
   </script>
 </body>
 </html>
@@ -349,6 +608,15 @@ void setupWebServer() {
   server.on("/setMotor", HTTP_GET, handleMotorControl);
   server.on("/getButtonState", HTTP_GET, handleGetButtonState); // Button status handler
   server.on("/setBrightness", HTTP_GET, handleBrightness); // New brightness handler
+  
+  // Advanced Motor Routes
+  server.on("/advancedMotor", HTTP_GET, handleAdvancedMotorControl);
+  server.on("/motorStatus", HTTP_GET, handleAdvancedMotorStatus);
+  server.on("/motorStop", HTTP_GET, handleAdvancedMotorStop);
+  server.on("/motorHome", HTTP_GET, handleAdvancedMotorHome);
+  server.on("/motorJog", HTTP_GET, handleAdvancedMotorJog);
+  server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
+  
   server.onNotFound(handleNotFound);
 
   // Start web server
@@ -413,12 +681,12 @@ void handleServoControl() {
   }
 }
 
-// Handle motor control request
+// Handle motor control request (legacy)
 void handleMotorControl() {
   // For absolute position
   if (server.hasArg("position")) {
     int position = server.arg("position").toInt();
-    moveMotorToPosition(position);  // Korrigiert von setMotorPosition zu moveMotorToPosition
+    moveMotorToPosition(position);
     server.send(200, "text/plain", "Motor positioned to " + String(position));
     return;
   }
@@ -428,13 +696,11 @@ void handleMotorControl() {
     int steps = server.arg("steps").toInt();
     int direction = server.arg("direction").toInt();
     
-    // Optional speed parameter (default 100% if not specified)
     int speed = 100;
     if (server.hasArg("speed")) {
       speed = server.arg("speed").toInt();
     }
     
-    // Move motor with speed - verwende moveMotorWithSpeed statt moveMotor
     moveMotorWithSpeed(steps, direction, speed);
     
     server.send(200, "text/plain", "Motor moved " + String(steps) + 
@@ -443,37 +709,145 @@ void handleMotorControl() {
     return;
   }
   
-  // If no valid parameters
   server.send(400, "text/plain", "Missing or invalid parameters");
 }
 
 // Handle button state request
 void handleGetButtonState() {
-  bool isButtonPressed = getButtonState();  // Function from button_control.h
-  
-  // Create JSON response
+  bool isButtonPressed = getButtonState();
   String jsonResponse = "{\"pressed\":" + String(isButtonPressed ? "true" : "false") + "}";
+  server.send(200, "application/json", jsonResponse);
+}
+
+// Handle LED brightness control
+void handleBrightness() {
+  if (server.hasArg("value")) {
+    int brightness = server.arg("value").toInt();
+    brightness = constrain(brightness, 0, 255);
+    setBrightness(brightness);
+    server.send(200, "text/plain", "Brightness set to " + String(brightness));
+  } else {
+    server.send(400, "text/plain", "Missing 'value' parameter");
+  }
+}
+
+// Advanced Motor Handler
+void handleAdvancedMotorControl() {
+  if (!server.hasArg("action")) {
+    server.send(400, "text/plain", "Missing 'action' parameter");
+    return;
+  }
+  
+  String action = server.arg("action");
+  
+  if (action == "moveTo" && server.hasArg("position")) {
+    int position = server.arg("position").toInt();
+    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    
+    advancedMotor.setSpeed(speed);
+    advancedMotor.moveTo(position);
+    
+    server.send(200, "text/plain", "Motor moved to position " + String(position));
+    
+  } else if (action == "moveRelative" && server.hasArg("steps")) {
+    int steps = server.arg("steps").toInt();
+    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    
+    advancedMotor.setSpeed(speed);
+    advancedMotor.moveRelative(steps);
+    
+    server.send(200, "text/plain", "Motor moved " + String(steps) + " steps");
+    
+  } else if (action == "moveDegrees" && server.hasArg("degrees")) {
+    float degrees = server.arg("degrees").toFloat();
+    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    
+    advancedMotor.setSpeed(speed);
+    advancedMotor.moveDegrees(degrees);
+    
+    server.send(200, "text/plain", "Motor moved " + String(degrees) + " degrees");
+    
+  } else if (action == "moveRevolutions" && server.hasArg("revolutions")) {
+    float revolutions = server.arg("revolutions").toFloat();
+    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    
+    advancedMotor.setSpeed(speed);
+    advancedMotor.moveRevolutions(revolutions);
+    
+    server.send(200, "text/plain", "Motor moved " + String(revolutions) + " revolutions");
+    
+  } else if (action == "smoothMove" && server.hasArg("steps")) {
+    int steps = server.arg("steps").toInt();
+    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    
+    advancedMotor.moveSmoothly(steps, speed);
+    
+    server.send(200, "text/plain", "Smooth movement completed");
+    
+  } else if (action == "acceleratedMove" && server.hasArg("steps")) {
+    int steps = server.arg("steps").toInt();
+    int startSpeed = server.hasArg("startSpeed") ? server.arg("startSpeed").toInt() : 20;
+    int endSpeed = server.hasArg("endSpeed") ? server.arg("endSpeed").toInt() : 60;
+    
+    advancedMotor.moveWithAcceleration(steps, startSpeed, endSpeed);
+    
+    server.send(200, "text/plain", "Accelerated movement completed");
+    
+  } else if (action == "setHome") {
+    advancedMotor.setHome();
+    server.send(200, "text/plain", "Home position set");
+    
+  } else if (action == "emergencyStop") {
+    advancedMotor.emergencyStop();
+    server.send(200, "text/plain", "Emergency stop executed");
+    
+  } else {
+    server.send(400, "text/plain", "Invalid action or missing parameters");
+  }
+}
+
+void handleAdvancedMotorStatus() {
+  AdvancedMotorStatus status = advancedMotor.getStatus();
+  
+  String jsonResponse = "{"
+    "\"currentPosition\":" + String(status.currentPosition) + ","
+    "\"targetPosition\":" + String(status.targetPosition) + ","
+    "\"isMoving\":" + String(status.isMoving ? "true" : "false") + ","
+    "\"currentSpeed\":" + String(status.currentSpeed) + ","
+    "\"isHomed\":" + String(status.isHomed ? "true" : "false") + ","
+    "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ""
+    "}";
   
   server.send(200, "application/json", jsonResponse);
 }
 
-// New handler for LED brightness control
-void handleBrightness() {
-  if (server.hasArg("value")) {
-    int brightness = server.arg("value").toInt();
-    
-    // Ensure brightness is valid (0-255)
-    brightness = constrain(brightness, 0, 255);
-    
-    // Set LED brightness using the function from led_control.h
-    setBrightness(brightness);
-    
-    // Send success response
-    server.send(200, "text/plain", "Brightness set to " + String(brightness));
-  } else {
-    // Send error response if no value was specified
-    server.send(400, "text/plain", "Missing 'value' parameter");
+void handleAdvancedMotorStop() {
+  advancedMotor.stop();
+  server.send(200, "text/plain", "Motor stopped");
+}
+
+void handleAdvancedMotorHome() {
+  advancedMotor.home();
+  server.send(200, "text/plain", "Motor moved to home position");
+}
+
+void handleAdvancedMotorJog() {
+  if (!server.hasArg("direction")) {
+    server.send(400, "text/plain", "Missing 'direction' parameter");
+    return;
   }
+  
+  bool direction = server.arg("direction").toInt() == 1;
+  int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+  
+  advancedMotor.jogContinuous(direction, speed);
+  
+  server.send(200, "text/plain", "Jog started in " + String(direction ? "forward" : "backward") + " direction");
+}
+
+void handleAdvancedMotorCalibrate() {
+  advancedMotor.calibrate();
+  server.send(200, "text/plain", "Motor calibrated");
 }
 
 // Handle not found (404)

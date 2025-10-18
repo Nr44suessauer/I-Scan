@@ -1,8 +1,8 @@
 #include "wifi_manager.h"
 
 // Netzwerk-Konfiguration
-const char* SSID = "Benis";
-const char* PASSWORD = "1234567890";
+const char* SSID = "Teekanne";
+const char* PASSWORD = "49127983361694305550";
 
 void setupWiFi() {
   Serial.print("Verbindung mit WLAN wird hergestellt: ");

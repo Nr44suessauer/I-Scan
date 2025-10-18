@@ -19,4 +19,12 @@ void handleNotFound();
 void handleGetButtonState(); // New handler for button status
 void handleBrightness(); // Handler for LED brightness control
 
+// Extended motor control handlers
+void handleMotorControl();
+void handleMotorStop();
+void handleMotorHome();
+void handleMotorStatus();
+void handleMotorCalibrate();
+void handleMotorDegrees();
+
 #endif // WEB_SERVER_H

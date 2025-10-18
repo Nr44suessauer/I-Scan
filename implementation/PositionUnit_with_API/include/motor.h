@@ -25,6 +25,30 @@ void moveMotor(int steps, int direction);
 void moveMotorToPosition(int position);
 void moveMotorWithSpeed(int steps, int direction, int speed);
 
+// Erweiterte Motor-Funktionen
+void stopMotor();
+void homeMotor();
+int getCurrentMotorPosition();
+bool isMotorMoving();
+void setMotorSpeed(int speed);
+void moveMotorDegrees(float degrees, int direction);
+void calibrateMotor();
+
+// Geschwindigkeitsprofile
+void moveMotorWithAcceleration(int steps, int direction, int startSpeed, int endSpeed);
+void moveMotorSmoothly(int steps, int direction, int speed);
+
+// Motor-Status-Funktionen
+typedef struct {
+    int currentPosition;
+    int targetPosition;
+    bool isMoving;
+    int currentSpeed;
+    bool isHomed;
+} MotorStatus;
+
+MotorStatus getMotorStatus();
+
 // Button Funktionsprototypen
 void setupButton();
 bool getButtonState();
