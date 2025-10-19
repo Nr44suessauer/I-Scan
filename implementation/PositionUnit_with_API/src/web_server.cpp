@@ -3,6 +3,7 @@
 #include "motor.h" 
 #include "button_control.h" // Include for button functionality
 #include "advanced_motor.h" // Include for advanced motor control
+#include "relay_control.h"  // Include for relay control
 
 // Function declarations
 void handleRoot();
@@ -15,6 +16,8 @@ void handleGetButtonState(); // New function declaration for button status
 void handleBrightness(); // New function declaration for brightness control
 void handleSetHomingMode();     // New function for setting homing mode
 void handleRowCounter();        // Row Counter API function declaration
+void handleRelayControl();      // Relay control function declaration
+void handleRelayState();        // Relay state function declaration
 
 
 
@@ -114,6 +117,7 @@ const char* html = R"rawliteral(
       <button class="tablinks active" onclick="openTab(event, 'MotorTab')">Motor Control</button>
       <button class="tablinks" onclick="openTab(event, 'ServoTab')">Servo Control</button>
       <button class="tablinks" onclick="openTab(event, 'LEDTab')">LED Control</button>
+      <button class="tablinks" onclick="openTab(event, 'RelayTab')">Relay Control</button>
       <button class="tablinks" onclick="openTab(event, 'StatusTab')">Status & Info</button>
     </div>
 
@@ -293,6 +297,48 @@ const char* html = R"rawliteral(
       </div>
     </div>
 
+    <!-- Relay Control Tab -->
+    <div id="RelayTab" class="tabcontent">
+      <h2>Relay Control</h2>
+      
+      <!-- Relay Status -->
+      <div class="control-container">
+        <h3>Relay Status (Pin 17)</h3>
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-label">Current State</div>
+            <div class="status-value" id="relayStatus">OFF</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Pin</div>
+            <div class="status-value">Pin 17</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshRelayStatus()">Update Status</button>
+      </div>
+
+      <!-- Relay Control -->
+      <div class="control-container">
+        <h3>Relay Control</h3>
+        <div class="btn-grid">
+          <button class="btn btn-success" onclick="setRelay(true)">Turn ON</button>
+          <button class="btn btn-danger" onclick="setRelay(false)">Turn OFF</button>
+          <button class="btn btn-warning" onclick="toggleRelay()">Toggle</button>
+        </div>
+      </div>
+
+      <!-- Relay Information -->
+      <div class="control-container">
+        <h3>Information</h3>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+          <p><strong>Relay Pin:</strong> GPIO 17</p>
+          <p><strong>Control Type:</strong> Active HIGH</p>
+          <p><strong>Max Current:</strong> Depends on relay specifications</p>
+          <p><strong>Note:</strong> Ensure your relay can handle the load you're switching!</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Status Tab -->
     <div id="StatusTab" class="tabcontent">
       <h2>System Status & Information</h2>
@@ -328,6 +374,10 @@ const char* html = R"rawliteral(
           <div class="status-item">
             <div class="status-label">Button Pin</div>
             <div class="status-value">Pin 45</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Relay Pin</div>
+            <div class="status-value">Pin 17</div>
           </div>
           <div class="status-item">
             <div class="status-label">IP Address</div>
@@ -703,6 +753,45 @@ const char* html = R"rawliteral(
       document.getElementById('ipAddress').textContent = window.location.host;
     }
     
+    // Relay Control Functions
+    function setRelay(state) {
+      const action = state ? 'on' : 'off';
+      fetch(`/relay?action=${action}`)
+        .then(response => response.text())
+        .then(data => {
+          console.log('Relay response:', data);
+          refreshRelayStatus();
+        })
+        .catch(error => {
+          console.error('Error controlling relay:', error);
+        });
+    }
+    
+    function toggleRelay() {
+      fetch('/relay?action=toggle')
+        .then(response => response.text())
+        .then(data => {
+          console.log('Relay toggle response:', data);
+          refreshRelayStatus();
+        })
+        .catch(error => {
+          console.error('Error toggling relay:', error);
+        });
+    }
+    
+    function refreshRelayStatus() {
+      fetch('/relaystate')
+        .then(response => response.json())
+        .then(data => {
+          const relayStatus = document.getElementById('relayStatus');
+          relayStatus.textContent = data.state ? 'ON' : 'OFF';
+          relayStatus.style.color = data.state ? '#4CAF50' : '#f44336';
+        })
+        .catch(error => {
+          console.error('Error retrieving relay status:', error);
+        });
+    }
+    
     // Color preview event listener
     document.addEventListener('DOMContentLoaded', function() {
       const hexInput = document.getElementById('hexInput');
@@ -720,6 +809,9 @@ const char* html = R"rawliteral(
       // Display IP address and generate QR code
       document.getElementById('ipAddress').textContent = window.location.host;
       generateQRCode();
+      
+      // Initial status updates
+      refreshRelayStatus();
     });
   </script>
 </body>
@@ -745,6 +837,10 @@ void setupWebServer() {
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
   server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // New route for homing mode
   server.on("/rowCounter", HTTP_GET, handleRowCounter);                     // Row Counter API Route
+  
+  // Relay Routes
+  server.on("/relay", HTTP_GET, handleRelayControl);                        // Relay control route
+  server.on("/relaystate", HTTP_GET, handleRelayState);                     // Relay state route
 
 
 
@@ -1085,6 +1181,35 @@ void handleRowCounter() {
   } else {
     server.send(400, "text/plain", "Invalid action. Use 'start', 'go', 'stop', 'status', or 'debug'");
   }
+}
+
+// Handle relay control
+void handleRelayControl() {
+  if (server.hasArg("action")) {
+    String action = server.arg("action");
+    
+    if (action == "on") {
+      setRelayState(true);
+      server.send(200, "text/plain", "Relay turned ON");
+    } else if (action == "off") {
+      setRelayState(false);
+      server.send(200, "text/plain", "Relay turned OFF");
+    } else if (action == "toggle") {
+      toggleRelay();
+      String state = getRelayState() ? "ON" : "OFF";
+      server.send(200, "text/plain", "Relay toggled - now " + state);
+    } else {
+      server.send(400, "text/plain", "Invalid action. Use 'on', 'off', or 'toggle'");
+    }
+  } else {
+    server.send(400, "text/plain", "Missing action parameter");
+  }
+}
+
+// Handle relay state request
+void handleRelayState() {
+  String jsonResponse = "{\"state\":" + String(getRelayState() ? "true" : "false") + "}";
+  server.send(200, "application/json", jsonResponse);
 }
 
 // Handle not found (404)

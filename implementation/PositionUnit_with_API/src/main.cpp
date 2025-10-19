@@ -6,6 +6,7 @@
 #include "motor.h"          // Include motor header
 #include "advanced_motor.h" // Include advanced motor header
 #include "button_control.h" // Include button header
+#include "relay_control.h"  // Include relay header
 
 void setup() {
   Serial.begin(9600);
@@ -25,6 +26,9 @@ void setup() {
   
   // Button setup
   setupButton(); // Initialize button
+  
+  // Relay setup
+  setupRelay(); // Initialize relay
   
   // Establish WiFi connection
   setupWiFi();
