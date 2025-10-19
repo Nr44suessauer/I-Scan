@@ -12,11 +12,11 @@
 // Button-Pin-Definition
 #define BUTTON_PIN 45     // Button Input Pin
 
-// Optimierte Werte für den 28BYJ-48 Motor - schnellere Geschwindigkeit
-#define STEP_DELAY_MS 1     // Reduziert auf 1ms für höhere Grundgeschwindigkeit
-#define STEPS_PER_REVOLUTION 4096  // Der 28BYJ-48 benötigt 4096 Schritte für eine volle Umdrehung
-#define MAX_SPEED_DELAY 0.5   // Minimale Verzögerung für höchste Geschwindigkeit
-#define MIN_SPEED_DELAY 10    // Reduziert für insgesamt schnellere Bewegung
+// Optimized values for the 28BYJ-48 motor - faster speed
+#define STEP_DELAY_MS 1     // Reduced to 1ms for higher base speed
+#define STEPS_PER_REVOLUTION 4096  // The 28BYJ-48 requires 4096 steps for a full revolution
+#define MAX_SPEED_DELAY 0.5   // Minimum delay for highest speed
+#define MIN_SPEED_DELAY 10    // Reduced for overall faster movement
 
 // Funktionsprototypen
 void setupMotor();

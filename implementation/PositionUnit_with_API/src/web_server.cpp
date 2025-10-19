@@ -13,7 +13,7 @@ void handleServoControl();
 void handleMotorControl(); 
 void handleGetButtonState(); // New function declaration for button status
 void handleBrightness(); // New function declaration for brightness control
-void handleSetHomingMode();     // Neue Funktion für Homing-Modus setzen
+void handleSetHomingMode();     // New function for setting homing mode
 void handleRowCounter();        // Row Counter API function declaration
 
 
@@ -107,23 +107,23 @@ const char* html = R"rawliteral(
 </head>
 <body>
   <div class="container">
-    <h1>🔧 ESP32 PositionUnit - Advanced Control</h1>
+    <h1>ESP32 PositionUnit - Advanced Control</h1>
     
     <!-- Tab Navigation -->
     <div class="tab">
-      <button class="tablinks active" onclick="openTab(event, 'MotorTab')">🔩 Motor Control</button>
-      <button class="tablinks" onclick="openTab(event, 'ServoTab')">🔄 Servo Control</button>
-      <button class="tablinks" onclick="openTab(event, 'LEDTab')">💡 LED Control</button>
-      <button class="tablinks" onclick="openTab(event, 'StatusTab')">📊 Status & Info</button>
+      <button class="tablinks active" onclick="openTab(event, 'MotorTab')">Motor Control</button>
+      <button class="tablinks" onclick="openTab(event, 'ServoTab')">Servo Control</button>
+      <button class="tablinks" onclick="openTab(event, 'LEDTab')">LED Control</button>
+      <button class="tablinks" onclick="openTab(event, 'StatusTab')">Status & Info</button>
     </div>
 
     <!-- Motor Control Tab -->
     <div id="MotorTab" class="tabcontent active">
-      <h2>🔩 Advanced Stepper Motor Control</h2>
+      <h2>Advanced Stepper Motor Control</h2>
       
       <!-- Motor Status -->
       <div class="control-container">
-        <h3>📊 Motor Status</h3>
+        <h3>Motor Status</h3>
         <div class="status-display" id="motorStatusDisplay">
           <div class="status-item">
             <div class="status-label">Position</div>
@@ -147,7 +147,7 @@ const char* html = R"rawliteral(
 
       <!-- Speed Control -->
       <div class="control-container">
-        <h3>⚡ Speed Control</h3>
+        <h3>Speed Control</h3>
         <div class="slider-wrapper">
           <label>Speed:</label>
           <input type="range" id="speedSlider" min="1" max="120" value="60" oninput="updateSpeedValue(this.value)">
@@ -157,7 +157,7 @@ const char* html = R"rawliteral(
 
       <!-- Positioning -->
       <div class="control-container">
-        <h3>🎯 Absolute Positioning</h3>
+        <h3>Absolute Positioning</h3>
         <div class="slider-wrapper">
           <label>Position:</label>
           <input type="range" id="positionSlider" min="-5000" max="5000" value="0" oninput="updatePositionValue(this.value)">
@@ -171,57 +171,56 @@ const char* html = R"rawliteral(
 
       <!-- Relative Movement -->
       <div class="control-container">
-        <h3>➡️ Relative Movement</h3>
+        <h3>Relative Movement</h3>
         <div class="btn-grid">
-          <button class="btn btn-success" onclick="moveRelative(-1000)">⬅️ 1000 Steps</button>
-          <button class="btn btn-success" onclick="moveRelative(-100)">⬅️ 100 Steps</button>
-          <button class="btn btn-success" onclick="moveRelative(-10)">⬅️ 10 Steps</button>
-          <button class="btn btn-success" onclick="moveRelative(10)">➡️ 10 Steps</button>
-          <button class="btn btn-success" onclick="moveRelative(100)">➡️ 100 Steps</button>
-          <button class="btn btn-success" onclick="moveRelative(1000)">➡️ 1000 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(-1000)">- 1000 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(-100)">- 100 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(-10)">- 10 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(10)">+ 10 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(100)">+ 100 Steps</button>
+          <button class="btn btn-success" onclick="moveRelative(1000)">+ 1000 Steps</button>
         </div>
       </div>
 
       <!-- Advanced Functions -->
       <div class="control-container">
-        <h3>🔧 Advanced Functions</h3>
+        <h3>Advanced Functions</h3>
         <div class="function-row">
           <label class="switch-label">
             <input type="checkbox" id="physicalHomeToggle" checked onchange="toggleHomingMode(this.checked)">
             <span class="slider-toggle"></span>
-            <span class="switch-text">🎯 Physical Home (Button)</span>
+            <span class="switch-text">Physical Home (Button)</span>
           </label>
           <span class="description">When enabled: Home to button position. When disabled: Home to virtual position (0)</span>
         </div>
         <div class="btn-grid">
-          <button class="btn btn-primary" onclick="homeMotor()">🏠 Home Position</button>
-          <button class="btn btn-warning" onclick="calibrateMotor()">🔧 Calibrate</button>
+          <button class="btn btn-primary" onclick="homeMotor()">Home Position</button>
+          <button class="btn btn-warning" onclick="calibrateMotor()">Calibrate</button>
         </div>
       </div>
 
       <!-- Row Counter Section -->
       <div class="control-container">
-        <h3>📊 Row Counter</h3>
+        <h3>Row Counter</h3>
         <div class="function-row">
-          <span class="description">Fährt in kleinen Schritten und zählt Rows (Home-Button Zyklen)</span>
+          <span class="description">Moves in small steps and counts rows (Home-Button cycles)</span>
         </div>
         <div class="input-row" style="margin: 15px 0;">
-          <label for="rowsInput">Anzahl Rows:</label>
+          <label for="rowsInput">Number of Rows:</label>
           <input type="number" id="rowsInput" min="1" max="1000" value="10" style="width: 80px; margin: 0 10px;">
         </div>
         <div class="status-display" style="margin: 15px 0;">
           <div class="status-item">
-            <div class="status-label">Aktuelle Rows</div>
+            <div class="status-label">Current Rows</div>
             <div class="status-value" id="currentRows">0</div>
           </div>
           <div class="status-item">
-            <div class="status-label">Ziel Rows</div>
+            <div class="status-label">Target Rows</div>
             <div class="status-value" id="targetRows">0</div>
           </div>
         </div>
         <div class="btn-grid">
-          <button class="btn btn-success" onclick="startRowCounter()">▶️ Start</button>
-          <button class="btn btn-primary" onclick="goRowCounter()">🎯 Go</button>
+          <button class="btn btn-success" onclick="goRowCounter()">Go</button>
         </div>
       </div>
 
@@ -232,7 +231,7 @@ const char* html = R"rawliteral(
 
     <!-- Servo Control Tab -->
     <div id="ServoTab" class="tabcontent">
-      <h2>🔄 Servo Control</h2>
+      <h2>Servo Control</h2>
       
       <div class="control-container">
         <h3>Servo Positioning</h3>
@@ -258,7 +257,7 @@ const char* html = R"rawliteral(
 
     <!-- LED Control Tab -->
     <div id="LEDTab" class="tabcontent">
-      <h2>💡 LED Control</h2>
+      <h2>LED Control</h2>
       
       <!-- Brightness -->
       <div class="control-container">
@@ -296,7 +295,7 @@ const char* html = R"rawliteral(
 
     <!-- Status Tab -->
     <div id="StatusTab" class="tabcontent">
-      <h2>📊 System Status & Information</h2>
+      <h2>System Status & Information</h2>
       
       <!-- Button Status -->
       <div class="control-container">
@@ -339,17 +338,17 @@ const char* html = R"rawliteral(
 
       <!-- QR Code for Web Interface -->
       <div class="control-container">
-        <h3>📱 Web Interface QR Code</h3>
+        <h3>Web Interface QR Code</h3>
         <div style="text-align: center; margin: 20px 0;">
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; display: inline-block;">
-            <img id="qrCodeImage" src="" alt="QR Code wird generiert..." style="max-width: 200px; height: auto; border: 2px solid #ddd; border-radius: 8px;">
+            <img id="qrCodeImage" src="" alt="QR Code is being generated..." style="max-width: 200px; height: auto; border: 2px solid #ddd; border-radius: 8px;">
             <div style="margin-top: 10px; font-size: 14px; color: #666;">
-              Scannen Sie den QR-Code mit Ihrem Smartphone<br>
-              für direkten Zugriff auf die Web-Oberfläche
+              Scan the QR code with your smartphone<br>
+              for direct access to the web interface
             </div>
           </div>
           <div style="margin-top: 15px;">
-            <button class="btn btn-secondary" onclick="generateQRCode()">🔄 QR Code aktualisieren</button>
+            <button class="btn btn-secondary" onclick="generateQRCode()">Update QR Code</button>
           </div>
         </div>
       </div>
@@ -362,10 +361,10 @@ const char* html = R"rawliteral(
   </div>
   
   <script>
-    // Globale Variablen
+    // Global variables
     let motorStatusInterval;
     
-    // Tab-Funktionalität
+    // Tab functionality
     function openTab(evt, tabName) {
       var i, tabcontent, tablinks;
       tabcontent = document.getElementsByClassName("tabcontent");
@@ -427,14 +426,14 @@ const char* html = R"rawliteral(
           document.getElementById('targetPosition').textContent = data.targetPosition || 0;
           document.getElementById('currentSpeed').textContent = (data.currentSpeed || 60) + ' RPM';
           
-          // Toggle-Status aktualisieren
+          // Update toggle status
           document.getElementById('physicalHomeToggle').checked = data.usePhysicalHome || false;
           
-          // Row Counter Status aktualisieren
+          // Update Row Counter status
           document.getElementById('currentRows').textContent = data.currentRows || 0;
           document.getElementById('targetRows').textContent = data.targetRows || 0;
           
-          // Status-Text je nach Zustand
+          // Status text depending on state
           let statusText = 'Ready';
           
           if (data.isRowCounterActive) {
@@ -488,7 +487,7 @@ const char* html = R"rawliteral(
     function homeMotor() {
       document.getElementById('status').innerHTML = 'Status: Motor moving to home position...';
       
-      // Geschwindigkeit vom Speed-Slider übernehmen
+      // Get speed from Speed slider
       const speed = document.getElementById('speedSlider').value;
       
       fetch('/motorHome?speed=' + speed)
@@ -550,7 +549,7 @@ const char* html = R"rawliteral(
     }
     
     // Row Counter Functions
-    function startRowCounter() {
+    function updateRowsTarget() {
       const targetRows = document.getElementById('rowsInput').value || 10;
       
       if (targetRows < 1 || targetRows > 1000) {
@@ -558,24 +557,36 @@ const char* html = R"rawliteral(
         return;
       }
       
-      document.getElementById('status').innerHTML = 'Status: Initializing row counter...';
-      
+      // Automatically start the row counter with the new target
       fetch('/rowCounter?action=start&targetRows=' + targetRows)
         .then(response => response.text())
         .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
-          updateMotorStatus();
+          document.getElementById('targetRows').textContent = targetRows;
+          document.getElementById('status').innerHTML = 'Status: Target rows set to ' + targetRows;
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error starting row counter';
+          document.getElementById('status').innerHTML = 'Status: Error setting target rows';
         });
     }
     
     function goRowCounter() {
+      const targetRows = document.getElementById('rowsInput').value || 10;
       const speed = parseInt(document.getElementById('speedSlider').value) || 60;
-      document.getElementById('status').innerHTML = 'Status: Starting row counting...';
       
-      fetch('/rowCounter?action=go&speed=' + speed)
+      if (targetRows < 1 || targetRows > 1000) {
+        document.getElementById('status').innerHTML = 'Status: Invalid target rows (1-1000)';
+        return;
+      }
+      
+      document.getElementById('status').innerHTML = 'Status: Initializing and starting row counter...';
+      
+      // First set the target rows (start function)
+      fetch('/rowCounter?action=start&targetRows=' + targetRows)
+        .then(response => response.text())
+        .then(data => {
+          // Then immediately start the row counting process (go function)
+          return fetch('/rowCounter?action=go&speed=' + speed);
+        })
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -699,7 +710,14 @@ const char* html = R"rawliteral(
         hexInput.addEventListener('input', updateColorPreview);
       }
       
-      // IP-Adresse anzeigen und QR-Code generieren
+      // Rows input event listener - automatically update target when value changes
+      const rowsInput = document.getElementById('rowsInput');
+      if (rowsInput) {
+        rowsInput.addEventListener('input', updateRowsTarget);
+        rowsInput.addEventListener('change', updateRowsTarget);
+      }
+      
+      // Display IP address and generate QR code
       document.getElementById('ipAddress').textContent = window.location.host;
       generateQRCode();
     });
@@ -725,7 +743,7 @@ void setupWebServer() {
   server.on("/motorHome", HTTP_GET, handleAdvancedMotorHome);
   server.on("/motorJog", HTTP_GET, handleAdvancedMotorJog);
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
-  server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // Neue Route für Homing-Modus
+  server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // New route for homing mode
   server.on("/rowCounter", HTTP_GET, handleRowCounter);                     // Row Counter API Route
 
 
@@ -946,12 +964,12 @@ void handleAdvancedMotorStop() {
 }
 
 void handleAdvancedMotorHome() {
-  // Geschwindigkeit vom Speed-Slider übernehmen, falls vorhanden
+  // Get speed from Speed slider if available
   if (server.hasArg("speed")) {
     int speed = server.arg("speed").toInt();
-    if (speed > 0 && speed <= 120) {  // Validierung entsprechend dem Slider-Maximum
+    if (speed > 0 && speed <= 120) {  // Validation according to slider maximum
       advancedMotor.setSpeed(speed);
-      Serial.println("Home-Geschwindigkeit auf " + String(speed) + " RPM gesetzt");
+      Serial.println("Home speed set to " + String(speed) + " RPM");
     }
   }
   
@@ -1018,18 +1036,18 @@ void handleRowCounter() {
     }
     
   } else if (action == "go") {
-    // Geschwindigkeit vom Speed-Slider übernehmen, falls vorhanden
-    int speed = 60; // Default-Geschwindigkeit
+    // Get speed from Speed slider if available
+    int speed = 60; // Default speed
     if (server.hasArg("speed")) {
       speed = server.arg("speed").toInt();
       if (speed < 1 || speed > 120) {
-        speed = 60; // Fallback auf Standardwert bei ungültiger Eingabe
+        speed = 60; // Fallback to default value for invalid input
       }
     }
     
     bool success = advancedMotor.goRowCounter();
     if (success) {
-      // Geschwindigkeit nach dem Start setzen
+      // Set speed after start
       advancedMotor.setSpeed(speed);
       server.send(200, "text/plain", "Row Counter started with " + String(speed) + " RPM");
     } else {
@@ -1052,7 +1070,7 @@ void handleRowCounter() {
     server.send(200, "application/json", jsonResponse);
     
   } else if (action == "debug") {
-    // Debug-Informationen für Troubleshooting
+    // Debug information for troubleshooting
     AdvancedMotorStatus status = advancedMotor.getStatus();
     String debugResponse = 
       "Row Counter Debug Info:\n"

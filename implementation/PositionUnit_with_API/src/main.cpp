@@ -40,7 +40,7 @@ void loop() {
   // Handle server requests
   handleWebServerRequests();
   
-  // Update motor (für non-blocking Operationen)
+  // Update motor (for non-blocking operations)
   updateMotor();
   
   // Update button state (for continuous monitoring)
@@ -49,5 +49,5 @@ void loop() {
   // Check WiFi connection
   checkWiFiConnection();
   
-  delay(1); // Minimaler Delay für Stabilität - reduziert von 10ms auf 1ms für bessere Motor-Performance
+  delay(1); // Minimal delay for stability - reduced from 10ms to 1ms for better motor performance
 }

@@ -14,7 +14,7 @@
 #include "freertos/task.h"
 #include "driver/ledc.h"
 
-// Pin für den Servo-Motor (definiert in main.cpp)
+// Pin for the servo motor (defined in main.cpp)
 extern int SERVO_GPIO_PIN;
 
 // Definitions for the servo motor

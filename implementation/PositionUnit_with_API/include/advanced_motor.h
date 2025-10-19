@@ -3,17 +3,17 @@
 
 #include <Arduino.h>
 
-// Pin-Definitionen für Schrittmotor
+// Pin definitions for stepper motor
 #define STEP_PIN 37
 #define DIR_PIN 36
 #define ENABLE_PIN -1  // Optional: Pin zum Aktivieren/Deaktivieren des Motors
 
 // Motor-Konfiguration
-#define STEPS_PER_REVOLUTION 200  // Standard für NEMA17 (1.8° pro Schritt)
+#define STEPS_PER_REVOLUTION 200  // Standard for NEMA17 (1.8° per step)
 #define MICROSTEPS 1             // Microstepping-Faktor
 #define MAX_SPEED_RPM 300        // Maximale Geschwindigkeit in RPM
 #define DEFAULT_SPEED_RPM 60     // Standard-Geschwindigkeit in RPM
-#define ACCELERATION_STEPS 50    // Schritte für Beschleunigung/Verzögerung
+#define ACCELERATION_STEPS 50    // Steps for acceleration/deceleration
 
 // Motor-Status-Struktur
 typedef struct {
@@ -23,8 +23,8 @@ typedef struct {
     int currentSpeed;
     bool isHomed;
     bool isEnabled;
-    bool usePhysicalHome;       // Status für Homing-Modus
-    bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
+    bool usePhysicalHome;       // Status for homing mode
+    bool isButtonHomingActive;  // New status for button homing mode
     bool isRowCounterActive;    // Row Counter aktiv
     int currentRows;            // Aktuelle Anzahl Rows
     int targetRows;             // Ziel-Anzahl Rows
@@ -32,7 +32,7 @@ typedef struct {
     unsigned long lastMoveTime;
 } AdvancedMotorStatus;
 
-// Klasse für erweiterte Schrittmotorsteuerung
+// Class for advanced stepper motor control
 class AdvancedStepperMotor {
 private:
     int stepPin;
@@ -51,7 +51,7 @@ private:
     bool isRowCounterActive;    // Row Counter aktiv
     int currentRows;            // Aktuelle Anzahl Rows
     int targetRows;             // Ziel-Anzahl Rows
-    bool lastButtonState;       // Letzter Button-Zustand für Edge-Detection
+    bool lastButtonState;       // Last button state for edge detection
     enum RowCounterState {
         ROW_COUNTER_IDLE,
         ROW_COUNTER_MOVING      // Kontinuierliche Bewegung bis Button gedrückt wird

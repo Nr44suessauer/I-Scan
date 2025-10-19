@@ -1,6 +1,6 @@
 #include "servo_control.h"
 
-// Variable für den Servo-Pin (Standardwert: 20)
+// Variable for the servo pin (default value: 20)
 int SERVO_GPIO_PIN = 14;
 
 // Variable to track the current servo position

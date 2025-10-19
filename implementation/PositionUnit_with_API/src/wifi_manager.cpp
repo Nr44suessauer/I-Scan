@@ -1,11 +1,11 @@
 #include "wifi_manager.h"
 
-// Netzwerk-Konfiguration
+// Network configuration
 const char* SSID = "Teekanne";
 const char* PASSWORD = "49127983361694305550";
 
 void setupWiFi() {
-  Serial.print("Verbindung mit WLAN wird hergestellt: ");
+  Serial.print("Connecting to WiFi: ");
   Serial.println(SSID);
   
   WiFi.begin(SSID, PASSWORD);
@@ -21,8 +21,8 @@ void setupWiFi() {
 
 void checkWiFiConnection() {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WLAN-Verbindung verloren. Versuche Wiederverbindung...");
-    setColorByIndex(0);  // Rot für Verbindungsverlust
+    Serial.println("WiFi connection lost. Attempting reconnection...");
+    setColorByIndex(0);  // Red for connection loss
     
     WiFi.begin(SSID, PASSWORD);
     
@@ -34,13 +34,13 @@ void checkWiFiConnection() {
     Serial.println();
     printNetworkStatus();
     
-    setColorByIndex(1);  // Grün für erfolgreiche Wiederverbindung
+    setColorByIndex(1);  // Green for successful reconnection
   }
 }
 
 void printNetworkStatus() {
-  Serial.print("Verbunden mit: ");
+  Serial.print("Connected to: ");
   Serial.println(WiFi.SSID());
-  Serial.print("Lokale IP: ");
+  Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
 }
