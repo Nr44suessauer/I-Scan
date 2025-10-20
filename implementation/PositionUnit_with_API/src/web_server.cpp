@@ -18,6 +18,8 @@ void handleSetHomingMode();     // New function for setting homing mode
 void handleRowCounter();        // Row Counter API function declaration
 void handleRelayControl();      // Relay control function declaration
 void handleRelayState();        // Relay state function declaration
+void handleMotorRelay();        // Motor relay control function declaration
+void handleRelayInvert();       // Relay invert function declaration
 
 
 
@@ -196,6 +198,22 @@ const char* html = R"rawliteral(
             <span class="switch-text">Physical Home (Button)</span>
           </label>
           <span class="description">When enabled: Home to button position. When disabled: Home to virtual position (0)</span>
+        </div>
+        <div class="function-row">
+          <label class="switch-label">
+            <input type="checkbox" id="motorRelayToggle" onchange="toggleMotorRelay(this.checked)">
+            <span class="slider-toggle"></span>
+            <span class="switch-text">Motor Control with Relay</span>
+          </label>
+          <span class="description">When enabled: Relay turns on during motor movement and off when stopped</span>
+          <div style="margin-left: 30px; margin-top: 10px;">
+            <label class="switch-label">
+              <input type="checkbox" id="relayInvertToggle" onchange="toggleRelayInvert(this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Invert Relay Logic</span>
+            </label>
+            <span class="description">When enabled: Inverts relay on/off behavior</span>
+          </div>
         </div>
         <div class="btn-grid">
           <button class="btn btn-primary" onclick="homeMotor()">Home Position</button>
@@ -598,6 +616,34 @@ const char* html = R"rawliteral(
         });
     }
     
+    function toggleMotorRelay(enabled) {
+      const mode = enabled ? 'enabled' : 'disabled';
+      document.getElementById('status').innerHTML = `Status: Motor relay control ${mode}...`;
+      
+      fetch(`/motorRelay?enabled=${enabled}`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error setting motor relay control';
+        });
+    }
+    
+    function toggleRelayInvert(inverted) {
+      const mode = inverted ? 'inverted' : 'normal';
+      document.getElementById('status').innerHTML = `Status: Relay logic ${mode}...`;
+      
+      fetch(`/relayInvert?inverted=${inverted}`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error setting relay invert logic';
+        });
+    }
+    
     // Row Counter Functions
     function updateRowsTarget() {
       const targetRows = document.getElementById('rowsInput').value || 10;
@@ -837,6 +883,8 @@ void setupWebServer() {
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
   server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // New route for homing mode
   server.on("/rowCounter", HTTP_GET, handleRowCounter);                     // Row Counter API Route
+  server.on("/motorRelay", HTTP_GET, handleMotorRelay);                     // Motor relay control route
+  server.on("/relayInvert", HTTP_GET, handleRelayInvert);                   // Relay invert route
   
   // Relay Routes
   server.on("/relay", HTTP_GET, handleRelayControl);                        // Relay control route
@@ -1210,6 +1258,44 @@ void handleRelayControl() {
 void handleRelayState() {
   String jsonResponse = "{\"state\":" + String(getRelayState() ? "true" : "false") + "}";
   server.send(200, "application/json", jsonResponse);
+}
+
+// Handle motor relay control
+void handleMotorRelay() {
+  if (server.hasArg("enabled")) {
+    String enabledStr = server.arg("enabled");
+    bool enabled = (enabledStr == "true");
+    
+    // Set motor relay control mode
+    advancedMotor.setMotorRelayControl(enabled);
+    
+    String response = enabled ? 
+      "Motor relay control enabled - relay will control motor power" : 
+      "Motor relay control disabled - relay independent from motor";
+    
+    server.send(200, "text/plain", response);
+  } else {
+    server.send(400, "text/plain", "Missing enabled parameter");
+  }
+}
+
+// Handle relay invert control
+void handleRelayInvert() {
+  if (server.hasArg("inverted")) {
+    String invertedStr = server.arg("inverted");
+    bool inverted = (invertedStr == "true");
+    
+    // Set relay invert logic
+    advancedMotor.setRelayInvert(inverted);
+    
+    String response = inverted ? 
+      "Relay logic inverted - relay OFF when motor runs" : 
+      "Relay logic normal - relay ON when motor runs";
+    
+    server.send(200, "text/plain", response);
+  } else {
+    server.send(400, "text/plain", "Missing inverted parameter");
+  }
 }
 
 // Handle not found (404)

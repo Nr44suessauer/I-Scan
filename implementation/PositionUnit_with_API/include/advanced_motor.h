@@ -56,6 +56,10 @@ private:
         ROW_COUNTER_IDLE,
         ROW_COUNTER_MOVING      // Kontinuierliche Bewegung bis Button gedrückt wird
     } rowCounterState;
+    
+    // Motor Relay Control Variablen
+    bool motorRelayControlEnabled;  // Motor relay control aktiv
+    bool relayInverted;            // Relay logic inverted
 
     
     int stepsPerRevolution;
@@ -108,6 +112,12 @@ public:
     bool isRowCounterRunning();    // Prüft ob Row Counter aktiv ist
     int getCurrentRows();          // Gibt aktuelle Row-Anzahl zurück
     int getTargetRows();           // Gibt Ziel-Row-Anzahl zurück
+    
+    // Motor Relay Control Funktionen
+    void setMotorRelayControl(bool enabled);  // Aktiviert/deaktiviert Motor-Relay-Steuerung
+    void setRelayInvert(bool inverted);       // Invertiert Relay-Logik
+    bool getMotorRelayControl();              // Gibt Motor-Relay-Status zurück
+    bool getRelayInvert();                    // Gibt Relay-Invert-Status zurück
 
     
     // Status-Funktionen

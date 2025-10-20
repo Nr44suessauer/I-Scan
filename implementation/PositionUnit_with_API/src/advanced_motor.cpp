@@ -1,5 +1,6 @@
 #include "advanced_motor.h"
 #include "button_control.h"  // Für Button-Zustand
+#include "relay_control.h"   // Für Relay-Steuerung
 
 // Globale Instanz des erweiterten Motors
 AdvancedStepperMotor advancedMotor(STEP_PIN, DIR_PIN, ENABLE_PIN, STEPS_PER_REVOLUTION);
@@ -22,6 +23,10 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     targetRows = 0;
     lastButtonState = true;        // true = nicht gedrückt (INPUT_PULLUP)
     rowCounterState = ROW_COUNTER_IDLE;
+    
+    // Motor Relay Control Initialisierung
+    motorRelayControlEnabled = false;
+    relayInverted = false;
     
     currentSpeedRPM = DEFAULT_SPEED_RPM;
     stepDelayMicros = 0;
@@ -129,6 +134,16 @@ void AdvancedStepperMotor::moveSteps(int steps) {
     }
     
     isMoving = true;
+    
+    // Relay-Steuerung beim Bewegungsstart
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+        } else {
+            setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+        }
+    }
+    
     setDirection(steps > 0);
     
     int absSteps = abs(steps);
@@ -141,6 +156,15 @@ void AdvancedStepperMotor::moveSteps(int steps) {
     currentPosition += steps;
     targetPosition = currentPosition;
     isMoving = false;
+    
+    // Relay-Steuerung beim Bewegungsende
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(true);   // Relay ON wenn Motor steht (inverted)
+        } else {
+            setRelayState(false);  // Relay OFF wenn Motor steht (normal)
+        }
+    }
     
     setPinsIdle(); // Pins in Ruhezustand setzen nach Bewegung
     Serial.printf("Bewegung abgeschlossen. Neue Position: %d\n", currentPosition);
@@ -254,6 +278,15 @@ void AdvancedStepperMotor::jogContinuous(bool direction, int rpm) {
     setDirection(direction);
     isMoving = true;
     
+    // Relay-Steuerung beim Jogging-Start
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+        } else {
+            setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+        }
+    }
+    
     Serial.printf("Kontinuierliches Jogging gestartet. Richtung: %s, Geschwindigkeit: %d RPM\n", 
                   direction ? "vorwärts" : "rückwärts", rpm);
 }
@@ -262,6 +295,16 @@ void AdvancedStepperMotor::jogContinuous(bool direction, int rpm) {
 void AdvancedStepperMotor::stop() {
     isMoving = false;
     targetPosition = currentPosition;
+    
+    // Relay-Steuerung beim Stoppen
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(true);   // Relay ON wenn Motor steht (inverted)
+        } else {
+            setRelayState(false);  // Relay OFF wenn Motor steht (normal)
+        }
+    }
+    
     setPinsIdle(); // Pins in Ruhezustand setzen
     Serial.println("Motor gestoppt - Pins auf LOW");
 }
@@ -440,6 +483,17 @@ void AdvancedStepperMotor::startButtonHomingMode() {
     Serial.println("Button-Homing-Modus gestartet - Motor fährt bis Button gedrückt wird");
     Serial.println("Verwende aktuelle Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
     isButtonHomingActive = true;
+    isMoving = true;
+    
+    // Relay-Steuerung beim Homing-Start
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+        } else {
+            setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+        }
+    }
+    
     // Sicherstellen, dass Step-Delay aktuell ist
     calculateStepDelay();
     // Richtung explizit setzen (gegen Uhrzeigersinn zum Home)
@@ -520,6 +574,16 @@ bool AdvancedStepperMotor::goRowCounter() {
     currentRows = 0;
     lastButtonState = getButtonState();
     rowCounterState = ROW_COUNTER_MOVING;
+    isMoving = true;
+    
+    // Relay-Steuerung beim Row Counter Start
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+        } else {
+            setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+        }
+    }
     
     // Geschwindigkeit wird von Web-Handler gesetzt (basierend auf User-Eingabe)
     // Keine feste Geschwindigkeit hier setzen
@@ -548,6 +612,44 @@ int AdvancedStepperMotor::getCurrentRows() {
 
 int AdvancedStepperMotor::getTargetRows() {
     return targetRows;
+}
+
+// Motor Relay Control Funktionen
+void AdvancedStepperMotor::setMotorRelayControl(bool enabled) {
+    motorRelayControlEnabled = enabled;
+    Serial.printf("Motor Relay Control: %s\n", enabled ? "Enabled" : "Disabled");
+    
+    // Wenn deaktiviert, Relay-Status auf aktuellen Motor-Status setzen
+    if (!enabled && !isMoving) {
+        // Relay entsprechend der Invert-Logik setzen
+        if (relayInverted) {
+            setRelayState(true);   // Relay ON wenn Motor AUS (inverted)
+        } else {
+            setRelayState(false);  // Relay OFF wenn Motor AUS (normal)
+        }
+    }
+}
+
+void AdvancedStepperMotor::setRelayInvert(bool inverted) {
+    relayInverted = inverted;
+    Serial.printf("Relay Logic: %s\n", inverted ? "Inverted" : "Normal");
+    
+    // Wenn Motor Relay Control aktiv ist, sofort anwenden
+    if (motorRelayControlEnabled) {
+        if (isMoving) {
+            setRelayState(!inverted);  // Motor läuft: normal=ON, inverted=OFF
+        } else {
+            setRelayState(inverted);   // Motor steht: normal=OFF, inverted=ON
+        }
+    }
+}
+
+bool AdvancedStepperMotor::getMotorRelayControl() {
+    return motorRelayControlEnabled;
+}
+
+bool AdvancedStepperMotor::getRelayInvert() {
+    return relayInverted;
 }
 
 
