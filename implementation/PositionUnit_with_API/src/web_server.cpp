@@ -5,6 +5,7 @@
 #include "advanced_motor.h" // Include for advanced motor control
 #include "relay_control.h"  // Include for relay control
 #include "realtime_system.h" // Include for realtime system
+#include <EEPROM.h>         // Include for EEPROM operations
 
 // Function declarations
 void handleRoot();
@@ -23,6 +24,9 @@ void handleMotorRelay();        // Motor relay control function declaration
 void handleRelayInvert();       // Relay invert function declaration
 void handleRealtimeSystem();    // Realtime system control function declaration
 void handleComponentUpdate();   // Component update control function declaration
+void handleGetDescription();    // Get device description from EEPROM
+void handleSetDescription();    // Set device description to EEPROM
+void initializeEEPROM();       // Initialize EEPROM for device description
 
 
 
@@ -104,6 +108,16 @@ const char* html = R"rawliteral(
     input[type="checkbox"] { display: none; }
     input[type="checkbox"]:checked + .slider-toggle { background: #2196F3; }
     input[type="checkbox"]:checked + .slider-toggle:before { transform: translateX(25px); }
+    
+    /* Description Button Styles */
+    .desc-btn-save { background-color: #28a745; }
+    .desc-btn-save:hover { background-color: #218838; }
+    .desc-btn-reload { background-color: #007bff; }
+    .desc-btn-reload:hover { background-color: #0056b3; }
+    .desc-btn-example { background-color: #ffc107; color: black; }
+    .desc-btn-example:hover { background-color: #e0a800; }
+    .desc-btn-clear { background-color: #dc3545; }
+    .desc-btn-clear:hover { background-color: #c82333; }
     
     /* Responsive Design */
     @media (max-width: 768px) {
@@ -423,6 +437,40 @@ const char* html = R"rawliteral(
             <div class="status-label">IP Address</div>
             <div class="status-value" id="ipAddress">Loading...</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Device Description -->
+      <div class="control-container">
+        <h3>Device Description</h3>
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-value" id="currentDescription">Loading...</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 15px;">
+          <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <label for="modulNumberInput" style="font-weight: bold; min-width: 80px;">Device:</label>
+            <input type="text" id="modulNumberInput" 
+                   style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"
+                   placeholder="Enter module number (e.g., ISC-001)">
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label for="descriptionInput" style="display: block; margin-bottom: 8px; font-weight: bold;">Description:</label>
+            <textarea id="descriptionInput" 
+                      rows="6" 
+                      style="width: 100%; min-height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; resize: vertical;"
+                      placeholder="Enter device description..."></textarea>
+          </div>
+          <div style="margin-top: 10px; text-align: left; white-space: nowrap;">
+            <button onclick="saveDescription()" class="desc-btn-save" style="display: inline-block; margin: 5px; padding: 10px 15px; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.3s;">Save to EEPROM</button>
+            <button onclick="loadDescription()" class="desc-btn-reload" style="display: inline-block; margin: 5px; padding: 10px 15px; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.3s;">Reload</button>
+            <button onclick="loadExample()" class="desc-btn-example" style="display: inline-block; margin: 5px; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.3s;">Load Example</button>
+            <button onclick="clearDescription()" class="desc-btn-clear" style="display: inline-block; margin: 5px; padding: 10px 15px; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.3s;">Clear</button>
+          </div>
+          <div id="descriptionStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
         </div>
       </div>
 
@@ -928,6 +976,108 @@ const char* html = R"rawliteral(
         });
     }
     
+    // Device Description Functions
+    function loadDescription() {
+      fetch('/getDescription')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById('modulNumberInput').value = data.modulNumber || '';
+            document.getElementById('descriptionInput').value = data.description || '';
+            
+            // Update display
+            const displayText = (data.modulNumber ? 'Device: ' + data.modulNumber : '') + 
+                               (data.description ? (data.modulNumber ? ' | ' : '') + 'Desc: ' + data.description.substring(0, 50) + (data.description.length > 50 ? '...' : '') : '');
+            document.getElementById('currentDescription').textContent = displayText || 'No data set';
+          } else {
+            document.getElementById('currentDescription').textContent = 'Error loading data';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading description:', error);
+          document.getElementById('currentDescription').textContent = 'Error loading data';
+        });
+    }
+    
+    function saveDescription() {
+      const modulNumber = document.getElementById('modulNumberInput').value.trim();
+      const description = document.getElementById('descriptionInput').value.trim();
+      
+      showDescriptionStatus('Saving to EEPROM...', 'info');
+      
+      // Simple form-encoded POST
+      const params = new URLSearchParams();
+      params.append('modulNumber', modulNumber);
+      params.append('description', description);
+      
+      fetch('/setDescription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString()
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showDescriptionStatus('Data saved successfully!', 'success');
+          loadDescription(); // Refresh display
+        } else {
+          showDescriptionStatus('Error saving data: ' + data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error saving data:', error);
+        showDescriptionStatus('Network error while saving data', 'error');
+      });
+    }
+    
+    function clearDescription() {
+      if (confirm('Are you sure you want to clear the device data?')) {
+        document.getElementById('modulNumberInput').value = '';
+        document.getElementById('descriptionInput').value = '';
+        saveDescription();
+      }
+    }
+    
+    function loadExample() {
+      document.getElementById('modulNumberInput').value = 'ISC-2024-001';
+      document.getElementById('descriptionInput').value = 'I-Scan Device for Laboratory A\nPurpose: Sample scanning and analysis\nOperator: Tech Team\nCalibration: 2024-10-20\nStatus: Ready for operation';
+      showDescriptionStatus('Example loaded! You can now modify the values and save.', 'info');
+    }
+    
+    function showDescriptionStatus(message, type) {
+      const statusDiv = document.getElementById('descriptionStatus');
+      statusDiv.textContent = message;
+      statusDiv.style.display = 'block';
+      
+      // Set color based on type
+      switch(type) {
+        case 'success':
+          statusDiv.style.backgroundColor = '#d4edda';
+          statusDiv.style.color = '#155724';
+          statusDiv.style.border = '1px solid #c3e6cb';
+          break;
+        case 'error':
+          statusDiv.style.backgroundColor = '#f8d7da';
+          statusDiv.style.color = '#721c24';
+          statusDiv.style.border = '1px solid #f5c6cb';
+          break;
+        case 'info':
+          statusDiv.style.backgroundColor = '#d1ecf1';
+          statusDiv.style.color = '#0c5460';
+          statusDiv.style.border = '1px solid #bee5eb';
+          break;
+      }
+      
+      // Hide after 5 seconds for success and info messages
+      if (type !== 'error') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+    
     // Color preview event listener
     document.addEventListener('DOMContentLoaded', function() {
       const hexInput = document.getElementById('hexInput');
@@ -948,6 +1098,9 @@ const char* html = R"rawliteral(
       
       // Initial status updates
       refreshRelayStatus();
+      
+      // Load device description on page load
+      loadDescription();
     });
   </script>
 </body>
@@ -982,8 +1135,12 @@ void setupWebServer() {
   server.on("/relay", HTTP_GET, handleRelayControl);                        // Relay control route
   server.on("/relaystate", HTTP_GET, handleRelayState);                     // Relay state route
 
+  // Device Description Routes
+  server.on("/getDescription", HTTP_GET, handleGetDescription);             // Get device description
+  server.on("/setDescription", HTTP_POST, handleSetDescription);            // Set device description
 
-
+  // Initialize EEPROM for device description
+  initializeEEPROM();
   
   server.onNotFound(handleNotFound);
 
@@ -1457,6 +1614,142 @@ void handleComponentUpdate() {
     response += "Network: " + String(updateFlags.networkUpdate ? "enabled" : "disabled");
     
     server.send(200, "text/plain", response);
+  }
+}
+
+// Device description EEPROM addresses
+#define EEPROM_MODUL_NUMBER_ADDR 100
+#define EEPROM_MODUL_NUMBER_SIZE 50
+#define EEPROM_DESCRIPTION_ADDR 150
+#define EEPROM_DESCRIPTION_SIZE 400
+
+// Initialize EEPROM for device description
+void initializeEEPROM() {
+  EEPROM.begin(EEPROM_DESCRIPTION_ADDR + EEPROM_DESCRIPTION_SIZE);
+  
+  // Check if EEPROM areas are uninitialized (all 0xFF)
+  bool needsInit = false;
+  char firstByteModul = EEPROM.read(EEPROM_MODUL_NUMBER_ADDR);
+  char firstByteDesc = EEPROM.read(EEPROM_DESCRIPTION_ADDR);
+  
+  if (firstByteModul == 0xFF || firstByteDesc == 0xFF) {
+    needsInit = true;
+  }
+  
+  if (needsInit) {
+    Serial.println("Initializing EEPROM areas...");
+    
+    // Clear modul number area
+    for (int i = 0; i < EEPROM_MODUL_NUMBER_SIZE; i++) {
+      EEPROM.write(EEPROM_MODUL_NUMBER_ADDR + i, 0);
+    }
+    
+    // Clear description area
+    for (int i = 0; i < EEPROM_DESCRIPTION_SIZE; i++) {
+      EEPROM.write(EEPROM_DESCRIPTION_ADDR + i, 0);
+    }
+    
+    EEPROM.commit();
+    Serial.println("EEPROM areas initialized.");
+  } else {
+    Serial.println("EEPROM areas already initialized.");
+  }
+}
+
+// Handle get device description
+void handleGetDescription() {
+  EEPROM.begin(EEPROM_DESCRIPTION_ADDR + EEPROM_DESCRIPTION_SIZE);
+  
+  String modulNumber = "";
+  String description = "";
+  
+  // Read modul number
+  for (int i = 0; i < EEPROM_MODUL_NUMBER_SIZE; i++) {
+    char c = EEPROM.read(EEPROM_MODUL_NUMBER_ADDR + i);
+    if (c == 0) break; // End of string
+    if (c >= 32 && c <= 126) { // Only printable ASCII characters
+      modulNumber += c;
+    } else {
+      break; // Stop at invalid character
+    }
+  }
+  
+  // Read description
+  for (int i = 0; i < EEPROM_DESCRIPTION_SIZE; i++) {
+    char c = EEPROM.read(EEPROM_DESCRIPTION_ADDR + i);
+    if (c == 0) break; // End of string
+    if (c >= 32 && c <= 126 || c == '\n' || c == '\r' || c == '\t') { // Printable + line breaks
+      description += c;
+    } else {
+      break; // Stop at invalid character
+    }
+  }
+  
+  // Create JSON response
+  String jsonResponse = "{\"success\":true,\"modulNumber\":\"" + modulNumber + "\",\"description\":\"" + description + "\"}";
+  // Escape newlines for JSON
+  jsonResponse.replace("\n", "\\n");
+  jsonResponse.replace("\r", "\\r");
+  jsonResponse.replace("\t", "\\t");
+  
+  server.send(200, "application/json", jsonResponse);
+}
+
+// Handle set device description
+void handleSetDescription() {
+  if (server.hasArg("modulNumber") && server.hasArg("description")) {
+    String modulNumber = server.arg("modulNumber");
+    String description = server.arg("description");
+    
+    // Debug output
+    Serial.println("Received data:");
+    Serial.println("Modul Number: " + modulNumber);
+    Serial.println("Description: " + description);
+    
+    // Check size limits
+    if (modulNumber.length() >= EEPROM_MODUL_NUMBER_SIZE) {
+      String jsonResponse = "{\"success\":false,\"message\":\"Module number too long (max " + String(EEPROM_MODUL_NUMBER_SIZE - 1) + " characters)\"}";
+      server.send(400, "application/json", jsonResponse);
+      return;
+    }
+    
+    if (description.length() >= EEPROM_DESCRIPTION_SIZE) {
+      String jsonResponse = "{\"success\":false,\"message\":\"Description too long (max " + String(EEPROM_DESCRIPTION_SIZE - 1) + " characters)\"}";
+      server.send(400, "application/json", jsonResponse);
+      return;
+    }
+    
+    EEPROM.begin(EEPROM_DESCRIPTION_ADDR + EEPROM_DESCRIPTION_SIZE);
+    
+    // Clear and write modul number
+    for (int i = 0; i < EEPROM_MODUL_NUMBER_SIZE; i++) {
+      EEPROM.write(EEPROM_MODUL_NUMBER_ADDR + i, 0);
+    }
+    for (int i = 0; i < modulNumber.length(); i++) {
+      EEPROM.write(EEPROM_MODUL_NUMBER_ADDR + i, modulNumber.charAt(i));
+    }
+    
+    // Clear and write description
+    for (int i = 0; i < EEPROM_DESCRIPTION_SIZE; i++) {
+      EEPROM.write(EEPROM_DESCRIPTION_ADDR + i, 0);
+    }
+    for (int i = 0; i < description.length(); i++) {
+      EEPROM.write(EEPROM_DESCRIPTION_ADDR + i, description.charAt(i));
+    }
+    
+    // Commit changes to EEPROM
+    if (EEPROM.commit()) {
+      Serial.println("EEPROM write successful");
+      String jsonResponse = "{\"success\":true,\"message\":\"Data saved to EEPROM\"}";
+      server.send(200, "application/json", jsonResponse);
+    } else {
+      Serial.println("EEPROM write failed");
+      String jsonResponse = "{\"success\":false,\"message\":\"Failed to save to EEPROM\"}";
+      server.send(500, "application/json", jsonResponse);
+    }
+  } else {
+    String jsonResponse = "{\"success\":false,\"message\":\"Missing parameters\"}";
+    server.send(400, "application/json", jsonResponse);
   }
 }
 
