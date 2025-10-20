@@ -7,6 +7,7 @@
 #include "advanced_motor.h" // Include advanced motor header
 #include "button_control.h" // Include button header
 #include "relay_control.h"  // Include relay header
+#include "realtime_system.h" // Include realtime system header
 
 void setup() {
   Serial.begin(9600);
@@ -35,23 +36,19 @@ void setup() {
   
   // Set up and start web server
   setupWebServer();
+  
+  // Initialize realtime system (5ms interval for all components)
+  initRealtimeSystem(5);
+  Serial.println("Echtzeit-System für alle Komponenten aktiviert");
 
   // Change color after WiFi connection
   setColorByIndex(1);  // Green for successful WiFi connection
 }
 
 void loop() {
-  // Handle server requests
-  handleWebServerRequests();
+  // HAUPTSCHLEIFE: Echtzeit-Update aller Komponenten
+  updateAllComponents();
   
-  // Update motor (for non-blocking operations)
-  updateMotor();
-  
-  // Update button state (for continuous monitoring)
-  getButtonState();
-  
-  // Check WiFi connection
-  checkWiFiConnection();
-  
-  delay(1); // Minimal delay for stability - reduced from 10ms to 1ms for better motor performance
+  // Minimale Verzögerung für Stabilität
+  delay(1); // 1ms für optimale Echtzeit-Performance
 }

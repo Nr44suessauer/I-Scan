@@ -47,19 +47,31 @@ private:
     bool usePhysicalHome;       // True: Physisches Home mit Button, False: Virtuelles Home
     bool isButtonHomingActive;  // Button-Homing-Modus aktiv
     
-    // Row Counter Variablen
-    bool isRowCounterActive;    // Row Counter aktiv
-    int currentRows;            // Aktuelle Anzahl Rows
-    int targetRows;             // Ziel-Anzahl Rows
+    // Row Counter Variables
+    bool isRowCounterActive;    // Row Counter active
+    int currentRows;            // Current number of rows
+    int targetRows;             // Target number of rows
     bool lastButtonState;       // Last button state for edge detection
     enum RowCounterState {
         ROW_COUNTER_IDLE,
-        ROW_COUNTER_MOVING      // Kontinuierliche Bewegung bis Button gedrückt wird
+        ROW_COUNTER_MOVING      // Continuous movement until button is pressed
     } rowCounterState;
     
-    // Motor Relay Control Variablen
-    bool motorRelayControlEnabled;  // Motor relay control aktiv
+    // Motor Relay Control Variables
+    bool motorRelayControlEnabled;  // Motor relay control active
     bool relayInverted;            // Relay logic inverted
+    
+    // Chunked Movement Variables (for interruptible movements)
+    bool isChunkedMovementActive;   // Chunked Movement active
+    int remainingSteps;             // Remaining steps
+    bool movementDirection;         // Movement direction (true = forward)
+    int chunkSize;                  // Size of individual chunks
+    unsigned long lastChunkTime;    // Time of last chunk
+    unsigned long chunkDelayMs;     // Pause between chunks for other commands
+    
+    // Global Realtime Update System
+    unsigned long lastRealtimeUpdateTime;  // Last realtime update time
+    unsigned long realtimeUpdateInterval;  // Interval for realtime updates (ms)
 
     
     int stepsPerRevolution;
@@ -77,50 +89,61 @@ public:
     void begin();
     void enable();
     void disable();
-    void setPinsIdle();  // Neue Funktion: Pins in Ruhezustand setzen
+    void setPinsIdle();  // New function: Set pins to idle state
     
-    // Grundlegende Bewegungsfunktionen
+    // Basic Movement Functions
     void setSpeed(int rpm);
     void setDirection(bool clockwise);
     void step();
-    void moveSteps(int steps);
-    void moveTo(int position);
-    void moveRelative(int steps);
+    void moveSteps(int steps);              // Standard (blocking for small movements)
+    void moveTo(int position);              // Standard
+    void moveRelative(int steps);           // Standard
     void moveDegrees(float degrees);
     void moveRevolutions(float revolutions);
     
-    // Erweiterte Bewegungsfunktionen
+    // Chunked Movement Functions (interruptible large movements)
+    void moveStepsChunked(int steps, int chunkSize = 50, int delayMs = 10);
+    void moveToChunked(int position, int chunkSize = 50, int delayMs = 10);
+    void moveRelativeChunked(int steps, int chunkSize = 50, int delayMs = 10);
+    bool isChunkedMovementRunning();
+    void stopChunkedMovement();
+    void setChunkParameters(int chunkSize, int delayMs);
+    
+    // Advanced Movement Functions
     void moveWithAcceleration(int steps, int startRPM, int endRPM);
     void moveSmoothly(int steps, int targetRPM);
     void jogContinuous(bool direction, int rpm);
     
-    // Steuerungsfunktionen
+    // Control Functions
     void stop();
     void emergencyStop();
     void home();
     void setHome();
     void calibrate();
-    void setUsePhysicalHome(bool usePhysical);  // Setzt den Homing-Modus
-    bool getUsePhysicalHome();     // Gibt den aktuellen Homing-Modus zurück
-    void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
-    void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
+    void setUsePhysicalHome(bool usePhysical);  // Sets the homing mode
+    bool getUsePhysicalHome();     // Returns the current homing mode
+    void startButtonHomingMode();  // New function: Moves until button is pressed
+    void stopButtonHomingMode();   // Stops the button homing mode
     
-    // Row Counter Funktionen
-    bool startRowCounter(int targetRows); // Initialisiert den Row Counter mit Ziel-Anzahl
-    bool goRowCounter();           // Startet den Row Counter Prozess
-    void stopRowCounter();         // Stoppt den Row Counter
-    bool isRowCounterRunning();    // Prüft ob Row Counter aktiv ist
-    int getCurrentRows();          // Gibt aktuelle Row-Anzahl zurück
-    int getTargetRows();           // Gibt Ziel-Row-Anzahl zurück
+    // Row Counter Functions
+    bool startRowCounter(int targetRows); // Initializes the row counter with target count
+    bool goRowCounter();           // Starts the row counter process
+    void stopRowCounter();         // Stops the row counter
+    bool isRowCounterRunning();    // Checks if row counter is active
+    int getCurrentRows();          // Returns current row count
+    int getTargetRows();           // Returns target row count
     
-    // Motor Relay Control Funktionen
-    void setMotorRelayControl(bool enabled);  // Aktiviert/deaktiviert Motor-Relay-Steuerung
-    void setRelayInvert(bool inverted);       // Invertiert Relay-Logik
-    bool getMotorRelayControl();              // Gibt Motor-Relay-Status zurück
-    bool getRelayInvert();                    // Gibt Relay-Invert-Status zurück
-
+    // Motor Relay Control Functions
+    void setMotorRelayControl(bool enabled);  // Enables/disables motor relay control
+    void setRelayInvert(bool inverted);       // Inverts relay logic
+    bool getMotorRelayControl();              // Returns motor relay status
+    bool getRelayInvert();                    // Returns relay invert status
     
-    // Status-Funktionen
+    // Realtime Update System
+    void setRealtimeUpdateInterval(unsigned long intervalMs);  // Sets update interval
+    void forceRealtimeUpdate();               // Forces immediate update of all components
+    
+    // Status Functions
     int getCurrentPosition();
     int getTargetPosition();
     bool getIsMoving();
@@ -130,31 +153,34 @@ public:
     int getCurrentSpeed();
     AdvancedMotorStatus getStatus();
     
-    // Konfiguration
+    // Configuration
     void setStepsPerRevolution(int steps);
     void setMicrostepping(int factor);
     
-    // Non-blocking Bewegung (für kontinuierliche Bewegungen)
-    void update();  // Muss regelmäßig in loop() aufgerufen werden
+    // Non-blocking Movement (for continuous movements)
+    void update();  // Must be called regularly in loop()
     void startNonBlockingMoveTo(int position);
     void startNonBlockingMoveSteps(int steps);
+    
+private:
+    void updateRealtimeComponents();          // Internal function for realtime updates
 };
 
-// Globale Instanz
+// Global Instance
 extern AdvancedStepperMotor advancedMotor;
 
-// Hilfsfunktionen
+// Helper Functions
 void setupAdvancedMotor();
 void updateMotor();
 
-// Web-API Funktionen
+// Web-API Functions
 void handleAdvancedMotorControl();
 void handleAdvancedMotorStatus();
 void handleAdvancedMotorStop();
 void handleAdvancedMotorHome();
 void handleAdvancedMotorJog();
 void handleAdvancedMotorCalibrate();
-void handleRowCounter(); // Neue Web-API für Row Counter
+void handleRowCounter(); // New Web-API for Row Counter
 
 
 #endif // ADVANCED_MOTOR_H

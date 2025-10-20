@@ -54,18 +54,18 @@ void checkServerConnection() {
   // Prüfen, ob Daten vom Server verfügbar sind
   if (isConnected && client.available()) {
     String data = client.readStringUntil('\n');
-    Serial.print("Vom Server empfangen: ");
+    Serial.print("Received from server: ");
     Serial.println(data);
   }
   
-  // Heartbeat-Logik
+  // Heartbeat logic
   if (isConnected && (currentTime - lastHeartbeat >= HEARTBEAT_INTERVAL)) {
     if (sendHeartbeat()) {
       lastHeartbeat = currentTime;
     }
   }
   
-  // Verbindungswiederherstellung
+  // Connection recovery
   if (!isConnected && (currentTime - lastReconnectAttempt >= RECONNECT_CHECK_INTERVAL)) {
     connectToServer();
     lastReconnectAttempt = currentTime;

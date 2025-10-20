@@ -1,8 +1,8 @@
 #include "advanced_motor.h"
-#include "button_control.h"  // Für Button-Zustand
-#include "relay_control.h"   // Für Relay-Steuerung
+#include "button_control.h"  // For button state
+#include "relay_control.h"   // For relay control
 
-// Globale Instanz des erweiterten Motors
+// Global instance of the advanced motor
 AdvancedStepperMotor advancedMotor(STEP_PIN, DIR_PIN, ENABLE_PIN, STEPS_PER_REVOLUTION);
 
 // Konstruktor
@@ -14,19 +14,31 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     isMoving = false;
     isEnabled = false;
     isHomed = false;
-    usePhysicalHome = true;        // Standard: Physisches Home mit Button
-    isButtonHomingActive = false;  // Button-Homing-Modus initial deaktiviert
+    usePhysicalHome = true;        // Default: Physical home with button
+    isButtonHomingActive = false;  // Button homing mode initially disabled
     
-    // Row Counter Initialisierung
+    // Row Counter Initialization
     isRowCounterActive = false;
     currentRows = 0;
     targetRows = 0;
-    lastButtonState = true;        // true = nicht gedrückt (INPUT_PULLUP)
+    lastButtonState = true;        // true = not pressed (INPUT_PULLUP)
     rowCounterState = ROW_COUNTER_IDLE;
     
-    // Motor Relay Control Initialisierung
+    // Motor Relay Control Initialization
     motorRelayControlEnabled = false;
     relayInverted = false;
+    
+    // Chunked Movement Initialisierung
+    isChunkedMovementActive = false;
+    remainingSteps = 0;
+    movementDirection = true;
+    chunkSize = 50;              // Standard: 50 Schritte pro Chunk
+    lastChunkTime = 0;
+    chunkDelayMs = 10;           // Standard: 10ms Pause zwischen Chunks
+    
+    // Echtzeit-Update System Initialisierung
+    lastRealtimeUpdateTime = 0;
+    realtimeUpdateInterval = 5;  // Standard: 5ms Echtzeit-Updates
     
     currentSpeedRPM = DEFAULT_SPEED_RPM;
     stepDelayMicros = 0;
@@ -59,23 +71,23 @@ void AdvancedStepperMotor::enable() {
     if (enablePin >= 0) {
         digitalWrite(enablePin, LOW); // LOW = enabled
     }
-    Serial.println("Motor aktiviert");
+    Serial.println("Motor enabled");
 }
 
-// Motor deaktivieren
+// Disable motor
 void AdvancedStepperMotor::disable() {
     isEnabled = false;
     isMoving = false;
     if (enablePin >= 0) {
         digitalWrite(enablePin, HIGH); // HIGH = disabled
     }
-    setPinsIdle(); // Pins in Ruhezustand setzen
-    Serial.println("Motor deaktiviert");
+    setPinsIdle(); // Set pins to idle state
+    Serial.println("Motor disabled");
 }
 
-// Pins in Ruhezustand setzen (kein Strom)
+// Set pins to idle state (no current)
 void AdvancedStepperMotor::setPinsIdle() {
-    digitalWrite(stepPin, LOW);  // STEP Pin auf LOW
+    digitalWrite(stepPin, LOW);  // STEP pin to LOW
     digitalWrite(dirPin, LOW);   // DIR Pin auf LOW
     Serial.println("Motor-Pins in Ruhezustand (LOW)");
 }
@@ -85,23 +97,23 @@ void AdvancedStepperMotor::setSpeed(int rpm) {
     rpm = constrain(rpm, 1, MAX_SPEED_RPM);
     currentSpeedRPM = rpm;
     calculateStepDelay();
-    Serial.printf("Motor-Geschwindigkeit: %d RPM\n", rpm);
+    Serial.printf("Motor speed: %d RPM\n", rpm);
 }
 
-// Verzögerung zwischen Schritten berechnen
+// Calculate delay between steps
 void AdvancedStepperMotor::calculateStepDelay() {
-    // Berechnung: 60 Sekunden / (RPM * Schritte pro Umdrehung) = Sekunden pro Schritt
-    // Dann in Mikrosekunden umwandeln und durch 2 teilen (für HIGH und LOW Phase)
+    // Calculation: 60 seconds / (RPM * steps per revolution) = seconds per step
+    // Then convert to microseconds and divide by 2 (for HIGH and LOW phase)
     stepDelayMicros = (60000000L) / (currentSpeedRPM * stepsPerRevolution * 2);
 }
 
-// Richtung setzen
+// Set direction
 void AdvancedStepperMotor::setDirection(bool clockwise) {
     digitalWrite(dirPin, clockwise ? HIGH : LOW);
-    delayMicroseconds(5); // Kurze Pause für Treiber
+    delayMicroseconds(5); // Short pause for driver
 }
 
-// Einzelner Schritt
+// Single step
 void AdvancedStepperMotor::step() {
     if (!isEnabled) return;
     
@@ -111,7 +123,7 @@ void AdvancedStepperMotor::step() {
     delayMicroseconds(stepDelayMicros);
 }
 
-// Einzelnen Schritt ausführen (für non-blocking Bewegung)
+// Execute single step (for non-blocking movement)
 void AdvancedStepperMotor::performStep() {
     if (!isEnabled) return;
     
@@ -135,12 +147,12 @@ void AdvancedStepperMotor::moveSteps(int steps) {
     
     isMoving = true;
     
-    // Relay-Steuerung beim Bewegungsstart
+    // Relay control at movement start
     if (motorRelayControlEnabled) {
         if (relayInverted) {
-            setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+            setRelayState(false);  // Relay OFF when motor runs (inverted)
         } else {
-            setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+            setRelayState(true);   // Relay ON when motor runs (normal)
         }
     }
     
@@ -197,7 +209,80 @@ void AdvancedStepperMotor::moveRevolutions(float revolutions) {
     moveSteps(steps);
 }
 
-// Bewegung mit Beschleunigung
+// CHUNKED MOVEMENT FUNCTIONS (Interruptible large movements)
+void AdvancedStepperMotor::moveStepsChunked(int steps, int chunkSize, int delayMs) {
+    if (steps == 0) return;
+    
+    // Automatically enable motor when movement is requested
+    if (!isEnabled) {
+        enable();
+    }
+    
+    // Stoppe vorherige chunked Bewegung falls aktiv
+    if (isChunkedMovementActive) {
+        stopChunkedMovement();
+    }
+    
+    isChunkedMovementActive = true;
+    remainingSteps = abs(steps);
+    movementDirection = (steps > 0);
+    this->chunkSize = chunkSize;
+    this->chunkDelayMs = delayMs;
+    lastChunkTime = 0;
+    targetPosition = currentPosition + steps;
+    
+    // Relay-Steuerung beim Bewegungsstart
+    if (motorRelayControlEnabled) {
+        if (relayInverted) {
+            setRelayState(false);  // Relay OFF when motor runs (inverted)
+        } else {
+            setRelayState(true);   // Relay ON when motor runs (normal)
+        }
+    }
+    
+    Serial.printf("Starting chunked movement: %d steps, chunk size: %d, delay: %dms\n", 
+                  remainingSteps, chunkSize, delayMs);
+}
+
+void AdvancedStepperMotor::moveToChunked(int position, int chunkSize, int delayMs) {
+    int stepsToMove = position - currentPosition;
+    moveStepsChunked(stepsToMove, chunkSize, delayMs);
+}
+
+void AdvancedStepperMotor::moveRelativeChunked(int steps, int chunkSize, int delayMs) {
+    moveStepsChunked(steps, chunkSize, delayMs);
+}
+
+bool AdvancedStepperMotor::isChunkedMovementRunning() {
+    return isChunkedMovementActive;
+}
+
+void AdvancedStepperMotor::stopChunkedMovement() {
+    if (isChunkedMovementActive) {
+        isChunkedMovementActive = false;
+        remainingSteps = 0;
+        targetPosition = currentPosition;
+        
+        // Relay-Steuerung beim Stoppen
+        if (motorRelayControlEnabled) {
+            if (relayInverted) {
+                setRelayState(true);   // Relay ON wenn Motor steht (inverted)
+            } else {
+                setRelayState(false);  // Relay OFF wenn Motor steht (normal)
+            }
+        }
+        
+        Serial.printf("Chunked movement stopped at position: %d\n", currentPosition);
+    }
+}
+
+void AdvancedStepperMotor::setChunkParameters(int chunkSize, int delayMs) {
+    this->chunkSize = chunkSize;
+    this->chunkDelayMs = delayMs;
+    Serial.printf("Chunk parameters set: size=%d, delay=%dms\n", chunkSize, delayMs);
+}
+
+// Movement with acceleration
 void AdvancedStepperMotor::moveWithAcceleration(int steps, int startRPM, int endRPM) {
     if (!isEnabled || steps == 0) return;
     
@@ -296,6 +381,12 @@ void AdvancedStepperMotor::stop() {
     isMoving = false;
     targetPosition = currentPosition;
     
+    // Chunked Movement stoppen falls aktiv
+    if (isChunkedMovementActive) {
+        isChunkedMovementActive = false;
+        remainingSteps = 0;
+    }
+    
     // Relay-Steuerung beim Stoppen
     if (motorRelayControlEnabled) {
         if (relayInverted) {
@@ -316,17 +407,17 @@ void AdvancedStepperMotor::emergencyStop() {
     Serial.println("NOTFALL-STOPP ausgeführt!");
 }
 
-// Home-Position anfahren
+// Move to home position
 void AdvancedStepperMotor::home() {
     if (usePhysicalHome) {
-        Serial.println("Fahre zur physischen Home-Position (bis Button gedrückt)...");
+        Serial.println("Moving to physical home position (until button pressed)...");
         startButtonHomingMode();
     } else {
-        Serial.println("Fahre zur virtuellen Home-Position (Position 0)...");
-        Serial.println("Verwende aktuelle Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+        Serial.println("Moving to virtual home position (position 0)...");
+        Serial.println("Using current speed: " + String(currentSpeedRPM) + " RPM");
         moveTo(0);
         isHomed = true;
-        Serial.println("Virtuelle Home-Position erreicht");
+        Serial.println("Virtual home position reached");
     }
 }
 
@@ -395,6 +486,72 @@ void AdvancedStepperMotor::setMicrostepping(int factor) {
 
 // Non-blocking Bewegungen
 void AdvancedStepperMotor::update() {
+    unsigned long currentTime = millis();
+    
+    // Chunked Movement Verarbeitung
+    if (isChunkedMovementActive && remainingSteps > 0) {
+        // Prüfe ob genug Zeit seit dem letzten Chunk vergangen ist
+        if (currentTime - lastChunkTime >= chunkDelayMs) {
+            // Berechne die Schritte für diesen Chunk
+            int stepsThisChunk = min(remainingSteps, chunkSize);
+            
+            // IMPORTANT: Check relay control BEFORE each chunk
+            // Falls Motor Control with Relay während der Bewegung geändert wurde
+            if (motorRelayControlEnabled) {
+                if (relayInverted) {
+                    setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+                } else {
+                    setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+                }
+            }
+            
+            // Führe den Chunk aus (blockierend, aber nur für wenige Schritte)
+            isMoving = true;
+            setDirection(movementDirection);
+            
+            for (int i = 0; i < stepsThisChunk; i++) {
+                step();
+                if (movementDirection) {
+                    currentPosition++;
+                } else {
+                    currentPosition--;
+                }
+            }
+            
+            remainingSteps -= stepsThisChunk;
+            lastChunkTime = currentTime;
+            
+            Serial.printf("Chunk ausgeführt: %d Schritte, verbleibend: %d, Position: %d\n", 
+                         stepsThisChunk, remainingSteps, currentPosition);
+            
+            // Prüfen ob Bewegung abgeschlossen
+            if (remainingSteps <= 0) {
+                isChunkedMovementActive = false;
+                isMoving = false;
+                targetPosition = currentPosition;
+                
+                // Relay-Steuerung beim Bewegungsende
+                if (motorRelayControlEnabled) {
+                    if (relayInverted) {
+                        setRelayState(true);   // Relay ON wenn Motor steht (inverted)
+                    } else {
+                        setRelayState(false);  // Relay OFF wenn Motor steht (normal)
+                    }
+                }
+                
+                setPinsIdle();
+                Serial.printf("Chunked Bewegung abgeschlossen. Endposition: %d\n", currentPosition);
+            } else {
+                // IMPORTANT: Check relay control AFTER each chunk 
+                // Falls Motor Control with Relay während der Bewegung ausgeschaltet wurde
+                if (!motorRelayControlEnabled) {
+                    // Benutzer hat Motor Relay Control ausgeschaltet, Relay-Zustand nicht automatisch ändern
+                    Serial.println("Motor Relay Control disabled - Relay remains in manual mode");
+                }
+            }
+        }
+    }
+    
     // Row Counter Verarbeitung
     if (isRowCounterActive) {
         bool currentButtonState = getButtonState(); // true = nicht gedrückt
@@ -417,13 +574,13 @@ void AdvancedStepperMotor::update() {
                     lastStepTime = currentTime;
                 }
                 
-                // Prüfe ob Home-Button gedrückt wurde
+                // Check if home button was pressed
                 if (buttonJustPressed) {
                     currentRows++;
-                    Serial.printf("Row %d von %d abgeschlossen (Button gedrückt)\n", currentRows, targetRows);
+                    Serial.printf("Row %d of %d completed (button pressed)\n", currentRows, targetRows);
                     
                     if (currentRows >= targetRows) {
-                        Serial.println("Ziel-Rows erreicht!");
+                        Serial.println("Target rows reached!");
                         stopRowCounter();
                     } else {
                         // Weiter fahren für nächste Row
@@ -437,17 +594,17 @@ void AdvancedStepperMotor::update() {
         return; // Wenn Row Counter aktiv ist, andere Funktionen überspringen
     }
     
-    // Button-Homing-Modus überwachen
+    // Monitor button homing mode
     if (isButtonHomingActive) {
-        // Prüfe Button-Zustand (getButtonState() gibt false zurück wenn Button gedrückt)
-        bool buttonPressed = !getButtonState(); // Invertieren, da getButtonState() true = nicht gedrückt
+        // Check button state (getButtonState() returns false when button pressed)
+        bool buttonPressed = !getButtonState(); // Invert, since getButtonState() true = not pressed
         
         if (buttonPressed) {
-            // Button wurde gedrückt - sofort stoppen
-            Serial.println("Button gedrückt! Home-Position erreicht");
+            // Button was pressed - stop immediately
+            Serial.println("Button pressed! Home position reached");
             stopButtonHomingMode();
         } else {
-            // Button nicht gedrückt - weiter fahren mit aktueller Geschwindigkeit
+            // Button not pressed - continue moving at current speed
             unsigned long currentTime = micros();
             if (currentTime - lastStepTime >= stepDelayMicros * 2) {
                 // STEP Pin HIGH
@@ -478,14 +635,14 @@ bool AdvancedStepperMotor::getUsePhysicalHome() {
     return usePhysicalHome;
 }
 
-// Button-Homing-Modus starten (fährt bis Button gedrückt wird)
+// Start button homing mode (moves until button pressed)
 void AdvancedStepperMotor::startButtonHomingMode() {
-    Serial.println("Button-Homing-Modus gestartet - Motor fährt bis Button gedrückt wird");
-    Serial.println("Verwende aktuelle Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+    Serial.println("Button homing mode started - motor moves until button pressed");
+    Serial.println("Using current speed: " + String(currentSpeedRPM) + " RPM");
     isButtonHomingActive = true;
     isMoving = true;
     
-    // Relay-Steuerung beim Homing-Start
+    // Relay control at homing start
     if (motorRelayControlEnabled) {
         if (relayInverted) {
             setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
@@ -501,7 +658,7 @@ void AdvancedStepperMotor::startButtonHomingMode() {
     Serial.println("Step Delay: " + String(stepDelayMicros) + " Mikrosekunden");
 }
 
-// Button-Homing-Modus stoppen
+// Stop button homing mode
 void AdvancedStepperMotor::stopButtonHomingMode() {
     if (isButtonHomingActive) {
         Serial.println("Button-Homing-Modus gestoppt");
@@ -650,6 +807,47 @@ bool AdvancedStepperMotor::getMotorRelayControl() {
 
 bool AdvancedStepperMotor::getRelayInvert() {
     return relayInverted;
+}
+
+// Echtzeit-Update System Funktionen
+void AdvancedStepperMotor::setRealtimeUpdateInterval(unsigned long intervalMs) {
+    realtimeUpdateInterval = intervalMs;
+    Serial.printf("Motor Echtzeit-Update Intervall auf %lums gesetzt\n", intervalMs);
+}
+
+void AdvancedStepperMotor::forceRealtimeUpdate() {
+    Serial.println("Erzwinge Motor Echtzeit-Update...");
+    updateRealtimeComponents();
+}
+
+void AdvancedStepperMotor::updateRealtimeComponents() {
+    unsigned long currentTime = millis();
+    
+    // Prüfe ob Update-Intervall erreicht wurde
+    if (currentTime - lastRealtimeUpdateTime >= realtimeUpdateInterval) {
+        // Motor-Relay-Control Echtzeit-Prüfung
+        if (isMoving || isChunkedMovementActive) {
+            // Motor läuft - prüfe Relay-Einstellungen
+            if (motorRelayControlEnabled) {
+                if (relayInverted) {
+                    setRelayState(false);  // Relay OFF wenn Motor läuft (inverted)
+                } else {
+                    setRelayState(true);   // Relay ON wenn Motor läuft (normal)
+                }
+            }
+        } else {
+            // Motor steht - prüfe Relay-Einstellungen  
+            if (motorRelayControlEnabled) {
+                if (relayInverted) {
+                    setRelayState(true);   // Relay ON wenn Motor steht (inverted)
+                } else {
+                    setRelayState(false);  // Relay OFF wenn Motor steht (normal)
+                }
+            }
+        }
+        
+        lastRealtimeUpdateTime = currentTime;
+    }
 }
 
 

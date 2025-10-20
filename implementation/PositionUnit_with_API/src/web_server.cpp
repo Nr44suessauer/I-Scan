@@ -4,6 +4,7 @@
 #include "button_control.h" // Include for button functionality
 #include "advanced_motor.h" // Include for advanced motor control
 #include "relay_control.h"  // Include for relay control
+#include "realtime_system.h" // Include for realtime system
 
 // Function declarations
 void handleRoot();
@@ -20,6 +21,8 @@ void handleRelayControl();      // Relay control function declaration
 void handleRelayState();        // Relay state function declaration
 void handleMotorRelay();        // Motor relay control function declaration
 void handleRelayInvert();       // Relay invert function declaration
+void handleRealtimeSystem();    // Realtime system control function declaration
+void handleComponentUpdate();   // Component update control function declaration
 
 
 
@@ -366,11 +369,30 @@ const char* html = R"rawliteral(
         <h3>Button Status (Pin 45)</h3>
         <div class="status-display">
           <div class="status-item">
-            <div class="status-label">Status</div>
-            <div class="status-value" id="buttonStatus">Not pressed</div>
+            <div class="status-label">Display Status</div>
+            <div class="status-value" id="buttonStatus">Pressed</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Hardware State</div>
+            <div class="status-value" id="buttonHardwareState">HIGH</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Update Rate</div>
+            <div class="status-value">Auto (500ms)</div>
           </div>
         </div>
-        <button class="btn btn-secondary" onclick="refreshButtonStatus()">Update Status</button>
+        
+        <!-- Button Invert Option -->
+        <div class="function-row" style="margin-top: 15px;">
+          <label class="switch-label">
+            <input type="checkbox" id="buttonInvertToggle" onchange="toggleButtonInvert(this.checked)">
+            <span class="slider-toggle"></span>
+            <span class="switch-text">Invert Button Logic</span>
+          </label>
+          <span class="description">When enabled: Inverts pressed/not pressed display logic</span>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="refreshButtonStatus()">Manual Refresh</button>
       </div>
 
       <!-- System Information -->
@@ -431,6 +453,8 @@ const char* html = R"rawliteral(
   <script>
     // Global variables
     let motorStatusInterval;
+    let buttonUpdateInterval;
+    let buttonInverted = false;
     
     // Tab functionality
     function openTab(evt, tabName) {
@@ -449,8 +473,16 @@ const char* html = R"rawliteral(
       // Update motor status automatically when Motor tab is opened
       if (tabName === 'MotorTab') {
         startMotorStatusUpdates();
+        stopButtonStatusUpdates(); // Stop button updates when not on Status tab
       } else {
         stopMotorStatusUpdates();
+      }
+      
+      // Start button status updates when Status tab is opened
+      if (tabName === 'StatusTab') {
+        startButtonStatusUpdates();
+      } else {
+        stopButtonStatusUpdates();
       }
     }
     
@@ -474,6 +506,13 @@ const char* html = R"rawliteral(
       refreshButtonStatus();
       updateMotorStatus();
       startMotorStatusUpdates();
+      
+      // Restore button invert setting from localStorage
+      const savedButtonInvert = localStorage.getItem('buttonInverted');
+      if (savedButtonInvert === 'true') {
+        buttonInverted = true;
+        document.getElementById('buttonInvertToggle').checked = true;
+      }
     });
     
     // Motor Functions
@@ -783,11 +822,62 @@ const char* html = R"rawliteral(
         .then(response => response.json())
         .then(data => {
           const buttonStatus = document.getElementById('buttonStatus');
-          buttonStatus.textContent = data.pressed ? 'Pressed' : 'Not pressed';
+          const buttonHardwareState = document.getElementById('buttonHardwareState');
+          
+          // Show raw hardware state
+          buttonHardwareState.textContent = data.pressed ? 'LOW (Active)' : 'HIGH (Idle)';
+          buttonHardwareState.style.color = data.pressed ? '#17a2b8' : '#6c757d'; // Blue for active, gray for idle
+          
+          // Apply invert logic if enabled
+          let isPressed = data.pressed;
+          if (buttonInverted) {
+            isPressed = !isPressed;
+          }
+          
+          if (isPressed) {
+            buttonStatus.textContent = buttonInverted ? 'Pressed (inverted)' : 'Pressed';
+            buttonStatus.style.color = '#28a745'; // Green for pressed
+            buttonStatus.style.fontWeight = 'bold';
+          } else {
+            buttonStatus.textContent = buttonInverted ? 'Not pressed (inverted)' : 'Not pressed';  
+            buttonStatus.style.color = '#6c757d'; // Gray for not pressed
+            buttonStatus.style.fontWeight = 'normal';
+          }
         })
         .catch(error => {
           console.error('Error retrieving button status:', error);
+          const buttonStatus = document.getElementById('buttonStatus');
+          buttonStatus.textContent = 'Error reading';
+          buttonStatus.style.color = '#dc3545'; // Red for error
         });
+    }
+    
+    // Start automatic button status updates when Status tab is active
+    function startButtonStatusUpdates() {
+      if (!buttonUpdateInterval) {
+        refreshButtonStatus(); // Initial update
+        buttonUpdateInterval = setInterval(refreshButtonStatus, 500); // Update every 500ms
+      }
+    }
+    
+    // Stop automatic button status updates
+    function stopButtonStatusUpdates() {
+      if (buttonUpdateInterval) {
+        clearInterval(buttonUpdateInterval);
+        buttonUpdateInterval = null;
+      }
+    }
+    
+    // Toggle button invert logic
+    function toggleButtonInvert(inverted) {
+      buttonInverted = inverted;
+      console.log('Button invert logic:', inverted ? 'enabled' : 'disabled');
+      
+      // Immediately refresh button status to show the change
+      refreshButtonStatus();
+      
+      // Save the setting to localStorage for persistence
+      localStorage.setItem('buttonInverted', inverted.toString());
     }
     
     // QR Code functions
@@ -885,6 +975,8 @@ void setupWebServer() {
   server.on("/rowCounter", HTTP_GET, handleRowCounter);                     // Row Counter API Route
   server.on("/motorRelay", HTTP_GET, handleMotorRelay);                     // Motor relay control route
   server.on("/relayInvert", HTTP_GET, handleRelayInvert);                   // Relay invert route
+  server.on("/realtimeSystem", HTTP_GET, handleRealtimeSystem);             // Realtime system control route
+  server.on("/componentUpdate", HTTP_GET, handleComponentUpdate);           // Component update control route
   
   // Relay Routes
   server.on("/relay", HTTP_GET, handleRelayControl);                        // Relay control route
@@ -1019,20 +1111,33 @@ void handleAdvancedMotorControl() {
   if (action == "moveTo" && server.hasArg("position")) {
     int position = server.arg("position").toInt();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+    int stepsToMove = abs(position - advancedMotor.getCurrentPosition());
     
     advancedMotor.setSpeed(speed);
-    advancedMotor.moveTo(position);
     
-    server.send(200, "text/plain", "Motor moved to position " + String(position));
+    // For large movements (>100 steps) use chunked version
+    if (stepsToMove > 100) {
+      advancedMotor.moveToChunked(position, 50, 10);  // 50 steps per chunk, 10ms pause
+      server.send(200, "text/plain", "Motor moving to position " + String(position) + " (chunked)");
+    } else {
+      advancedMotor.moveTo(position);
+      server.send(200, "text/plain", "Motor moved to position " + String(position));
+    }
     
   } else if (action == "moveRelative" && server.hasArg("steps")) {
     int steps = server.arg("steps").toInt();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
     
     advancedMotor.setSpeed(speed);
-    advancedMotor.moveRelative(steps);
     
-    server.send(200, "text/plain", "Motor moved " + String(steps) + " steps");
+    // For large movements (>100 steps) use chunked version
+    if (abs(steps) > 100) {
+      advancedMotor.moveRelativeChunked(steps, 50, 10);  // 50 steps per chunk, 10ms pause
+      server.send(200, "text/plain", "Motor moving " + String(steps) + " steps (chunked)");
+    } else {
+      advancedMotor.moveRelative(steps);
+      server.send(200, "text/plain", "Motor moved " + String(steps) + " steps");
+    }
     
   } else if (action == "moveDegrees" && server.hasArg("degrees")) {
     float degrees = server.arg("degrees").toFloat();
@@ -1096,7 +1201,8 @@ void handleAdvancedMotorStatus() {
     "\"isButtonHomingActive\":" + String(status.isButtonHomingActive ? "true" : "false") + ","
     "\"isRowCounterActive\":" + String(advancedMotor.isRowCounterRunning() ? "true" : "false") + ","
     "\"currentRows\":" + String(advancedMotor.getCurrentRows()) + ","
-    "\"targetRows\":" + String(advancedMotor.getTargetRows()) + ""
+    "\"targetRows\":" + String(advancedMotor.getTargetRows()) + ","
+    "\"isChunkedMovementActive\":" + String(advancedMotor.isChunkedMovementRunning() ? "true" : "false") + ""
     "}";
   
   server.send(200, "application/json", jsonResponse);
@@ -1295,6 +1401,62 @@ void handleRelayInvert() {
     server.send(200, "text/plain", response);
   } else {
     server.send(400, "text/plain", "Missing inverted parameter");
+  }
+}
+
+// Handle realtime system control
+void handleRealtimeSystem() {
+  if (server.hasArg("action")) {
+    String action = server.arg("action");
+    
+    if (action == "enable") {
+      enableRealtimeUpdates();
+      server.send(200, "text/plain", "Realtime system enabled");
+    } else if (action == "disable") {
+      disableRealtimeUpdates();
+      server.send(200, "text/plain", "Realtime system disabled");
+    } else if (action == "forceUpdate") {
+      forceUpdateAllComponents();
+      server.send(200, "text/plain", "Force update of all components executed");
+    } else if (action == "setInterval" && server.hasArg("interval")) {
+      unsigned long interval = server.arg("interval").toInt();
+      if (interval >= 1 && interval <= 1000) {
+        globalRealtimeInterval = interval;
+        server.send(200, "text/plain", "Realtime interval set to " + String(interval) + "ms");
+      } else {
+        server.send(400, "text/plain", "Invalid interval (1-1000ms)");
+      }
+    } else {
+      server.send(400, "text/plain", "Invalid action. Use 'enable', 'disable', 'forceUpdate', or 'setInterval'");
+    }
+  } else {
+    String status = realtimeSystemEnabled ? "enabled" : "disabled";
+    String response = "Realtime system status: " + status + ", interval: " + String(globalRealtimeInterval) + "ms";
+    server.send(200, "text/plain", response);
+  }
+}
+
+// Handle component update control
+void handleComponentUpdate() {
+  if (server.hasArg("component") && server.hasArg("enabled")) {
+    String component = server.arg("component");
+    bool enabled = (server.arg("enabled") == "true");
+    
+    setComponentUpdateFlag(component.c_str(), enabled);
+    
+    String response = "Component '" + component + "' realtime updates: " + 
+                     (enabled ? "enabled" : "disabled");
+    server.send(200, "text/plain", response);
+  } else {
+    String response = "Component update flags:\n";
+    response += "Relay: " + String(updateFlags.relayUpdate ? "enabled" : "disabled") + "\n";
+    response += "LED: " + String(updateFlags.ledUpdate ? "enabled" : "disabled") + "\n";
+    response += "Servo: " + String(updateFlags.servoUpdate ? "enabled" : "disabled") + "\n";
+    response += "Motor: " + String(updateFlags.motorUpdate ? "enabled" : "disabled") + "\n";
+    response += "Button: " + String(updateFlags.buttonUpdate ? "enabled" : "disabled") + "\n";
+    response += "Network: " + String(updateFlags.networkUpdate ? "enabled" : "disabled");
+    
+    server.send(200, "text/plain", response);
   }
 }
 
