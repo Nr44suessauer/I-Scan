@@ -574,17 +574,16 @@ void AdvancedStepperMotor::update() {
                     lastStepTime = currentTime;
                 }
                 
-                // Check if home button was pressed
+                // Check if Physical Home button was pressed
                 if (buttonJustPressed) {
                     currentRows++;
-                    Serial.printf("Row %d of %d completed (button pressed)\n", currentRows, targetRows);
+                    Serial.printf("Button Press #%d of %d detected! (Physical Home Button pressed)\n", currentRows, targetRows);
                     
                     if (currentRows >= targetRows) {
-                        Serial.println("Target rows reached!");
+                        Serial.println("🎉 Target button presses reached! Row Counter finished.");
                         stopRowCounter();
                     } else {
-                        // Weiter fahren für nächste Row
-                        Serial.println("Fahre weiter für nächste Row...");
+                        Serial.printf("✅ Continuing... waiting for button press #%d\n", currentRows + 1);
                     }
                 }
                 break;
@@ -701,7 +700,7 @@ bool AdvancedStepperMotor::startRowCounter(int targetRowCount) {
         return false;
     }
     
-    Serial.printf("Row Counter initialisiert - Ziel: %d Rows\n", targetRowCount);
+    Serial.printf("🔢 Row Counter initialized - Target: %d Physical Home Button presses\n", targetRowCount);
     isRowCounterActive = false; // Noch nicht aktiv, nur initialisiert
     currentRows = 0;
     targetRows = targetRowCount;
@@ -726,7 +725,8 @@ bool AdvancedStepperMotor::goRowCounter() {
         return false;
     }
     
-    Serial.printf("Row Counter gestartet - Ziel: %d Rows\n", targetRows);
+    Serial.printf("🚀 Row Counter started! Waiting for %d Physical Home Button presses...\n", targetRows);
+    Serial.println("💡 Press the Physical Home Button to count rows while machine is running");
     isRowCounterActive = true;
     currentRows = 0;
     lastButtonState = getButtonState();
@@ -753,7 +753,7 @@ bool AdvancedStepperMotor::goRowCounter() {
 void AdvancedStepperMotor::stopRowCounter() {
     if (!isRowCounterActive) return;
     
-    Serial.printf("Row Counter gestoppt - %d von %d Rows erreicht\n", currentRows, targetRows);
+    Serial.printf("🛑 Row Counter stopped - %d of %d button presses completed\n", currentRows, targetRows);
     isRowCounterActive = false;
     rowCounterState = ROW_COUNTER_IDLE;
     stop();

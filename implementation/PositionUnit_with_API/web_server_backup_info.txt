@@ -1,0 +1,13 @@
+// Backup der ursprünglichen web_server.cpp
+// Diese Datei wurde erstellt als Backup vor der Problembehebung
+// Falls die Hauptdatei zu groß geworden ist für das ESP32 Memory
+
+// Datum: 22.10.2025
+// Problem: UI wird nicht mehr angezeigt nach Hinzufügung des Update-Interval Features
+// Mögliche Ursache: HTML-String zu groß für ESP32 Memory
+
+// Original web_server.cpp ist über 2400 Zeilen lang
+// HTML-Teil geht von Zeile ~40 bis Zeile ~1676 (ca. 1636 Zeilen HTML)
+// Das könnte das Flash/RAM-Limit des ESP32 überschreiten
+
+// Lösung: HTML komprimieren oder in mehrere Teile aufteilen

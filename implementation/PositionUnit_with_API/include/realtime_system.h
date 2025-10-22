@@ -27,6 +27,8 @@ void enableRealtimeUpdates();                          // Enables realtime updat
 void disableRealtimeUpdates();                         // Disables realtime updates
 void setComponentUpdateFlag(const char* component, bool enabled);  // Sets update flag
 void forceUpdateAllComponents();                       // Forces immediate update
+void setRealtimeInterval(unsigned long intervalMs);    // Sets update interval
+unsigned long getRealtimeInterval();                   // Gets current update interval
 
 // Component-specific Update Functions
 void updateRelayComponent();                           // Relay realtime update

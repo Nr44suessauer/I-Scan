@@ -108,6 +108,21 @@ void forceUpdateAllComponents() {
     updateNetworkComponent();
 }
 
+// Sets the realtime update interval
+void setRealtimeInterval(unsigned long intervalMs) {
+    // Validate interval range (1ms to 1000ms)
+    if (intervalMs < 1) intervalMs = 1;
+    if (intervalMs > 1000) intervalMs = 1000;
+    
+    globalRealtimeInterval = intervalMs;
+    Serial.printf("Realtime update interval set to %lums\n", intervalMs);
+}
+
+// Gets the current realtime update interval
+unsigned long getRealtimeInterval() {
+    return globalRealtimeInterval;
+}
+
 // Component-specific update functions
 void updateRelayComponent() {
     // Check for pending relay changes

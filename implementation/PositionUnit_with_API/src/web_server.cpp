@@ -24,6 +24,8 @@ void handleMotorRelay();        // Motor relay control function declaration
 void handleRelayInvert();       // Relay invert function declaration
 void handleRealtimeSystem();    // Realtime system control function declaration
 void handleComponentUpdate();   // Component update control function declaration
+void handleComponentStatus();   // Component status function declaration  
+void handleUpdateInterval();    // Update interval control function declaration
 void handleGetDescription();    // Get device description from EEPROM
 void handleSetDescription();    // Set device description to EEPROM
 void initializeEEPROM();       // Initialize EEPROM for device description
@@ -119,11 +121,87 @@ const char* html = R"rawliteral(
     .desc-btn-clear { background-color: #dc3545; }
     .desc-btn-clear:hover { background-color: #c82333; }
     
+    /* System Management Styles */
+    .component-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+    .component-card { 
+      border: 1px solid #ddd; 
+      border-radius: 8px; 
+      padding: 15px; 
+      background: #f9f9f9; 
+      transition: 0.3s;
+    }
+    .component-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .component-card h4 { 
+      margin: 0 0 10px 0; 
+      color: #333; 
+      font-size: 16px;
+    }
+    .component-card .switch-label {
+      margin-bottom: 8px;
+    }
+    .component-card .description {
+      margin-top: 8px; 
+      font-size: 12px; 
+      color: #666;
+    }
+    
+    /* System Status Indicators */
+    .system-status-active { color: #28a745; font-weight: bold; }
+    .system-status-disabled { color: #dc3545; font-weight: bold; }
+    
+    /* Info Box Styles */
+    .info-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .info-box-success {
+      background: #e8f5e8;
+      border-left: 4px solid #4caf50;
+      color: #2d5016;
+    }
+    .info-box-info {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      color: #0d47a1;
+    }
+    .info-box-warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+    
+    /* Button Styles for System Management */
+    .btn-info { background-color: #17a2b8; }
+    .btn-info:hover { background-color: #138496; }
+    
+    /* Disabled State */
+    input[type="checkbox"]:disabled + .slider-toggle {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Performance Tips Styling */
+    .performance-tips {
+      background: #e8f5e8;
+      border-radius: 8px;
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .performance-tips strong {
+      color: #2e7d32;
+    }
+    
     /* Responsive Design */
     @media (max-width: 768px) {
       .container { padding: 10px; }
       .btn-grid { grid-template-columns: 1fr; }
       .status-display { grid-template-columns: 1fr; }
+      .component-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -138,6 +216,7 @@ const char* html = R"rawliteral(
       <button class="tablinks" onclick="openTab(event, 'LEDTab')">LED Control</button>
       <button class="tablinks" onclick="openTab(event, 'RelayTab')">Relay Control</button>
       <button class="tablinks" onclick="openTab(event, 'StatusTab')">Status & Info</button>
+      <button class="tablinks" onclick="openTab(event, 'SystemTab')">System Management</button>
     </div>
 
     <!-- Motor Control Tab -->
@@ -240,23 +319,33 @@ const char* html = R"rawliteral(
 
       <!-- Row Counter Section -->
       <div class="control-container">
-        <h3>Row Counter</h3>
+        <h3>Row Counter - Physical Home Button Counter</h3>
         <div class="function-row">
-          <span class="description">Moves in small steps and counts rows (Home-Button cycles)</span>
+          <span class="description">Counts how many times the Physical Home Button is pressed while the machine is running. Each button press = 1 row completed.</span>
         </div>
         <div class="input-row" style="margin: 15px 0;">
-          <label for="rowsInput">Number of Rows:</label>
+          <label for="rowsInput">Target Button Presses:</label>
           <input type="number" id="rowsInput" min="1" max="1000" value="10" style="width: 80px; margin: 0 10px;">
+          <span style="font-size: 12px; color: #666;">How many times should the Physical Home Button be pressed?</span>
         </div>
         <div class="status-display" style="margin: 15px 0;">
           <div class="status-item">
-            <div class="status-label">Current Rows</div>
+            <div class="status-label">Button Presses</div>
             <div class="status-value" id="currentRows">0</div>
           </div>
           <div class="status-item">
-            <div class="status-label">Target Rows</div>
+            <div class="status-label">Target Presses</div>
             <div class="status-value" id="targetRows">0</div>
           </div>
+        </div>
+        
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3; margin: 15px 0;">
+          <strong>💡 How it works:</strong><br>
+          • Press "Go" to start the counter<br>
+          • Machine will run continuously<br>
+          • Each time you press the Physical Home Button = +1 row counted<br>
+          • Counter stops automatically when target is reached<br>
+          • Perfect for counting work cycles, scans, or repetitive operations
         </div>
         <div class="btn-grid">
           <button class="btn btn-success" onclick="goRowCounter()">Go</button>
@@ -440,6 +529,14 @@ const char* html = R"rawliteral(
         </div>
       </div>
 
+      <!-- Row Counter Information -->
+      <div class="control-container">
+        <h3>Row Counter Info</h3>
+        <div style="background: #f0f8ff; padding: 10px; border-radius: 5px;">
+          <strong>Physical Home Button Counter:</strong> Counts button presses while machine runs. Each press = 1 row completed. Perfect for work cycles, scans, quality checks.
+        </div>
+      </div>
+
       <!-- Device Description -->
       <div class="control-container">
         <h3>Device Description</h3>
@@ -487,6 +584,174 @@ const char* html = R"rawliteral(
           </div>
           <div style="margin-top: 15px;">
             <button class="btn btn-secondary" onclick="generateQRCode()">Update QR Code</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Management Tab -->
+    <div id="SystemTab" class="tabcontent">
+      <h2>System Management & Performance</h2>
+      
+      <!-- Realtime System Control -->
+      <div class="control-container">
+        <h3>Realtime Update System</h3>
+        <div class="function-row">
+          <div class="input-group">
+            <label class="switch-label">
+              <input type="checkbox" id="realtimeSystemToggle" checked onchange="toggleRealtimeSystem(this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Realtime Updates</span>
+            </label>
+            <span class="description">Controls the global realtime update system (5ms interval)</span>
+          </div>
+        </div>
+        <div class="function-row">
+          <button class="btn btn-secondary" onclick="forceUpdateComponents()">Force Update All Components</button>
+          <span class="description">Immediately updates all active components</span>
+        </div>
+        
+        <!-- System Performance Display -->
+        <div class="status-display" style="margin-top: 15px;">
+          <div class="status-item">
+            <div class="status-label">System Status</div>
+            <div class="status-value" id="systemStatus">Active</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Update Interval</div>
+            <div class="status-value" id="systemInterval">5ms</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Active Components</div>
+            <div class="status-value" id="activeComponentCount">6</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Update Interval Control -->
+      <div class="control-container">
+        <h3>Performance Tuning</h3>
+        <div class="function-row">
+          <label>Update Interval: <input type="number" id="intervalInput" min="1" max="100" value="5" onchange="setUpdateInterval(this.value)"> ms</label>
+          <button class="btn btn-primary" onclick="setPresetInterval(5)">Reset (5ms)</button>
+        </div>
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-label">Current Interval</div>
+            <div class="status-value" id="currentInterval">5ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Component Management -->
+      <div class="control-container">
+        <h3>Component Update Control</h3>
+        <div class="description">Enable/disable realtime updates for individual components to optimize performance</div>
+        
+        <div class="component-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+          
+          <!-- Relay Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Relay Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="relayUpdateToggle" checked onchange="toggleComponentUpdate('relay', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Monitors relay state changes and motor enable/disable
+            </div>
+          </div>
+
+          <!-- LED Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">LED Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="ledUpdateToggle" checked onchange="toggleComponentUpdate('led', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Handles LED color updates and effects processing
+            </div>
+          </div>
+
+          <!-- Servo Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Servo Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="servoUpdateToggle" checked onchange="toggleComponentUpdate('servo', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Processes servo position updates and smooth transitions
+            </div>
+          </div>
+
+          <!-- Motor Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Motor Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="motorUpdateToggle" checked onchange="toggleComponentUpdate('motor', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Manages stepper motor movements and position tracking
+            </div>
+          </div>
+
+          <!-- Button Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Button Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="buttonUpdateToggle" checked onchange="toggleComponentUpdate('button', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Monitors button state changes and debouncing
+            </div>
+          </div>
+
+          <!-- Network Component -->
+          <div class="component-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Network Control</h4>
+            <label class="switch-label">
+              <input type="checkbox" id="networkUpdateToggle" checked onchange="toggleComponentUpdate('network', this.checked)">
+              <span class="slider-toggle"></span>
+              <span class="switch-text">Enable Updates</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              Handles web server requests and network communication
+            </div>
+          </div>
+
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div class="function-row" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+          <button class="btn btn-primary" onclick="enableAllComponents()">Enable All Components</button>
+          <button class="btn btn-secondary" onclick="disableAllComponents()">Disable All Components</button>
+          <button class="btn btn-info" onclick="refreshComponentStatus()">Refresh Status</button>
+        </div>
+      </div>
+
+      <!-- Performance Information -->
+      <div class="control-container">
+        <h3>Performance Optimization</h3>
+        <div class="description">
+          <strong>How it works:</strong> Disabled components free up processing time for active components.
+          The 5ms update cycle is shared among all enabled components.
+        </div>
+        <div style="margin-top: 10px;">
+          <div style="padding: 15px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #4caf50;">
+            <strong>💡 Performance Tips:</strong><br>
+            • Disable unused components to improve system responsiveness<br>
+            • Keep motor and button updates enabled for best control experience<br>
+            • Network updates can be disabled during intensive operations<br>
+            • LED and servo updates use more processing power for smooth animations
           </div>
         </div>
       </div>
@@ -1101,7 +1366,238 @@ const char* html = R"rawliteral(
       
       // Load device description on page load
       loadDescription();
+      
+      // Initialize system management
+      refreshComponentStatus();
+      refreshIntervalStatus();
     });
+
+    // ===== SYSTEM MANAGEMENT FUNCTIONS =====
+    
+    // Toggle individual component updates
+    function toggleComponentUpdate(component, enabled) {
+      const url = `/componentUpdate?component=${component}&enabled=${enabled ? 'true' : 'false'}`;
+      
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          console.log(`Component ${component} update ${enabled ? 'enabled' : 'disabled'}`);
+          updateStatus(`${component.charAt(0).toUpperCase() + component.slice(1)} updates ${enabled ? 'enabled' : 'disabled'}`);
+          updateActiveComponentCount();
+        })
+        .catch(error => {
+          console.error(`Error toggling ${component} updates:`, error);
+          updateStatus(`Error: Failed to toggle ${component} updates`);
+        });
+    }
+
+    // Toggle realtime system
+    function toggleRealtimeSystem(enabled) {
+      const url = `/realtimeSystem?enabled=${enabled ? 'true' : 'false'}`;
+      
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          console.log(`Realtime system ${enabled ? 'enabled' : 'disabled'}`);
+          document.getElementById('systemStatus').textContent = enabled ? 'Active' : 'Disabled';
+          updateStatus(`Realtime system ${enabled ? 'enabled' : 'disabled'}`);
+          
+          // Update all component toggles based on system state
+          if (!enabled) {
+            disableAllComponentToggles();
+          } else {
+            enableAllComponentToggles();
+            refreshComponentStatus();
+          }
+        })
+        .catch(error => {
+          console.error('Error toggling realtime system:', error);
+          updateStatus('Error: Failed to toggle realtime system');
+        });
+    }
+
+    // Force update all components
+    function forceUpdateComponents() {
+      fetch('/componentUpdate?forceUpdate=true')
+        .then(response => response.text())
+        .then(data => {
+          console.log('Force update executed');
+          updateStatus('Force update executed for all components');
+        })
+        .catch(error => {
+          console.error('Error forcing component updates:', error);
+          updateStatus('Error: Failed to force component updates');
+        });
+    }
+
+    // Enable all components
+    function enableAllComponents() {
+      const components = ['relay', 'led', 'servo', 'motor', 'button', 'network'];
+      let promises = [];
+      
+      components.forEach(component => {
+        const url = `/componentUpdate?component=${component}&enabled=true`;
+        promises.push(fetch(url));
+        
+        // Update UI toggle
+        const toggle = document.getElementById(`${component}UpdateToggle`);
+        if (toggle) {
+          toggle.checked = true;
+        }
+      });
+      
+      Promise.all(promises)
+        .then(() => {
+          console.log('All components enabled');
+          updateStatus('All components enabled');
+          updateActiveComponentCount();
+        })
+        .catch(error => {
+          console.error('Error enabling all components:', error);
+          updateStatus('Error: Failed to enable all components');
+        });
+    }
+
+    // Disable all components
+    function disableAllComponents() {
+      if (!confirm('Are you sure you want to disable all component updates? This will stop all realtime processing.')) {
+        return;
+      }
+      
+      const components = ['relay', 'led', 'servo', 'motor', 'button', 'network'];
+      let promises = [];
+      
+      components.forEach(component => {
+        const url = `/componentUpdate?component=${component}&enabled=false`;
+        promises.push(fetch(url));
+        
+        // Update UI toggle
+        const toggle = document.getElementById(`${component}UpdateToggle`);
+        if (toggle) {
+          toggle.checked = false;
+        }
+      });
+      
+      Promise.all(promises)
+        .then(() => {
+          console.log('All components disabled');
+          updateStatus('All components disabled - system in minimal mode');
+          updateActiveComponentCount();
+        })
+        .catch(error => {
+          console.error('Error disabling all components:', error);
+          updateStatus('Error: Failed to disable all components');
+        });
+    }
+
+    // Refresh component status from server
+    function refreshComponentStatus() {
+      fetch('/componentStatus')
+        .then(response => response.json())
+        .then(data => {
+          // Update individual component toggles
+          if (data.relay !== undefined) {
+            document.getElementById('relayUpdateToggle').checked = data.relay;
+          }
+          if (data.led !== undefined) {
+            document.getElementById('ledUpdateToggle').checked = data.led;
+          }
+          if (data.servo !== undefined) {
+            document.getElementById('servoUpdateToggle').checked = data.servo;
+          }
+          if (data.motor !== undefined) {
+            document.getElementById('motorUpdateToggle').checked = data.motor;
+          }
+          if (data.button !== undefined) {
+            document.getElementById('buttonUpdateToggle').checked = data.button;
+          }
+          if (data.network !== undefined) {
+            document.getElementById('networkUpdateToggle').checked = data.network;
+          }
+          
+          // Update system status
+          const systemActive = data.relay || data.led || data.servo || data.motor || data.button || data.network;
+          document.getElementById('realtimeSystemToggle').checked = systemActive;
+          document.getElementById('systemStatus').textContent = systemActive ? 'Active' : 'Disabled';
+          
+          updateActiveComponentCount();
+          console.log('Component status refreshed');
+        })
+        .catch(error => {
+          console.error('Error refreshing component status:', error);
+          updateStatus('Error: Failed to refresh component status');
+        });
+    }
+
+    // Update active component count
+    function updateActiveComponentCount() {
+      let count = 0;
+      const components = ['relay', 'led', 'servo', 'motor', 'button', 'network'];
+      
+      components.forEach(component => {
+        const toggle = document.getElementById(`${component}UpdateToggle`);
+        if (toggle && toggle.checked) {
+          count++;
+        }
+      });
+      
+      document.getElementById('activeComponentCount').textContent = count;
+    }
+
+    // Disable all component toggles (when system is disabled)
+    function disableAllComponentToggles() {
+      const components = ['relay', 'led', 'servo', 'motor', 'button', 'network'];
+      components.forEach(component => {
+        const toggle = document.getElementById(`${component}UpdateToggle`);
+        if (toggle) {
+          toggle.disabled = true;
+        }
+      });
+    }
+
+    // Enable all component toggles (when system is enabled)
+    function enableAllComponentToggles() {
+      const components = ['relay', 'led', 'servo', 'motor', 'button', 'network'];
+      components.forEach(component => {
+        const toggle = document.getElementById(`${component}UpdateToggle`);
+        if (toggle) {
+          toggle.disabled = false;
+        }
+      });
+    }
+
+    // Update status message
+    function updateStatus(message) {
+      document.getElementById('status').textContent = 'Status: ' + message;
+    }
+
+    // ===== UPDATE INTERVAL FUNCTIONS =====
+    function setUpdateInterval(interval) {
+      interval = Math.max(1, Math.min(100, parseInt(interval)));
+      fetch(`/updateInterval?interval=${interval}`)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('currentInterval').textContent = interval + 'ms';
+          document.getElementById('systemInterval').textContent = interval + 'ms';
+          updateStatus(`Update interval set to ${interval}ms`);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    function setPresetInterval(interval) { setUpdateInterval(interval); }
+    
+    function refreshIntervalStatus() {
+      fetch('/updateInterval')
+        .then(response => response.json())
+        .then(data => {
+          const interval = data.interval;
+          document.getElementById('intervalInput').value = interval;
+          document.getElementById('currentInterval').textContent = interval + 'ms';
+          document.getElementById('systemInterval').textContent = interval + 'ms';
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
   </script>
 </body>
 </html>
@@ -1130,6 +1626,8 @@ void setupWebServer() {
   server.on("/relayInvert", HTTP_GET, handleRelayInvert);                   // Relay invert route
   server.on("/realtimeSystem", HTTP_GET, handleRealtimeSystem);             // Realtime system control route
   server.on("/componentUpdate", HTTP_GET, handleComponentUpdate);           // Component update control route
+  server.on("/componentStatus", HTTP_GET, handleComponentStatus);           // Component status route
+  server.on("/updateInterval", HTTP_GET, handleUpdateInterval);             // Update interval control route
   
   // Relay Routes
   server.on("/relay", HTTP_GET, handleRelayControl);                        // Relay control route
@@ -1161,6 +1659,11 @@ void handleRoot() {
 
 // Handle color change request with predefined colors
 void handleColorChange() {
+  if (!updateFlags.ledUpdate) {
+    server.send(423, "text/plain", "LED updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("index")) {
     int colorIndex = server.arg("index").toInt();
     setColorByIndex(colorIndex);
@@ -1172,6 +1675,11 @@ void handleColorChange() {
 
 // Handle hex color change request
 void handleHexColorChange() {
+  if (!updateFlags.ledUpdate) {
+    server.send(423, "text/plain", "LED updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("hex")) {
     String hexColor = server.arg("hex");
     
@@ -1197,6 +1705,11 @@ void handleHexColorChange() {
 
 // Handle servo control request
 void handleServoControl() {
+  if (!updateFlags.servoUpdate) {
+    server.send(423, "text/plain", "Servo updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("angle")) {
     int angle = server.arg("angle").toInt();
     setServoAngle(angle);  // Function from servo_control.h
@@ -1246,6 +1759,11 @@ void handleGetButtonState() {
 
 // Handle LED brightness control
 void handleBrightness() {
+  if (!updateFlags.ledUpdate) {
+    server.send(423, "text/plain", "LED updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("value")) {
     int brightness = server.arg("value").toInt();
     brightness = constrain(brightness, 0, 255);
@@ -1258,6 +1776,11 @@ void handleBrightness() {
 
 // Advanced Motor Handler
 void handleAdvancedMotorControl() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   if (!server.hasArg("action")) {
     server.send(400, "text/plain", "Missing 'action' parameter");
     return;
@@ -1366,11 +1889,21 @@ void handleAdvancedMotorStatus() {
 }
 
 void handleAdvancedMotorStop() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   advancedMotor.stop();
   server.send(200, "text/plain", "Motor stopped");
 }
 
 void handleAdvancedMotorHome() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   // Get speed from Speed slider if available
   if (server.hasArg("speed")) {
     int speed = server.arg("speed").toInt();
@@ -1385,6 +1918,11 @@ void handleAdvancedMotorHome() {
 }
 
 void handleAdvancedMotorJog() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   if (!server.hasArg("direction")) {
     server.send(400, "text/plain", "Missing 'direction' parameter");
     return;
@@ -1399,6 +1937,11 @@ void handleAdvancedMotorJog() {
 }
 
 void handleAdvancedMotorCalibrate() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   advancedMotor.calibrate();
   server.send(200, "text/plain", "Motor calibrated");
 }
@@ -1421,6 +1964,11 @@ void handleSetHomingMode() {
 
 // Row Counter API Handler
 void handleRowCounter() {
+  if (!updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor updates are disabled in System Management");
+    return;
+  }
+  
   String action = server.arg("action");
   
   if (action == "start") {
@@ -1437,9 +1985,9 @@ void handleRowCounter() {
     
     bool success = advancedMotor.startRowCounter(targetRows);
     if (success) {
-      server.send(200, "text/plain", "Row Counter started with target: " + String(targetRows));
+      server.send(200, "text/plain", "Row Counter initialized. Target: " + String(targetRows) + " Physical Home Button presses");
     } else {
-      server.send(400, "text/plain", "Cannot start Row Counter. Motor must be homed first");
+      server.send(400, "text/plain", "Cannot initialize Row Counter. Motor must be homed first");
     }
     
   } else if (action == "go") {
@@ -1456,14 +2004,14 @@ void handleRowCounter() {
     if (success) {
       // Set speed after start
       advancedMotor.setSpeed(speed);
-      server.send(200, "text/plain", "Row Counter started with " + String(speed) + " RPM");
+      server.send(200, "text/plain", "Row Counter started! Press Physical Home Button to count rows. Speed: " + String(speed) + " RPM");
     } else {
-      server.send(400, "text/plain", "Row Counter is not ready or already running");
+      server.send(400, "text/plain", "Row Counter is not ready or already running. Initialize first!");
     }
     
   } else if (action == "stop") {
     advancedMotor.stopRowCounter();
-    server.send(200, "text/plain", "Row Counter stopped");
+    server.send(200, "text/plain", "Row Counter stopped. Check count results!");
     
   } else if (action == "status") {
     String jsonResponse = 
@@ -1496,6 +2044,11 @@ void handleRowCounter() {
 
 // Handle relay control
 void handleRelayControl() {
+  if (!updateFlags.relayUpdate) {
+    server.send(423, "text/plain", "Relay updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("action")) {
     String action = server.arg("action");
     
@@ -1525,6 +2078,11 @@ void handleRelayState() {
 
 // Handle motor relay control
 void handleMotorRelay() {
+  if (!updateFlags.relayUpdate || !updateFlags.motorUpdate) {
+    server.send(423, "text/plain", "Motor/Relay updates are disabled in System Management");
+    return;
+  }
+  
   if (server.hasArg("enabled")) {
     String enabledStr = server.arg("enabled");
     bool enabled = (enabledStr == "true");
@@ -1614,6 +2172,39 @@ void handleComponentUpdate() {
     response += "Network: " + String(updateFlags.networkUpdate ? "enabled" : "disabled");
     
     server.send(200, "text/plain", response);
+  }
+}
+
+// Handle component status request (JSON response for web interface)
+void handleComponentStatus() {
+  String jsonResponse = "{";
+  jsonResponse += "\"relay\":" + String(updateFlags.relayUpdate ? "true" : "false") + ",";
+  jsonResponse += "\"led\":" + String(updateFlags.ledUpdate ? "true" : "false") + ",";
+  jsonResponse += "\"servo\":" + String(updateFlags.servoUpdate ? "true" : "false") + ",";
+  jsonResponse += "\"motor\":" + String(updateFlags.motorUpdate ? "true" : "false") + ",";
+  jsonResponse += "\"button\":" + String(updateFlags.buttonUpdate ? "true" : "false") + ",";
+  jsonResponse += "\"network\":" + String(updateFlags.networkUpdate ? "true" : "false");
+  jsonResponse += "}";
+  
+  server.send(200, "application/json", jsonResponse);
+}
+
+// Handle update interval control
+void handleUpdateInterval() {
+  if (server.hasArg("interval")) {
+    unsigned long interval = server.arg("interval").toInt();
+    
+    // Validate interval range (1ms to 1000ms)
+    if (interval >= 1 && interval <= 1000) {
+      setRealtimeInterval(interval);
+      server.send(200, "text/plain", "Update interval set to " + String(interval) + "ms");
+    } else {
+      server.send(400, "text/plain", "Invalid interval. Must be between 1 and 1000 ms");
+    }
+  } else {
+    // Return current interval if no parameter provided
+    String jsonResponse = "{\"interval\":" + String(getRealtimeInterval()) + "}";
+    server.send(200, "application/json", jsonResponse);
   }
 }
 

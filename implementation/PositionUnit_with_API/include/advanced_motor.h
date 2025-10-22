@@ -9,10 +9,10 @@
 #define ENABLE_PIN -1  // Optional: Pin zum Aktivieren/Deaktivieren des Motors
 
 // Motor-Konfiguration
-#define STEPS_PER_REVOLUTION 200  // Standard for NEMA17 (1.8° per step)
-#define MICROSTEPS 1             // Microstepping-Faktor
+#define STEPS_PER_REVOLUTION 200  // Standard for NEMA23 (1.8° per step)
+#define MICROSTEPS 10             // Microstepping-Faktor
 #define MAX_SPEED_RPM 300        // Maximale Geschwindigkeit in RPM
-#define DEFAULT_SPEED_RPM 60     // Standard-Geschwindigkeit in RPM
+#define DEFAULT_SPEED_RPM 100     // Standard-Geschwindigkeit in RPM
 #define ACCELERATION_STEPS 50    // Steps for acceleration/deceleration
 
 // Motor-Status-Struktur
