@@ -1,4 +1,8 @@
 ﻿#include "advanced_motor.h"
+#include "button_control.h"  // Für Button-Status Abfrage
+
+// Globale Debug-Variable
+bool motorDebugEnabled = false;  // Standardmäßig ausgeschaltet
 
 // Globale Instanz
 AdvancedStepperMotor advancedMotor(STEP_PIN, DIR_PIN, ENABLE_PIN, ADVANCED_STEPS_PER_REVOLUTION);
@@ -8,6 +12,7 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     : stepPin(stepPin), dirPin(dirPin), enablePin(enablePin), stepsPerRevolution(stepsPerRevolution) {
     currentPosition = 0;
     targetPosition = 0;
+    virtualHomePosition = 0; // Initialisiere virtuelle Home-Position
     isMoving = false;
     isEnabled = false;
     isHomed = false;
@@ -27,7 +32,7 @@ void AdvancedStepperMotor::begin() {
     digitalWrite(stepPin, LOW);
     digitalWrite(dirPin, LOW);
     enable();
-    Serial.println("Erweiterter Motor initialisiert");
+    MOTOR_DEBUG_PRINTLN("Erweiterter Motor initialisiert");
 }
 
 void AdvancedStepperMotor::enable() {
@@ -51,7 +56,7 @@ void AdvancedStepperMotor::setSpeed(int rpm) {
     rpm = constrain(rpm, 1, MAX_SPEED_RPM);
     currentSpeedRPM = rpm;
     calculateStepDelay();
-    Serial.printf("Motor-Geschwindigkeit: %d RPM\n", rpm);
+    MOTOR_DEBUG_PRINTF("Motor-Geschwindigkeit: %d RPM\n", rpm);
 }
 
 void AdvancedStepperMotor::calculateStepDelay() {
@@ -104,8 +109,105 @@ void AdvancedStepperMotor::setHome() {
     isHomed = true;
 }
 
+void AdvancedStepperMotor::homeToButton() {
+    if (!isEnabled) {
+        MOTOR_DEBUG_PRINTLN("Motor ist deaktiviert - Home-Fahrt abgebrochen");
+        return;
+    }
+    
+    MOTOR_DEBUG_PRINTLN("Starte Home-Fahrt zum Button mit aktueller Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+    MOTOR_DEBUG_PRINTLN("Aktueller Button-Status: " + String(getButtonState() == HIGH ? "HIGH (nicht gedrückt)" : "LOW (gedrückt)"));
+    MOTOR_DEBUG_PRINTLN("Aktuelle Motor-Position: " + String(currentPosition));
+    
+    // Prüfe ob Button bereits gedrückt ist
+    if (getButtonState() == LOW) {
+        MOTOR_DEBUG_PRINTLN("Button ist bereits gedrückt - setze aktuelle Position als Home");
+        currentPosition = 0;
+        targetPosition = 0;
+        isHomed = true;
+        return;
+    }
+    
+    // Übernehme aktuelle Parameter vom Slider (Geschwindigkeit ist bereits gesetzt)
+    // Weitere Parameter können hier hinzugefügt werden, falls nötig
+    
+    // Fahre in Richtung Button (negative Richtung angenommen)
+    // Der Button fungiert als Home-Endschalter
+    isMoving = true;
+    setDirection(false);  // Fahre in negative Richtung zum Button
+    
+    int stepCount = 0;
+    int maxSteps = 10000;  // Sicherheits-Maximum, um Endlos-Fahrt zu vermeiden
+    
+    MOTOR_DEBUG_PRINTLN("Beginne Fahrt in negative Richtung...");
+    
+    // Fahre bis Button gedrückt wird oder Maximum erreicht ist
+    while (getButtonState() == HIGH && stepCount < maxSteps && isMoving) {
+        // Button nicht gedrückt (HIGH = nicht gedrückt bei INPUT_PULLUP)
+        step();
+        currentPosition++;  // Position wird dekrementiert bei negativer Fahrt
+        stepCount++;
+        
+        // Kurze Pause für Button-Abfrage und Debug-Ausgabe
+        if (stepCount % 30 == 0) {
+            MOTOR_DEBUG_PRINTLN("Schritte: " + String(stepCount) + ", Button-Status: " + String(getButtonState() == HIGH ? "HIGH" : "LOW") + ", Position: " + String(currentPosition));
+            delay(1);  // Etwas längere Pause für Button-Abfrage
+        }
+    }
+    
+    // Prüfe Ergebnis
+    if (getButtonState() == LOW) {
+        // Button wurde gedrückt (LOW = gedrückt bei INPUT_PULLUP)
+        MOTOR_DEBUG_PRINTLN("Home-Position am Button erreicht nach " + String(stepCount) + " Schritten");
+        currentPosition = 0;  // Setze aktuelle Position als Home (0)
+        targetPosition = 0;
+        isHomed = true;
+        MOTOR_DEBUG_PRINTLN("Motor erfolgreich gehomed - neue Home-Position gesetzt");
+    } else if (stepCount >= maxSteps) {
+        MOTOR_DEBUG_PRINTLN("WARNUNG: Maximale Schrittanzahl erreicht - Button nicht gefunden!");
+        MOTOR_DEBUG_PRINTLN("Möglicherweise ist der Button defekt oder die Fahrtrichtung falsch");
+        MOTOR_DEBUG_PRINTLN("Aktueller Button-Status: " + String(getButtonState() == HIGH ? "HIGH (nicht gedrückt)" : "LOW (gedrückt)"));
+    } else if (!isMoving) {
+        MOTOR_DEBUG_PRINTLN("Home-Fahrt wurde gestoppt");
+    }
+    
+    isMoving = false;
+    setPinsIdle();
+    MOTOR_DEBUG_PRINTLN("Home-Fahrt beendet. Aktuelle Position: " + String(currentPosition));
+}
+
+void AdvancedStepperMotor::setVirtualHome() {
+    virtualHomePosition = currentPosition;
+    isHomed = true;
+    MOTOR_DEBUG_PRINTLN("Virtuelle Home-Position gesetzt auf: " + String(virtualHomePosition));
+    MOTOR_DEBUG_PRINTLN("Aktuelle Position: " + String(currentPosition));
+}
+
+void AdvancedStepperMotor::moveToVirtualHome() {
+    if (!isEnabled) {
+        MOTOR_DEBUG_PRINTLN("Motor ist deaktiviert - Fahrt zur virtuellen Home-Position abgebrochen");
+        return;
+    }
+    
+    MOTOR_DEBUG_PRINTLN("Fahre zur virtuellen Home-Position: " + String(virtualHomePosition));
+    MOTOR_DEBUG_PRINTLN("Aktuelle Position: " + String(currentPosition));
+    MOTOR_DEBUG_PRINTLN("Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+    
+    int stepsToVirtualHome = virtualHomePosition - currentPosition;
+    MOTOR_DEBUG_PRINTLN("Benötigte Schritte: " + String(stepsToVirtualHome));
+    
+    if (stepsToVirtualHome == 0) {
+        MOTOR_DEBUG_PRINTLN("Bereits an virtueller Home-Position");
+        return;
+    }
+    
+    moveRelative(stepsToVirtualHome);
+    MOTOR_DEBUG_PRINTLN("Fahrt zur virtuellen Home-Position abgeschlossen");
+}
+
 int AdvancedStepperMotor::getCurrentPosition() { return currentPosition; }
 int AdvancedStepperMotor::getTargetPosition() { return targetPosition; }
+int AdvancedStepperMotor::getVirtualHomePosition() { return virtualHomePosition; }
 bool AdvancedStepperMotor::getIsMoving() { return isMoving; }
 bool AdvancedStepperMotor::getIsEnabled() { return isEnabled; }
 int AdvancedStepperMotor::getCurrentSpeed() { return currentSpeedRPM; }
@@ -115,6 +217,7 @@ AdvancedMotorStatus AdvancedStepperMotor::getStatus() {
     AdvancedMotorStatus status;
     status.currentPosition = currentPosition;
     status.targetPosition = targetPosition;
+    status.virtualHomePosition = virtualHomePosition;
     status.isMoving = isMoving;
     status.currentSpeed = currentSpeedRPM;
     status.isHomed = isHomed;
@@ -146,4 +249,31 @@ void setupAdvancedMotor() {
 // Globale Update-Funktion für main loop
 void updateMotor() {
     advancedMotor.update();
+}
+
+// Globale Home-Funktion mit Button
+void homeMotorToButton() {
+    advancedMotor.homeToButton();
+}
+
+// Globale Kalibrierungs-Funktion für virtuelle Home-Position
+void calibrateVirtualHome() {
+    advancedMotor.setVirtualHome();
+}
+
+// Globale Funktion für Fahrt zur virtuellen Home-Position
+void moveToVirtualHome() {
+    advancedMotor.moveToVirtualHome();
+}
+
+// Debug-Funktionen
+void setMotorDebug(bool enabled) {
+    motorDebugEnabled = enabled;
+    if (enabled) {
+        MOTOR_DEBUG_PRINTLN("Motor-Debug aktiviert");
+    }
+}
+
+bool getMotorDebugStatus() {
+    return motorDebugEnabled;
 }

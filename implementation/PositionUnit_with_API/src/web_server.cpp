@@ -185,11 +185,10 @@ const char* html = R"rawliteral(
       <div class="control-container">
         <h3>🔧 Advanced Functions</h3>
         <div class="function-row">
-          <span class="description">🎯 Virtual Home Mode: Motor will home to position 0</span>
+          <span class="description">� Home to Button: Motor homes to physical button</span>
         </div>
         <div class="btn-grid">
-          <button class="btn btn-primary" onclick="homeMotor()">🏠 Home Position</button>
-          <button class="btn btn-warning" onclick="calibrateMotor()">🔧 Calibrate</button>
+          <button class="btn btn-success" onclick="homeToButton()">🏠 Home to Button</button>
         </div>
       </div>
 
@@ -426,36 +425,55 @@ const char* html = R"rawliteral(
         });
     }
     
-    function homeMotor() {
-      document.getElementById('status').innerHTML = 'Status: Motor moving to home position...';
+    // function homeMotor() {
+    //   document.getElementById('status').innerHTML = 'Status: Motor moving to home position...';
+    //   
+    //   // Geschwindigkeit vom Speed-Slider übernehmen
+    //   const speed = document.getElementById('speedSlider').value;
+    //   
+    //   fetch('/motorHome?speed=' + speed)
+    //     .then(response => response.text())
+    //     .then(data => {
+    //       document.getElementById('status').innerHTML = 'Status: ' + data;
+    //       updateMotorStatus();
+    //     })
+    //     .catch(error => {
+    //       document.getElementById('status').innerHTML = 'Status: Error moving to home';
+    //     });
+    // }
+    
+    function homeToButton() {
+      document.getElementById('status').innerHTML = 'Status: Motor homing to button position...';
       
       // Geschwindigkeit vom Speed-Slider übernehmen
       const speed = document.getElementById('speedSlider').value;
       
-      fetch('/motorHome?speed=' + speed)
+      fetch('/motorHome?speed=' + speed + '&type=button')
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
           updateMotorStatus();
         })
         .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error moving to home';
+          document.getElementById('status').innerHTML = 'Status: Error homing to button';
         });
     }
     
-    function calibrateMotor() {
-      document.getElementById('status').innerHTML = 'Status: Motor calibrating...';
-      
-      fetch('/motorCalibrate')
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
-          updateMotorStatus();
-        })
-        .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error in calibration';
-        });
-    }
+    // function calibrateMotor() {
+    //   document.getElementById('status').innerHTML = 'Status: Setting virtual home position...';
+    //   
+    //   fetch('/motorCalibrate')
+    //     .then(response => response.text())
+    //     .then(data => {
+    //       document.getElementById('status').innerHTML = 'Status: ' + data;
+    //       updateMotorStatus();
+    //     })
+    //     .catch(error => {
+    //       document.getElementById('status').innerHTML = 'Status: Error setting virtual home';
+    //     });
+    // }
+    
+
     
 
     
@@ -783,18 +801,28 @@ void handleAdvancedMotorStop() {
 void handleAdvancedMotorHome() {
   // Geschwindigkeit setzen (gleiche Logik wie moveRelative)
   int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
-  Serial.println("Home mit Speed: " + String(speed) + " RPM");
+  
+  // Prüfe ob Button-Home angefordert wird
+  String homeType = server.hasArg("type") ? server.arg("type") : "position";
+  
+  Serial.println("Home mit Speed: " + String(speed) + " RPM, Type: " + homeType);
   
   advancedMotor.setSpeed(speed);
   
-  // Vereinfachte Home-Position: Fahre zu Position 0
-  int currentPos = advancedMotor.getCurrentPosition();
-  int stepsToHome = -currentPos;  // Anzahl Schritte zu Position 0
-  Serial.println("Fahre zur Home-Position (0): " + String(stepsToHome) + " Schritte");
-  advancedMotor.moveRelative(stepsToHome);
-  advancedMotor.setHome();  // Position als Home markieren
-  
-  server.send(200, "text/plain", "Motor moved to home position");
+  if (homeType == "button") {
+    // Neue Button-basierte Home-Fahrt
+    Serial.println("Starte Button-basierte Home-Fahrt");
+    advancedMotor.homeToButton();
+    server.send(200, "text/plain", "Motor homed to button position");
+  } else {
+    // Alte Methode: Vereinfachte Home-Position: Fahre zu Position 0
+    int currentPos = advancedMotor.getCurrentPosition();
+    int stepsToHome = -currentPos;  // Anzahl Schritte zu Position 0
+    Serial.println("Fahre zur Home-Position (0): " + String(stepsToHome) + " Schritte");
+    advancedMotor.moveRelative(stepsToHome);
+    advancedMotor.setHome();  // Position als Home markieren
+    server.send(200, "text/plain", "Motor moved to home position");
+  }
 }
 
 void handleAdvancedMotorJog() {

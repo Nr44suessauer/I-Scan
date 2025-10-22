@@ -15,10 +15,28 @@
 #define DEFAULT_SPEED_RPM 100              // Standard-Geschwindigkeit in RPM
 #define ACCELERATION_STEPS 50    // Schritte für Beschleunigung/Verzögerung
 
+// Debug-Konfiguration
+#define MOTOR_DEBUG_ENABLED true           // Debug-Ausgaben ein/ausschalten (zur Compile-Zeit)
+
+// Globale Debug-Variable (zur Laufzeit änderbar)
+extern bool motorDebugEnabled;
+
+// Debug-Makros mit Laufzeit-Check
+#if MOTOR_DEBUG_ENABLED
+  #define MOTOR_DEBUG_PRINT(x) do { if (motorDebugEnabled) Serial.print(x); } while(0)
+  #define MOTOR_DEBUG_PRINTLN(x) do { if (motorDebugEnabled) Serial.println(x); } while(0)
+  #define MOTOR_DEBUG_PRINTF(format, ...) do { if (motorDebugEnabled) Serial.printf(format, __VA_ARGS__); } while(0)
+#else
+  #define MOTOR_DEBUG_PRINT(x)
+  #define MOTOR_DEBUG_PRINTLN(x)
+  #define MOTOR_DEBUG_PRINTF(format, ...)
+#endif
+
 // Motor-Status-Struktur (vereinfacht)
 typedef struct {
     int currentPosition;
     int targetPosition;
+    int virtualHomePosition;
     bool isMoving;
     int currentSpeed;
     bool isHomed;
@@ -34,6 +52,7 @@ private:
     
     int currentPosition;
     int targetPosition;
+    int virtualHomePosition; // Virtuelle Home-Position
     bool isMoving;
     bool isEnabled;
     bool isHomed;
@@ -67,11 +86,15 @@ public:
     // Steuerungsfunktionen (nur von UI verwendet)  
     void stop();
     void setHome();
+    void homeToButton();  // Neue Funktion: Fahre zur Button-Position als Home
+    void setVirtualHome(); // Neue Funktion: Setze aktuelle Position als virtuelle Home
+    void moveToVirtualHome(); // Neue Funktion: Fahre zur virtuellen Home-Position
 
     
     // Status-Funktionen
     int getCurrentPosition();
     int getTargetPosition();
+    int getVirtualHomePosition(); // Getter für virtuelle Home-Position
     bool getIsMoving();
     bool getIsEnabled();
     bool getIsHomed();
@@ -95,6 +118,13 @@ extern AdvancedStepperMotor advancedMotor;
 // Hilfsfunktionen
 void setupAdvancedMotor();
 void updateMotor();
+void homeMotorToButton();  // Home-Fahrt zum Button
+void calibrateVirtualHome(); // Setze virtuelle Home-Position
+void moveToVirtualHome(); // Fahre zur virtuellen Home-Position
+
+// Debug-Funktionen
+void setMotorDebug(bool enabled);     // Debug ein/ausschalten
+bool getMotorDebugStatus();          // Debug-Status abfragen
 
 // Web-API Funktionen
 void handleAdvancedMotorControl();
