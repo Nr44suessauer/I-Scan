@@ -149,8 +149,8 @@ const char* html = R"rawliteral(
         <h3>⚡ Speed Control</h3>
         <div class="slider-wrapper">
           <label>Speed:</label>
-          <input type="range" id="speedSlider" min="1" max="120" value="60" oninput="updateSpeedValue(this.value)">
-          <span id="speedValue">60</span> RPM
+          <input type="range" id="speedSlider" min="1" max="500" value="150" oninput="updateSpeedValue(this.value)">
+          <span id="speedValue">100</span> RPM
         </div>
       </div>
 
@@ -185,12 +185,7 @@ const char* html = R"rawliteral(
       <div class="control-container">
         <h3>🔧 Advanced Functions</h3>
         <div class="function-row">
-          <label class="switch-label">
-            <input type="checkbox" id="physicalHomeToggle" checked onchange="toggleHomingMode(this.checked)">
-            <span class="slider-toggle"></span>
-            <span class="switch-text">🎯 Physical Home (Button)</span>
-          </label>
-          <span class="description">When enabled: Home to button position. When disabled: Home to virtual position (0)</span>
+          <span class="description">🎯 Virtual Home Mode: Motor will home to position 0</span>
         </div>
         <div class="btn-grid">
           <button class="btn btn-primary" onclick="homeMotor()">🏠 Home Position</button>
@@ -416,7 +411,7 @@ const char* html = R"rawliteral(
     }
     
     function moveRelative(steps) {
-      const speed = parseInt(document.getElementById('speedSlider').value) || 60;
+      const speed = parseInt(document.getElementById('speedSlider').value); 
       
       document.getElementById('status').innerHTML = 'Status: Motor moving ' + steps + ' steps...';
       
@@ -480,20 +475,7 @@ const char* html = R"rawliteral(
         });
     }
     
-    function toggleHomingMode(usePhysical) {
-      const mode = usePhysical ? 'physical' : 'virtual';
-      document.getElementById('status').innerHTML = `Status: Setting homing mode to ${mode}...`;
-      
-      fetch(`/setHomingMode?mode=${mode}`)
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('status').innerHTML = 'Status: ' + data;
-          updateMotorStatus();
-        })
-        .catch(error => {
-          document.getElementById('status').innerHTML = 'Status: Error setting homing mode';
-        });
-    }
+    // Homing mode toggle removed - using virtual home only
     
 
     
@@ -767,47 +749,9 @@ void handleAdvancedMotorControl() {
     
     server.send(200, "text/plain", "Motor moved " + String(steps) + " steps");
     
-  } else if (action == "moveDegrees" && server.hasArg("degrees")) {
-    float degrees = server.arg("degrees").toFloat();
-    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
-    
-    advancedMotor.setSpeed(speed);
-    advancedMotor.moveDegrees(degrees);
-    
-    server.send(200, "text/plain", "Motor moved " + String(degrees) + " degrees");
-    
-  } else if (action == "moveRevolutions" && server.hasArg("revolutions")) {
-    float revolutions = server.arg("revolutions").toFloat();
-    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
-    
-    advancedMotor.setSpeed(speed);
-    advancedMotor.moveRevolutions(revolutions);
-    
-    server.send(200, "text/plain", "Motor moved " + String(revolutions) + " revolutions");
-    
-  } else if (action == "smoothMove" && server.hasArg("steps")) {
-    int steps = server.arg("steps").toInt();
-    int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
-    
-    advancedMotor.moveSmoothly(steps, speed);
-    
-    server.send(200, "text/plain", "Smooth movement completed");
-    
-  } else if (action == "acceleratedMove" && server.hasArg("steps")) {
-    int steps = server.arg("steps").toInt();
-    int startSpeed = server.hasArg("startSpeed") ? server.arg("startSpeed").toInt() : 20;
-    int endSpeed = server.hasArg("endSpeed") ? server.arg("endSpeed").toInt() : 60;
-    
-    advancedMotor.moveWithAcceleration(steps, startSpeed, endSpeed);
-    
-    server.send(200, "text/plain", "Accelerated movement completed");
-    
   } else if (action == "setHome") {
     advancedMotor.setHome();
     server.send(200, "text/plain", "Home position set");
-    
-  } else if (action == "emergencyStop") {
-    advancedMotor.emergencyStop();
     server.send(200, "text/plain", "Emergency stop executed");
     
   } else {
@@ -825,8 +769,7 @@ void handleAdvancedMotorStatus() {
     "\"currentSpeed\":" + String(status.currentSpeed) + ","
     "\"isHomed\":" + String(status.isHomed ? "true" : "false") + ","
     "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ","
-    "\"usePhysicalHome\":" + String(status.usePhysicalHome ? "true" : "false") + ","
-    "\"isButtonHomingActive\":" + String(status.isButtonHomingActive ? "true" : "false") + ""
+
     "}";
   
   server.send(200, "application/json", jsonResponse);
@@ -838,50 +781,33 @@ void handleAdvancedMotorStop() {
 }
 
 void handleAdvancedMotorHome() {
-  // Geschwindigkeit vom Speed-Slider übernehmen, falls vorhanden
-  if (server.hasArg("speed")) {
-    int speed = server.arg("speed").toInt();
-    if (speed > 0 && speed <= 120) {  // Validierung entsprechend dem Slider-Maximum
-      advancedMotor.setSpeed(speed);
-      Serial.println("Home-Geschwindigkeit auf " + String(speed) + " RPM gesetzt");
-    }
-  }
+  // Geschwindigkeit setzen (gleiche Logik wie moveRelative)
+  int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+  Serial.println("Home mit Speed: " + String(speed) + " RPM");
   
-  advancedMotor.home();
+  advancedMotor.setSpeed(speed);
+  
+  // Vereinfachte Home-Position: Fahre zu Position 0
+  int currentPos = advancedMotor.getCurrentPosition();
+  int stepsToHome = -currentPos;  // Anzahl Schritte zu Position 0
+  Serial.println("Fahre zur Home-Position (0): " + String(stepsToHome) + " Schritte");
+  advancedMotor.moveRelative(stepsToHome);
+  advancedMotor.setHome();  // Position als Home markieren
+  
   server.send(200, "text/plain", "Motor moved to home position");
 }
 
 void handleAdvancedMotorJog() {
-  if (!server.hasArg("direction")) {
-    server.send(400, "text/plain", "Missing 'direction' parameter");
-    return;
-  }
-  
-  bool direction = server.arg("direction").toInt() == 1;
-  int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
-  
-  advancedMotor.jogContinuous(direction, speed);
-  
-  server.send(200, "text/plain", "Jog started in " + String(direction ? "forward" : "backward") + " direction");
+  server.send(400, "text/plain", "Jog function removed - use relative movement instead");
 }
 
 void handleAdvancedMotorCalibrate() {
-  advancedMotor.calibrate();
-  server.send(200, "text/plain", "Motor calibrated");
+  server.send(400, "text/plain", "Calibration function removed");
 }
 
 void handleSetHomingMode() {
-  String mode = server.arg("mode");
-  
-  if (mode == "physical") {
-    advancedMotor.setUsePhysicalHome(true);
-    server.send(200, "text/plain", "Homing mode set to Physical Home (Button)");
-  } else if (mode == "virtual") {
-    advancedMotor.setUsePhysicalHome(false);
-    server.send(200, "text/plain", "Homing mode set to Virtual Home (Position 0)");
-  } else {
-    server.send(400, "text/plain", "Invalid mode. Use 'physical' or 'virtual'");
-  }
+  // Homing mode functionality removed - using simple virtual home only
+  server.send(200, "text/plain", "Homing mode set to Virtual Home (Position 0)");
 }
 
 // Button Homing Handler

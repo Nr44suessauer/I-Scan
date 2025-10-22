@@ -9,13 +9,13 @@
 #define ENABLE_PIN -1  // Optional: Pin zum Aktivieren/Deaktivieren des Motors
 
 // Motor-Konfiguration
-#define STEPS_PER_REVOLUTION 200  // Standard für NEMA17 (1.8° pro Schritt)
-#define MICROSTEPS 1             // Microstepping-Faktor
-#define MAX_SPEED_RPM 300        // Maximale Geschwindigkeit in RPM
-#define DEFAULT_SPEED_RPM 60     // Standard-Geschwindigkeit in RPM
+#define ADVANCED_STEPS_PER_REVOLUTION 200  // Standard für NEMA17 (1.8° pro Schritt)
+#define MICROSTEPS 1                       // Microstepping-Faktor
+#define MAX_SPEED_RPM 500                  // Maximale Geschwindigkeit in RPM
+#define DEFAULT_SPEED_RPM 100              // Standard-Geschwindigkeit in RPM
 #define ACCELERATION_STEPS 50    // Schritte für Beschleunigung/Verzögerung
 
-// Motor-Status-Struktur
+// Motor-Status-Struktur (vereinfacht)
 typedef struct {
     int currentPosition;
     int targetPosition;
@@ -23,10 +23,6 @@ typedef struct {
     int currentSpeed;
     bool isHomed;
     bool isEnabled;
-    bool usePhysicalHome;       // Status für Homing-Modus
-    bool isButtonHomingActive;  // Neuer Status für Button-Homing-Modus
-
-    unsigned long lastMoveTime;
 } AdvancedMotorStatus;
 
 // Klasse für erweiterte Schrittmotorsteuerung
@@ -41,8 +37,6 @@ private:
     bool isMoving;
     bool isEnabled;
     bool isHomed;
-    bool usePhysicalHome;       // True: Physisches Home mit Button, False: Virtuelles Home
-    bool isButtonHomingActive;  // Button-Homing-Modus aktiv
 
     
     int stepsPerRevolution;
@@ -51,7 +45,6 @@ private:
     unsigned long lastStepTime;
     
     void calculateStepDelay();
-    void performStep();
     
 public:
     AdvancedStepperMotor(int stepPin, int dirPin, int enablePin = -1, int stepsPerRevolution = 200);
@@ -67,26 +60,13 @@ public:
     void setDirection(bool clockwise);
     void step();
     void moveSteps(int steps);
+    // Basis-Bewegungsfunktionen (nur von UI verwendet)
     void moveTo(int position);
     void moveRelative(int steps);
-    void moveDegrees(float degrees);
-    void moveRevolutions(float revolutions);
     
-    // Erweiterte Bewegungsfunktionen
-    void moveWithAcceleration(int steps, int startRPM, int endRPM);
-    void moveSmoothly(int steps, int targetRPM);
-    void jogContinuous(bool direction, int rpm);
-    
-    // Steuerungsfunktionen
+    // Steuerungsfunktionen (nur von UI verwendet)  
     void stop();
-    void emergencyStop();
-    void home();
     void setHome();
-    void calibrate();
-    void setUsePhysicalHome(bool usePhysical);  // Setzt den Homing-Modus
-    bool getUsePhysicalHome();     // Gibt den aktuellen Homing-Modus zurück
-    void startButtonHomingMode();  // Neue Funktion: Fährt bis Button gedrückt wird
-    void stopButtonHomingMode();   // Stoppt den Button-Homing-Modus
 
     
     // Status-Funktionen
