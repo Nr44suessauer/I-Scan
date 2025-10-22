@@ -19,6 +19,9 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
     currentSpeedRPM = DEFAULT_SPEED_RPM;
     stepDelayMicros = 0;
     lastStepTime = 0;
+    targetPassCount = 0;
+    currentPassCount = 0;
+    isPassingButton = false;
     calculateStepDelay();
 }
 
@@ -176,6 +179,86 @@ void AdvancedStepperMotor::homeToButton() {
     MOTOR_DEBUG_PRINTLN("Home-Fahrt beendet. Aktuelle Position: " + String(currentPosition));
 }
 
+void AdvancedStepperMotor::passButtonTimes(int count) {
+    if (!isEnabled) {
+        MOTOR_DEBUG_PRINTLN("Motor ist deaktiviert - Button-Pass-Fahrt abgebrochen");
+        return;
+    }
+    
+    if (count <= 0) {
+        MOTOR_DEBUG_PRINTLN("Ungültige Anzahl: " + String(count) + " - Button-Pass-Fahrt abgebrochen");
+        return;
+    }
+    
+    // Initialisiere Pass-Variablen
+    targetPassCount = count;
+    currentPassCount = 0;
+    isPassingButton = true;
+    
+    MOTOR_DEBUG_PRINTLN("Starte Button-Pass-Fahrt: Button soll " + String(count) + " mal passiert werden");
+    MOTOR_DEBUG_PRINTLN("Geschwindigkeit: " + String(currentSpeedRPM) + " RPM");
+    MOTOR_DEBUG_PRINTLN("Aktueller Button-Status: " + String(getButtonState() == HIGH ? "HIGH (nicht gedrückt)" : "LOW (gedrückt)"));
+    MOTOR_DEBUG_PRINTLN("Start-Position: " + String(currentPosition));
+    
+    isMoving = true;
+    setDirection(false);  // Fahre in negative Richtung (gleiche Richtung wie homeToButton)
+    
+    int passedCount = 0;
+    int stepCount = 0;
+    // maxSteps entfernt - keine Schrittbegrenzung mehr
+    bool lastButtonState = (getButtonState() == LOW);  // true wenn Button gedrückt
+    bool currentButtonState;
+    
+    MOTOR_DEBUG_PRINTLN("Beginne Fahrt - Ziel: " + String(count) + " Button-Passagen (keine Schrittbegrenzung)");
+    
+    // Fahre bis die gewünschte Anzahl von Button-Passagen erreicht ist
+    while (passedCount < count && isMoving) {
+        // Einen Schritt machen
+        step();
+        currentPosition--;  // Position wird dekrementiert bei negativer Fahrt
+        stepCount++;
+        
+        // Button-Status prüfen
+        currentButtonState = (getButtonState() == LOW);
+        
+        // Prüfe auf Flanke: von nicht-gedrückt zu gedrückt (steigende Flanke der Passage)
+        if (!lastButtonState && currentButtonState) {
+            passedCount++;
+            currentPassCount = passedCount; // Aktualisiere die Klassenvariable
+            MOTOR_DEBUG_PRINTLN("Button-Passage " + String(passedCount) + " von " + String(count) + 
+                              " bei Schritt " + String(stepCount) + ", Position: " + String(currentPosition));
+            
+
+        }
+        
+        lastButtonState = currentButtonState;
+        
+        // Debug-Ausgabe alle 50 Schritte für besseres Feedback
+        if (stepCount % 50 == 0) {
+            MOTOR_DEBUG_PRINTLN("Schritte: " + String(stepCount) + 
+                              ", Passagen: " + String(passedCount) + "/" + String(count) + 
+                              ", Button: " + String(getButtonState() == HIGH ? "HIGH" : "LOW") + 
+                              ", Position: " + String(currentPosition));
+            delay(5);  // Etwas längere Pause für UI-Update-Möglichkeit
+        }
+    }
+    
+    // Ergebnis auswerten
+    if (passedCount >= count) {
+        MOTOR_DEBUG_PRINTLN("ERFOLG: Button wurde " + String(passedCount) + " mal passiert");
+        MOTOR_DEBUG_PRINTLN("Benötigte Schritte: " + String(stepCount));
+        MOTOR_DEBUG_PRINTLN("End-Position: " + String(currentPosition));
+    } else if (!isMoving) {
+        MOTOR_DEBUG_PRINTLN("Fahrt wurde gestoppt");
+        MOTOR_DEBUG_PRINTLN("Erreichte Passagen: " + String(passedCount) + " von " + String(count));
+    }
+    
+    isMoving = false;
+    isPassingButton = false;
+    setPinsIdle();
+    MOTOR_DEBUG_PRINTLN("Button-Pass-Fahrt beendet. End-Position: " + String(currentPosition));
+}
+
 void AdvancedStepperMotor::setVirtualHome() {
     virtualHomePosition = currentPosition;
     isHomed = true;
@@ -212,6 +295,9 @@ bool AdvancedStepperMotor::getIsMoving() { return isMoving; }
 bool AdvancedStepperMotor::getIsEnabled() { return isEnabled; }
 int AdvancedStepperMotor::getCurrentSpeed() { return currentSpeedRPM; }
 bool AdvancedStepperMotor::getIsHomed() { return isHomed; }
+int AdvancedStepperMotor::getTargetPassCount() { return targetPassCount; }
+int AdvancedStepperMotor::getCurrentPassCount() { return currentPassCount; }
+bool AdvancedStepperMotor::getIsPassingButton() { return isPassingButton; }
 
 AdvancedMotorStatus AdvancedStepperMotor::getStatus() {
     AdvancedMotorStatus status;
@@ -222,6 +308,9 @@ AdvancedMotorStatus AdvancedStepperMotor::getStatus() {
     status.currentSpeed = currentSpeedRPM;
     status.isHomed = isHomed;
     status.isEnabled = isEnabled;
+    status.targetPassCount = targetPassCount;
+    status.currentPassCount = currentPassCount;
+    status.isPassingButton = isPassingButton;
     return status;
 }
 
@@ -254,6 +343,11 @@ void updateMotor() {
 // Globale Home-Funktion mit Button
 void homeMotorToButton() {
     advancedMotor.homeToButton();
+}
+
+// Globale Funktion für Button-Passagen
+void passButtonTimes(int count) {
+    advancedMotor.passButtonTimes(count);
 }
 
 // Globale Kalibrierungs-Funktion für virtuelle Home-Position

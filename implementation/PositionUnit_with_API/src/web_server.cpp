@@ -14,6 +14,7 @@ void handleMotorControl();
 void handleGetButtonState(); // New function declaration for button status
 void handleBrightness(); // New function declaration for brightness control
 void handleSetHomingMode();     // Neue Funktion für Homing-Modus setzen
+void handlePassButton(); // New function declaration for button pass functionality
 
 
 
@@ -185,10 +186,35 @@ const char* html = R"rawliteral(
       <div class="control-container">
         <h3>🔧 Advanced Functions</h3>
         <div class="function-row">
-          <span class="description">� Home to Button: Motor homes to physical button</span>
+          <span class="description">🏠 Home to Button: Motor homes to physical button</span>
         </div>
         <div class="btn-grid">
           <button class="btn btn-success" onclick="homeToButton()">🏠 Home to Button</button>
+        </div>
+      </div>
+
+      <!-- Button Pass Function -->
+      <div class="control-container">
+        <h3>🔄 Button Pass Function</h3>
+        <div class="function-row">
+          <span class="description">🎯 Pass Button Multiple Times: Motor passes the button a specified number of times</span>
+        </div>
+        <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;">
+          <label>Pass Count:</label>
+          <input type="number" id="passCountInput" class="position-input" placeholder="10" value="10" min="1" max="100">
+          <button class="btn btn-warning" onclick="passButtonTimes()">🔄 Pass Button</button>
+        </div>
+        
+        <!-- Pass Progress Display -->
+        <div class="status-display">
+          <div class="status-item">
+            <div class="status-label">Target Passes</div>
+            <div class="status-value" id="targetPassCount">0</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Current Passes</div>
+            <div class="status-value" id="currentPassCount">0</div>
+          </div>
         </div>
       </div>
 
@@ -310,6 +336,7 @@ const char* html = R"rawliteral(
   <script>
     // Globale Variablen
     let motorStatusInterval;
+    let isPassingActive = false;
     
     // Tab-Funktionalität
     function openTab(evt, tabName) {
@@ -333,11 +360,20 @@ const char* html = R"rawliteral(
       }
     }
     
-    // Update motor status automatically
+    // Update motor status automatically with dynamic interval
     function startMotorStatusUpdates() {
       updateMotorStatus();
       if (motorStatusInterval) clearInterval(motorStatusInterval);
-      motorStatusInterval = setInterval(updateMotorStatus, 2000);
+      // Verwende schnelleres Intervall wenn Button-Pass aktiv ist
+      const interval = isPassingActive ? 500 : 2000; // 500ms vs 2000ms
+      motorStatusInterval = setInterval(updateMotorStatus, interval);
+    }
+    
+    // Restart updates with new interval
+    function restartMotorStatusUpdates() {
+      if (motorStatusInterval) {
+        startMotorStatusUpdates();
+      }
     }
     
     function stopMotorStatusUpdates() {
@@ -373,13 +409,25 @@ const char* html = R"rawliteral(
           document.getElementById('targetPosition').textContent = data.targetPosition || 0;
           document.getElementById('currentSpeed').textContent = (data.currentSpeed || 60) + ' RPM';
           
-          // Toggle-Status aktualisieren
-          document.getElementById('physicalHomeToggle').checked = data.usePhysicalHome || false;
+          // Pass-Status aktualisieren
+          document.getElementById('targetPassCount').textContent = data.targetPassCount || 0;
+          document.getElementById('currentPassCount').textContent = data.currentPassCount || 0;
+          
+          // Prüfe ob sich der Pass-Status geändert hat
+          const wasPassingActive = isPassingActive;
+          isPassingActive = data.isPassingButton || false;
+          
+          // Restart updates with new interval if status changed
+          if (wasPassingActive !== isPassingActive) {
+            restartMotorStatusUpdates();
+          }
           
           // Status-Text je nach Zustand
           let statusText = 'Ready';
           
-          if (data.isMoving) {
+          if (data.isPassingButton) {
+              statusText = 'Passing Button (' + (data.currentPassCount || 0) + '/' + (data.targetPassCount || 0) + ')';
+          } else if (data.isMoving) {
               statusText = 'Moving';
           } else if (data.isHomed) {
               statusText = 'Ready (Home)';
@@ -456,6 +504,36 @@ const char* html = R"rawliteral(
         })
         .catch(error => {
           document.getElementById('status').innerHTML = 'Status: Error homing to button';
+        });
+    }
+    
+    function passButtonTimes() {
+      const count = parseInt(document.getElementById('passCountInput').value) || 10;
+      const speed = document.getElementById('speedSlider').value;
+      
+      if (count < 1 || count > 100) {
+        document.getElementById('status').innerHTML = 'Status: Pass count must be between 1 and 100';
+        return;
+      }
+      
+      document.getElementById('status').innerHTML = 'Status: Motor passing button ' + count + ' times...';
+      
+      // Aktiviere sofort den schnellen Aktualisierungsmodus
+      isPassingActive = true;
+      restartMotorStatusUpdates();
+      
+      fetch('/passButton?count=' + count + '&speed=' + speed)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerHTML = 'Status: ' + data;
+          // Force immediate update after completion
+          setTimeout(updateMotorStatus, 100);
+        })
+        .catch(error => {
+          document.getElementById('status').innerHTML = 'Status: Error passing button';
+          // Reset passing state on error
+          isPassingActive = false;
+          restartMotorStatusUpdates();
         });
     }
     
@@ -622,6 +700,7 @@ void setupWebServer() {
   server.on("/motorJog", HTTP_GET, handleAdvancedMotorJog);
   server.on("/motorCalibrate", HTTP_GET, handleAdvancedMotorCalibrate);
   server.on("/setHomingMode", HTTP_GET, handleSetHomingMode);               // Neue Route für Homing-Modus
+  server.on("/passButton", HTTP_GET, handlePassButton);                      // Neue Route für Button-Passagen
 
 
 
@@ -787,7 +866,9 @@ void handleAdvancedMotorStatus() {
     "\"currentSpeed\":" + String(status.currentSpeed) + ","
     "\"isHomed\":" + String(status.isHomed ? "true" : "false") + ","
     "\"isEnabled\":" + String(status.isEnabled ? "true" : "false") + ","
-
+    "\"targetPassCount\":" + String(status.targetPassCount) + ","
+    "\"currentPassCount\":" + String(status.currentPassCount) + ","
+    "\"isPassingButton\":" + String(status.isPassingButton ? "true" : "false") +
     "}";
   
   server.send(200, "application/json", jsonResponse);
@@ -836,6 +917,36 @@ void handleAdvancedMotorCalibrate() {
 void handleSetHomingMode() {
   // Homing mode functionality removed - using simple virtual home only
   server.send(200, "text/plain", "Homing mode set to Virtual Home (Position 0)");
+}
+
+void handlePassButton() {
+  // Überprüfe ob count Parameter vorhanden ist
+  if (!server.hasArg("count")) {
+    server.send(400, "text/plain", "Missing count parameter");
+    return;
+  }
+  
+  int count = server.arg("count").toInt();
+  int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
+  
+  // Validierung
+  if (count <= 0) {
+    server.send(400, "text/plain", "Count must be greater than 0");
+    return;
+  }
+  
+  if (count > 100) {
+    server.send(400, "text/plain", "Count must be 100 or less for safety");
+    return;
+  }
+  
+  Serial.println("Button-Pass-Fahrt mit Count: " + String(count) + ", Speed: " + String(speed) + " RPM");
+  
+  // Geschwindigkeit setzen und Button-Pass-Fahrt starten
+  advancedMotor.setSpeed(speed);
+  advancedMotor.passButtonTimes(count);
+  
+  server.send(200, "text/plain", "Motor passing button " + String(count) + " times");
 }
 
 // Button Homing Handler

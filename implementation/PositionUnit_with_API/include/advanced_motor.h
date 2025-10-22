@@ -41,6 +41,9 @@ typedef struct {
     int currentSpeed;
     bool isHomed;
     bool isEnabled;
+    int targetPassCount;
+    int currentPassCount;
+    bool isPassingButton;
 } AdvancedMotorStatus;
 
 // Klasse für erweiterte Schrittmotorsteuerung
@@ -56,6 +59,11 @@ private:
     bool isMoving;
     bool isEnabled;
     bool isHomed;
+    
+    // Button-Pass Variablen
+    int targetPassCount;     // Gewünschte Anzahl der Button-Passagen
+    int currentPassCount;    // Aktuelle Anzahl der erreichten Passagen
+    bool isPassingButton;    // Flag ob aktuell Button-Passagen ausgeführt werden
 
     
     int stepsPerRevolution;
@@ -87,6 +95,7 @@ public:
     void stop();
     void setHome();
     void homeToButton();  // Neue Funktion: Fahre zur Button-Position als Home
+    void passButtonTimes(int count); // Neue Funktion: Passiere Button n-mal
     void setVirtualHome(); // Neue Funktion: Setze aktuelle Position als virtuelle Home
     void moveToVirtualHome(); // Neue Funktion: Fahre zur virtuellen Home-Position
 
@@ -100,6 +109,9 @@ public:
     bool getIsHomed();
 
     int getCurrentSpeed();
+    int getTargetPassCount();
+    int getCurrentPassCount();
+    bool getIsPassingButton();
     AdvancedMotorStatus getStatus();
     
     // Konfiguration
@@ -119,6 +131,7 @@ extern AdvancedStepperMotor advancedMotor;
 void setupAdvancedMotor();
 void updateMotor();
 void homeMotorToButton();  // Home-Fahrt zum Button
+void passButtonTimes(int count); // Passiere Button n-mal
 void calibrateVirtualHome(); // Setze virtuelle Home-Position
 void moveToVirtualHome(); // Fahre zur virtuellen Home-Position
 
