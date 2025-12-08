@@ -1,4 +1,5 @@
 #include "motor_28byj48.h"
+#include "pin_config.h"
 
 // Globale Pin-Variablen (können zur Laufzeit geändert werden)
 int motor_28byj48_pin_1 = MOTOR_28BYJ48_DEFAULT_PIN_1;
@@ -59,16 +60,16 @@ void setup28BYJ48MotorWithPins(int pin1, int pin2, int pin3, int pin4) {
 }
 
 void set28BYJ48PinConfiguration(int pin1, int pin2, int pin3, int pin4) {
+    // Alte Pins deaktivieren
     digitalWrite(motor_28byj48_pin_1, LOW);
     digitalWrite(motor_28byj48_pin_2, LOW);
     digitalWrite(motor_28byj48_pin_3, LOW);
     digitalWrite(motor_28byj48_pin_4, LOW);
     
-    motor_28byj48_pin_1 = pin1;
-    motor_28byj48_pin_2 = pin2;
-    motor_28byj48_pin_3 = pin3;
-    motor_28byj48_pin_4 = pin4;
+    // Neue Pins setzen und in EEPROM speichern
+    set28BYJ48Pins(pin1, pin2, pin3, pin4);
     
+    // Hardware neu initialisieren
     pinMode(motor_28byj48_pin_1, OUTPUT);
     pinMode(motor_28byj48_pin_2, OUTPUT);
     pinMode(motor_28byj48_pin_3, OUTPUT);
@@ -79,7 +80,7 @@ void set28BYJ48PinConfiguration(int pin1, int pin2, int pin3, int pin4) {
     digitalWrite(motor_28byj48_pin_3, LOW);
     digitalWrite(motor_28byj48_pin_4, LOW);
     
-    Serial.printf("28BYJ-48 Pin-Konfiguration geändert - Neue Pins: %d, %d, %d, %d\n", 
+    Serial.printf("28BYJ-48 Pin-Konfiguration geändert und in EEPROM gespeichert - Neue Pins: %d, %d, %d, %d\n", 
                   pin1, pin2, pin3, pin4);
 }
 
@@ -138,7 +139,7 @@ void move28BYJ48MotorWithSpeed(int steps, int direction, int speed) {
             digitalWrite(motor_28byj48_pin_3, motor_28byj48_sequence[current_28byj48_step_index][2]);
             digitalWrite(motor_28byj48_pin_4, motor_28byj48_sequence[current_28byj48_step_index][3]);
             
-            current_28byj48_motor_position += direction;
+            current_28byj48_motor_position += direction;  // direction ist jetzt +1 oder -1
             delay(delayMs);
         }
     } 
@@ -157,7 +158,7 @@ void move28BYJ48MotorWithSpeed(int steps, int direction, int speed) {
             digitalWrite(motor_28byj48_pin_3, motor_28byj48_sequence[current_28byj48_step_index][2]);
             digitalWrite(motor_28byj48_pin_4, motor_28byj48_sequence[current_28byj48_step_index][3]);
             
-            current_28byj48_motor_position += direction;
+            current_28byj48_motor_position += direction;  // direction ist jetzt +1 oder -1
             delay(delayMs);
         }
     }
@@ -176,7 +177,7 @@ void move28BYJ48MotorWithSpeed(int steps, int direction, int speed) {
             digitalWrite(motor_28byj48_pin_3, motor_28byj48_sequence[current_28byj48_step_index][2]);
             digitalWrite(motor_28byj48_pin_4, motor_28byj48_sequence[current_28byj48_step_index][3]);
             
-            current_28byj48_motor_position += direction;
+            current_28byj48_motor_position += direction;  // direction ist jetzt +1 oder -1
             delayMicroseconds(delayMicros);
         }
     }

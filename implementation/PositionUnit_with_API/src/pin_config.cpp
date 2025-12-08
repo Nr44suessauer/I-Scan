@@ -213,17 +213,22 @@ void printPinConfig() {
 
 // Einzelne Pin-Setter
 void set28BYJ48Pins(int pin1, int pin2, int pin3, int pin4) {
+    // Config-Struktur aktualisieren
     currentPinConfig.motor_28byj48_pin1 = pin1;
     currentPinConfig.motor_28byj48_pin2 = pin2;
     currentPinConfig.motor_28byj48_pin3 = pin3;
     currentPinConfig.motor_28byj48_pin4 = pin4;
     
+    // Globale Variablen aktualisieren
     motor_28byj48_pin_1 = pin1;
     motor_28byj48_pin_2 = pin2;
     motor_28byj48_pin_3 = pin3;
     motor_28byj48_pin_4 = pin4;
     
+    // In EEPROM speichern
     savePinConfig();
+    
+    Serial.printf("✓ 28BYJ-48 Pins gespeichert: %d, %d, %d, %d\n", pin1, pin2, pin3, pin4);
 }
 
 void setNEMA23Pins(int stepPin, int dirPin, int enablePin) {

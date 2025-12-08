@@ -5,6 +5,7 @@
 #include "advanced_motor.h" // Include for advanced motor control
 #include "motor_28byj48.h" // Include for 28BYJ-48 motor control
 #include "pin_config.h" // Include for pin configuration
+#include "led_control.h" // Include for LED control
 
 // Function declarations
 void handleRoot();
@@ -24,6 +25,10 @@ void handleSavePinConfig(); // Save pin configuration handler
 void handleResetPinConfig(); // Reset pin configuration handler
 void handleSystemInfo(); // System info handler
 void handleSaveWiFiConfig(); // Save WiFi configuration handler
+void handleGetPinConfig(); // Get pin configuration as JSON
+void handleSetServoPin(); // Set servo pin
+void handleSetLedPin(); // Set LED pin
+void handleSetButtonPin(); // Set button pin
 
 
 // WebServer configuration
@@ -31,7 +36,7 @@ const uint16_t HTTP_PORT = 80;
 WebServer server(HTTP_PORT);
 
 // Enhanced HTML interface for motor control
-const char* html = R"rawliteral(
+const char html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
@@ -104,6 +109,52 @@ const char* html = R"rawliteral(
     input[type="checkbox"] { display: none; }
     input[type="checkbox"]:checked + .slider-toggle { background: #2196F3; }
     input[type="checkbox"]:checked + .slider-toggle:before { transform: translateX(25px); }
+    
+    /* Collapsible Section */
+    .collapsible-header { 
+      background: #2196F3; 
+      color: white; 
+      padding: 15px; 
+      cursor: pointer; 
+      border: none; 
+      width: 100%; 
+      text-align: left; 
+      font-size: 16px; 
+      font-weight: bold; 
+      border-radius: 8px; 
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .collapsible-header:hover { background: #1976D2; }
+    .collapsible-header.active { background: #1565C0; border-radius: 8px 8px 0 0; margin-bottom: 0; }
+    .collapsible-content { 
+      max-height: 0; 
+      overflow: hidden; 
+      transition: max-height 0.3s ease-out; 
+      background: #f8f9fa; 
+      border-radius: 0 0 8px 8px;
+    }
+    .collapsible-content.active { 
+      max-height: 1000px; 
+      padding: 20px; 
+      border: 2px solid #2196F3; 
+      border-top: none;
+    }
+    .pinout-image { 
+      width: 100%; 
+      max-width: 800px; 
+      height: auto; 
+      display: block; 
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+    .arrow { 
+      transition: transform 0.3s; 
+      font-size: 20px;
+    }
+    .arrow.active { transform: rotate(180deg); }
     
     /* Responsive Design */
     @media (max-width: 768px) {
@@ -448,6 +499,18 @@ const char* html = R"rawliteral(
       <!-- Pin Configuration -->
       <div class="control-container">
         <h3>📌 Pin Configuration</h3>
+        
+        <!-- ESP32-S3 Pinout Diagram -->
+        <button class="collapsible-header" onclick="toggleCollapsible(this)">
+          🖼️ ESP32-S3 DevKit Pinout Diagram
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img src="https://imgs.search.brave.com/Z7qpRZZI18oEhodGlO_A3ril0MmGB2mmY2SwBrOFNbA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/c2hvcGlmeS5jb20v/cy9maWxlcy8xLzAx/NzYvMzI3NC9maWxl/cy9FU1AzMi1TMy1E/ZXZLaXRDLTEtcGlu/b3V0XzEuanBnP3Y9/MTY2Njk2OTc0OQ" 
+               alt="ESP32-S3 DevKit Pinout" 
+               class="pinout-image"
+               onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=color:red;text-align:center;>Bild konnte nicht geladen werden</p>';">
+        </div>
         
         <!-- 28BYJ-48 Motor Pins -->
         <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
@@ -1254,17 +1317,22 @@ const char* html = R"rawliteral(
         .then(data => {
           if (data.waitingForFeedback) {
             // Zeige Feedback-Dialog
-            document.getElementById('currentTestPins').textContent = 
-              data.pin1 + ', ' + data.pin2 + ', ' + data.pin3 + ', ' + data.pin4;
-            document.getElementById('autoTestFeedback').style.display = 'block';
+            const currentTestPins = document.getElementById('currentTestPins');
+            if (currentTestPins) {
+              currentTestPins.textContent = data.pin1 + ', ' + data.pin2 + ', ' + data.pin3 + ', ' + data.pin4;
+            }
+            const feedback = document.getElementById('autoTestFeedback');
+            if (feedback) feedback.style.display = 'block';
             
             // Store current combination for results table
             window.currentTestCombo = {pin1: data.pin1, pin2: data.pin2, pin3: data.pin3, pin4: data.pin4};
           } else if (data.testComplete) {
             // Test abgeschlossen
             clearInterval(autoTestInterval);
-            document.getElementById('autoTestFeedback').style.display = 'none';
-            document.getElementById('autoTestBtn').disabled = false;
+            const feedback = document.getElementById('autoTestFeedback');
+            if (feedback) feedback.style.display = 'none';
+            const autoTestBtn = document.getElementById('autoTestBtn');
+            if (autoTestBtn) autoTestBtn.disabled = false;
             
             if (data.success) {
               document.getElementById('status').innerHTML = 
@@ -1290,7 +1358,8 @@ const char* html = R"rawliteral(
       fetch('/motor28byj48?action=confirmAutoTest')
         .then(response => response.text())
         .then(data => {
-          document.getElementById('autoTestFeedback').style.display = 'none';
+          const feedback = document.getElementById('autoTestFeedback');
+          if (feedback) feedback.style.display = 'none';
         });
     }
     
@@ -1302,13 +1371,16 @@ const char* html = R"rawliteral(
       fetch('/motor28byj48?action=rejectAutoTest')
         .then(response => response.text())
         .then(data => {
-          document.getElementById('autoTestFeedback').style.display = 'none';
+          const feedback = document.getElementById('autoTestFeedback');
+          if (feedback) feedback.style.display = 'none';
         });
     }
     
     // Keyboard shortcuts for quick feedback
     document.addEventListener('keydown', function(event) {
-      const feedbackVisible = document.getElementById('autoTestFeedback').style.display === 'block';
+      const feedback = document.getElementById('autoTestFeedback');
+      if (!feedback) return;
+      const feedbackVisible = feedback.style.display === 'block';
       if (!feedbackVisible) return;
       
       if (event.key === 'y' || event.key === 'Y' || event.key === 'j' || event.key === 'J') {
@@ -1477,6 +1549,20 @@ const char* html = R"rawliteral(
       passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
     }
 
+    function toggleCollapsible(element) {
+      element.classList.toggle('active');
+      const content = element.nextElementSibling;
+      const arrow = element.querySelector('.arrow');
+      
+      if (content.classList.contains('active')) {
+        content.classList.remove('active');
+        arrow.classList.remove('active');
+      } else {
+        content.classList.add('active');
+        arrow.classList.add('active');
+      }
+    }
+
     function saveWiFiConfig() {
       const ssid = document.getElementById('cfg_wifi_ssid').value;
       const password = document.getElementById('cfg_wifi_password').value;
@@ -1564,6 +1650,10 @@ void setupWebServer() {
   server.on("/resetPinConfig", HTTP_GET, handleResetPinConfig);
   server.on("/systemInfo", HTTP_GET, handleSystemInfo);
   server.on("/saveWiFiConfig", HTTP_POST, handleSaveWiFiConfig);
+  server.on("/getPinConfig", HTTP_GET, handleGetPinConfig);
+  server.on("/setServoPin", HTTP_GET, handleSetServoPin);
+  server.on("/setLedPin", HTTP_GET, handleSetLedPin);
+  server.on("/setButtonPin", HTTP_GET, handleSetButtonPin);
 
   
   server.onNotFound(handleNotFound);
@@ -1580,7 +1670,8 @@ void handleWebServerRequests() {
 
 // Handle root route
 void handleRoot() {
-  server.send(200, "text/html", html);
+  // Verwende PROGMEM String direkt mit send_P
+  server.send_P(200, "text/html", html);
 }
 
 // Handle color change request with predefined colors
@@ -1824,10 +1915,11 @@ void handle28BYJ48MotorControl() {
     int pin3 = server.arg("pin3").toInt();
     int pin4 = server.arg("pin4").toInt();
     
-    Serial.printf("28BYJ-48: Setting pins to %d, %d, %d, %d\n", pin1, pin2, pin3, pin4);
-    set28BYJ48PinConfiguration(pin1, pin2, pin3, pin4);
+    Serial.printf("28BYJ-48: Setting pins to %d, %d, %d, %d (saving to EEPROM)\n", pin1, pin2, pin3, pin4);
+    set28BYJ48Pins(pin1, pin2, pin3, pin4);
+    setup28BYJ48Motor();
     
-    server.send(200, "text/plain", "Pins configured: " + String(pin1) + ", " + 
+    server.send(200, "text/plain", "Pins configured and saved to EEPROM: " + String(pin1) + ", " + 
                 String(pin2) + ", " + String(pin3) + ", " + String(pin4));
     
   } else if (action == "testPins" && server.hasArg("pin1") && server.hasArg("pin2") && 
@@ -1964,26 +2056,24 @@ void handle28BYJ48MotorControl() {
   } else if (action == "moveRelative" && server.hasArg("steps")) {
     int steps = server.arg("steps").toInt();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 50;
+    int direction = server.hasArg("direction") ? server.arg("direction").toInt() : 1;
     
-    Serial.printf("28BYJ-48: Moving %d steps at speed %d%%\n", steps, speed);
-    int direction = (steps >= 0) ? 1 : 0;
-    int absSteps = abs(steps);
+    Serial.printf("28BYJ-48: Moving %d steps (direction=%d) at speed %d%%\n", steps, direction, speed);
     set28BYJ48MotorSpeed(speed);
-    move28BYJ48MotorWithSpeed(absSteps, direction, speed);
+    move28BYJ48MotorWithSpeed(steps, direction, speed);
     
-    server.send(200, "text/plain", "Moving " + String(steps) + " steps");
+    server.send(200, "text/plain", "Moving " + String(steps * direction) + " steps");
     
   } else if (action == "moveDegrees" && server.hasArg("degrees")) {
-    int degrees = server.arg("degrees").toInt();
+    float degrees = server.arg("degrees").toFloat();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 50;
+    int direction = server.hasArg("direction") ? server.arg("direction").toInt() : 1;
     
-    Serial.printf("28BYJ-48: Rotating %d degrees at speed %d%%\n", degrees, speed);
-    int direction = (degrees >= 0) ? 1 : 0;
-    float absDegrees = abs(degrees);
+    Serial.printf("28BYJ-48: Rotating %.2f degrees (direction=%d) at speed %d%%\n", degrees, direction, speed);
     set28BYJ48MotorSpeed(speed);
-    move28BYJ48MotorDegrees(absDegrees, direction);
+    move28BYJ48MotorDegrees(degrees, direction);
     
-    server.send(200, "text/plain", "Rotating " + String(degrees) + " degrees");
+    server.send(200, "text/plain", "Rotating " + String(degrees) + " degrees " + (direction == 1 ? "clockwise" : "counter-clockwise"));
     
   } else if (action == "home") {
     Serial.println("28BYJ-48: Homing motor");
@@ -2178,6 +2268,70 @@ void handleSaveWiFiConfig() {
     ESP.restart();
   } else {
     server.send(400, "text/plain", "Fehlende Parameter");
+  }
+}
+
+// Get Pin Configuration as JSON
+void handleGetPinConfig() {
+  PinConfiguration config = getPinConfig();
+  
+  String json = "{";
+  json += "\"motor28byj48\":{";
+  json += "\"pin1\":" + String(config.motor_28byj48_pin1) + ",";
+  json += "\"pin2\":" + String(config.motor_28byj48_pin2) + ",";
+  json += "\"pin3\":" + String(config.motor_28byj48_pin3) + ",";
+  json += "\"pin4\":" + String(config.motor_28byj48_pin4);
+  json += "},";
+  json += "\"servo\":" + String(config.servo_pin) + ",";
+  json += "\"led\":" + String(config.led_pin) + ",";
+  json += "\"button\":" + String(config.button_pin);
+  json += "}";
+  
+  server.send(200, "application/json", json);
+}
+
+// Set Servo Pin
+void handleSetServoPin() {
+  if (server.hasArg("pin")) {
+    int pin = server.arg("pin").toInt();
+    
+    Serial.printf("Setze Servo Pin auf GPIO %d\n", pin);
+    setServoPin(pin);
+    setupServo();  // Hardware neu initialisieren
+    
+    server.send(200, "text/plain", "Servo Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
+  } else {
+    server.send(400, "text/plain", "Fehlender 'pin' Parameter");
+  }
+}
+
+// Set LED Pin
+void handleSetLedPin() {
+  if (server.hasArg("pin")) {
+    int pin = server.arg("pin").toInt();
+    
+    Serial.printf("Setze LED Pin auf GPIO %d\n", pin);
+    setLedPin(pin);
+    setupLEDs();  // Hardware neu initialisieren
+    
+    server.send(200, "text/plain", "LED Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
+  } else {
+    server.send(400, "text/plain", "Fehlender 'pin' Parameter");
+  }
+}
+
+// Set Button Pin
+void handleSetButtonPin() {
+  if (server.hasArg("pin")) {
+    int pin = server.arg("pin").toInt();
+    
+    Serial.printf("Setze Button Pin auf GPIO %d\n", pin);
+    setButtonPin(pin);
+    setupButton();  // Hardware neu initialisieren
+    
+    server.send(200, "text/plain", "Button Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
+  } else {
+    server.send(400, "text/plain", "Fehlender 'pin' Parameter");
   }
 }
 
