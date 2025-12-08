@@ -4,6 +4,7 @@
 #include "button_control.h" // Include for button functionality
 #include "advanced_motor.h" // Include for advanced motor control
 #include "motor_28byj48.h" // Include for 28BYJ-48 motor control
+#include "pin_config.h" // Include for pin configuration
 
 // Function declarations
 void handleRoot();
@@ -18,8 +19,11 @@ void handleSetHomingMode();     // Neue Funktion für Homing-Modus setzen
 void handlePassButton(); // New function declaration for button pass functionality
 void handle28BYJ48MotorControl(); // 28BYJ-48 motor control handler
 void handle28BYJ48MotorStatus(); // 28BYJ-48 motor status handler
-
-
+void handlePinConfig(); // Pin configuration handler
+void handleSavePinConfig(); // Save pin configuration handler
+void handleResetPinConfig(); // Reset pin configuration handler
+void handleSystemInfo(); // System info handler
+void handleSaveWiFiConfig(); // Save WiFi configuration handler
 
 
 // WebServer configuration
@@ -424,24 +428,132 @@ const char* html = R"rawliteral(
 
       <!-- System Information -->
       <div class="control-container">
-        <h3>System Information</h3>
+        <h3>📊 System Information</h3>
         <div class="status-display">
           <div class="status-item">
-            <div class="status-label">Motor Pins</div>
-            <div class="status-value">Dir: 36, Step: 37</div>
+            <div class="status-label">Chip Model</div>
+            <div class="status-value" id="chipModel">-</div>
           </div>
           <div class="status-item">
-            <div class="status-label">Servo Pin</div>
-            <div class="status-value">Pin 2</div>
+            <div class="status-label">Free Heap</div>
+            <div class="status-value" id="freeHeap">-</div>
           </div>
           <div class="status-item">
-            <div class="status-label">LED Pins</div>
-            <div class="status-value">R:48, G:35, B:36</div>
+            <div class="status-label">Uptime</div>
+            <div class="status-value" id="uptime">-</div>
           </div>
-          <div class="status-item">
-            <div class="status-label">Button Pin</div>
-            <div class="status-value">Pin 45</div>
+        </div>
+      </div>
+
+      <!-- Pin Configuration -->
+      <div class="control-container">
+        <h3>📌 Pin Configuration</h3>
+        
+        <!-- 28BYJ-48 Motor Pins -->
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h4 style="margin-top: 0;">⚙️ 28BYJ-48 Motor</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+            <div>
+              <label>IN1:</label>
+              <input type="number" id="cfg_m28_p1" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+            <div>
+              <label>IN2:</label>
+              <input type="number" id="cfg_m28_p2" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+            <div>
+              <label>IN3:</label>
+              <input type="number" id="cfg_m28_p3" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+            <div>
+              <label>IN4:</label>
+              <input type="number" id="cfg_m28_p4" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
           </div>
+          <button class="btn btn-primary" onclick="save28BYJ48Pins()" style="margin-top: 10px;">💾 Speichern & Anwenden</button>
+        </div>
+
+        <!-- NEMA 23 Motor Pins -->
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h4 style="margin-top: 0;">⚡ NEMA 23 Motor</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+            <div>
+              <label>STEP Pin:</label>
+              <input type="number" id="cfg_nema_step" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+            <div>
+              <label>DIR Pin:</label>
+              <input type="number" id="cfg_nema_dir" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+            <div>
+              <label>ENABLE Pin:</label>
+              <input type="number" id="cfg_nema_en" class="position-input" min="0" max="48" style="width: 70px;">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveNEMA23Pins()" style="margin-top: 10px;">💾 Speichern & Anwenden</button>
+        </div>
+
+        <!-- Servo Pin -->
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h4 style="margin-top: 0;">🔄 Servo</h4>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label>GPIO Pin:</label>
+            <input type="number" id="cfg_servo_p" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" onclick="saveServoPin()">💾 Speichern & Anwenden</button>
+          </div>
+        </div>
+
+        <!-- LED Pin -->
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h4 style="margin-top: 0;">💡 LED</h4>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label>GPIO Pin:</label>
+            <input type="number" id="cfg_led_p" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" onclick="saveLedPin()">💾 Speichern & Anwenden</button>
+          </div>
+        </div>
+
+        <!-- Button Pin -->
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h4 style="margin-top: 0;">🔘 Button</h4>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label>GPIO Pin:</label>
+            <input type="number" id="cfg_btn_p" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" onclick="saveButtonPin()">💾 Speichern & Anwenden</button>
+          </div>
+        </div>
+
+        <!-- WiFi Configuration -->
+        <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 5px;">
+          <h4 style="margin-top: 0;">📡 WLAN-Konfiguration</h4>
+          <div style="background: #fff; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <div style="margin: 10px 0;">
+              <label style="display: block; font-weight: bold;">SSID (Netzwerkname):</label>
+              <input type="text" id="cfg_wifi_ssid" class="hex-input" maxlength="63" style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div style="margin: 10px 0;">
+              <label style="display: block; font-weight: bold;">Passwort:</label>
+              <input type="password" id="cfg_wifi_password" class="hex-input" maxlength="63" style="width: 100%; box-sizing: border-box;">
+              <label style="display: block; margin-top: 5px;">
+                <input type="checkbox" onclick="togglePasswordVisibility()"> Passwort anzeigen
+              </label>
+            </div>
+            <div style="margin: 10px 0;">
+              <label style="display: block; font-weight: bold;">Hostname (Gerätename):</label>
+              <input type="text" id="cfg_wifi_hostname" class="hex-input" maxlength="31" style="width: 100%; box-sizing: border-box;">
+              <small style="display: block; color: #666; margin-top: 5px;">z.B. ESP32-IScan</small>
+            </div>
+          </div>
+          <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+            <strong>⚠️ Wichtig:</strong> Nach dem Speichern wird das Gerät neu gestartet und versucht sich mit dem neuen WLAN zu verbinden.
+          </div>
+          <button class="btn btn-warning" onclick="saveWiFiConfig()">💾 WLAN-Konfiguration speichern & neu starten</button>
+        </div>
+
+        <!-- Reset to Defaults -->
+        <div style="margin: 20px 0; text-align: center;">
+          <button class="btn btn-warning" onclick="resetPinConfig()">🔄 Auf Standardwerte zurücksetzen</button>
+          <button class="btn btn-secondary" onclick="loadPinConfig()" style="margin-left: 10px;">🔃 Aktualisieren</button>
         </div>
       </div>
     </div>
@@ -508,6 +620,9 @@ const char* html = R"rawliteral(
       refreshButtonStatus();
       updateMotorStatus();
       startMotorStatusUpdates();
+      loadPinConfig();
+      loadSystemInfo();
+      setInterval(loadSystemInfo, 5000); // Update system info every 5 seconds
     });
     
     // Motor Functions
@@ -1204,6 +1319,216 @@ const char* html = R"rawliteral(
         event.preventDefault();
       }
     });
+
+    // Pin Configuration Functions
+    function loadPinConfig() {
+      fetch('/pinConfig')
+        .then(response => response.json())
+        .then(data => {
+          // 28BYJ-48 Motor
+          document.getElementById('cfg_m28_p1').value = data.motor_28byj48.pin1;
+          document.getElementById('cfg_m28_p2').value = data.motor_28byj48.pin2;
+          document.getElementById('cfg_m28_p3').value = data.motor_28byj48.pin3;
+          document.getElementById('cfg_m28_p4').value = data.motor_28byj48.pin4;
+          
+          // NEMA 23 Motor
+          document.getElementById('cfg_nema_step').value = data.nema23.step;
+          document.getElementById('cfg_nema_dir').value = data.nema23.dir;
+          document.getElementById('cfg_nema_en').value = data.nema23.enable;
+          
+          // Servo
+          document.getElementById('cfg_servo_p').value = data.servo;
+          
+          // LED
+          document.getElementById('cfg_led_p').value = data.led;
+          
+          // Button
+          document.getElementById('cfg_btn_p').value = data.button;
+          
+          // WiFi
+          if (data.wifi) {
+            document.getElementById('cfg_wifi_ssid').value = data.wifi.ssid || '';
+            document.getElementById('cfg_wifi_password').value = data.wifi.password || '';
+            document.getElementById('cfg_wifi_hostname').value = data.wifi.hostname || '';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading pin config:', error);
+          showStatus('Fehler beim Laden der Pin-Konfiguration', true);
+        });
+    }
+
+    function save28BYJ48Pins() {
+      const pin1 = document.getElementById('cfg_m28_p1').value;
+      const pin2 = document.getElementById('cfg_m28_p2').value;
+      const pin3 = document.getElementById('cfg_m28_p3').value;
+      const pin4 = document.getElementById('cfg_m28_p4').value;
+      
+      const formData = new FormData();
+      formData.append('component', 'motor_28byj48');
+      formData.append('pin1', pin1);
+      formData.append('pin2', pin2);
+      formData.append('pin3', pin3);
+      formData.append('pin4', pin4);
+      
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function saveNEMA23Pins() {
+      const stepPin = document.getElementById('cfg_nema_step').value;
+      const dirPin = document.getElementById('cfg_nema_dir').value;
+      const enablePin = document.getElementById('cfg_nema_en').value;
+      
+      const formData = new FormData();
+      formData.append('component', 'nema23');
+      formData.append('stepPin', stepPin);
+      formData.append('dirPin', dirPin);
+      formData.append('enablePin', enablePin);
+      
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function saveServoPin() {
+      const pin = document.getElementById('cfg_servo_p').value;
+      
+      const formData = new FormData();
+      formData.append('component', 'servo');
+      formData.append('pin', pin);
+      
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function saveLedPin() {
+      const pin = document.getElementById('cfg_led_p').value;
+      
+      const formData = new FormData();
+      formData.append('component', 'led');
+      formData.append('pin', pin);
+      
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function saveButtonPin() {
+      const pin = document.getElementById('cfg_btn_p').value;
+      
+      const formData = new FormData();
+      formData.append('component', 'button');
+      formData.append('pin', pin);
+      
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function resetPinConfig() {
+      if (confirm('Möchten Sie die Pin-Konfiguration wirklich auf Standardwerte zurücksetzen?')) {
+        fetch('/resetPinConfig')
+          .then(response => response.text())
+          .then(data => {
+            showStatus(data);
+            loadPinConfig();
+          })
+          .catch(error => {
+            showStatus('Fehler beim Zurücksetzen', true);
+          });
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const passwordField = document.getElementById('cfg_wifi_password');
+      passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
+    }
+
+    function saveWiFiConfig() {
+      const ssid = document.getElementById('cfg_wifi_ssid').value;
+      const password = document.getElementById('cfg_wifi_password').value;
+      const hostname = document.getElementById('cfg_wifi_hostname').value;
+      
+      if (!ssid || ssid.trim() === '') {
+        showStatus('SSID darf nicht leer sein!', true);
+        return;
+      }
+      
+      if (!hostname || hostname.trim() === '') {
+        showStatus('Hostname darf nicht leer sein!', true);
+        return;
+      }
+      
+      if (confirm('Das Gerät wird neu gestartet und versucht sich mit dem neuen WLAN zu verbinden.\\n\\nSSID: ' + ssid + '\\nHostname: ' + hostname + '\\n\\nFortfahren?')) {
+        const formData = new FormData();
+        formData.append('ssid', ssid);
+        formData.append('password', password);
+        formData.append('hostname', hostname);
+        
+        fetch('/saveWiFiConfig', { method: 'POST', body: formData })
+          .then(response => response.text())
+          .then(data => {
+            showStatus('WLAN-Konfiguration gespeichert. Neustart in 3 Sekunden...');
+            setTimeout(() => {
+              showStatus('Gerät wird neu gestartet. Bitte warten Sie ~30 Sekunden und verbinden Sie sich dann mit dem neuen WLAN.');
+            }, 1000);
+          })
+          .catch(error => {
+            showStatus('Fehler beim Speichern', true);
+          });
+      }
+    }
+
+    function loadSystemInfo() {
+      fetch('/systemInfo')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('chipModel').textContent = data.chipModel + ' (' + data.chipCores + ' cores)';
+          document.getElementById('freeHeap').textContent = (data.freeHeap / 1024).toFixed(1) + ' KB / ' + (data.heapSize / 1024).toFixed(1) + ' KB';
+          
+          const uptimeSeconds = data.uptime;
+          const hours = Math.floor(uptimeSeconds / 3600);
+          const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+          const seconds = uptimeSeconds % 60;
+          document.getElementById('uptime').textContent = hours + 'h ' + minutes + 'm ' + seconds + 's';
+        })
+        .catch(error => {
+          console.error('Error loading system info:', error);
+        });
+    }
   </script>
 </body>
 </html>
@@ -1232,6 +1557,13 @@ void setupWebServer() {
   // 28BYJ-48 Motor Routes
   server.on("/motor28byj48", HTTP_GET, handle28BYJ48MotorControl);
   server.on("/motor28byj48Status", HTTP_GET, handle28BYJ48MotorStatus);
+
+  // Pin Configuration Routes
+  server.on("/pinConfig", HTTP_GET, handlePinConfig);
+  server.on("/savePinConfig", HTTP_POST, handleSavePinConfig);
+  server.on("/resetPinConfig", HTTP_GET, handleResetPinConfig);
+  server.on("/systemInfo", HTTP_GET, handleSystemInfo);
+  server.on("/saveWiFiConfig", HTTP_POST, handleSaveWiFiConfig);
 
   
   server.onNotFound(handleNotFound);
@@ -1689,6 +2021,164 @@ void handle28BYJ48MotorStatus() {
     "}";
   
   server.send(200, "application/json", jsonResponse);
+}
+
+// Pin Configuration Handler
+void handlePinConfig() {
+  PinConfiguration config = getPinConfig();
+  
+  String jsonResponse = "{"
+    "\"motor_28byj48\":{\"pin1\":" + String(config.motor_28byj48_pin1) + 
+    ",\"pin2\":" + String(config.motor_28byj48_pin2) + 
+    ",\"pin3\":" + String(config.motor_28byj48_pin3) + 
+    ",\"pin4\":" + String(config.motor_28byj48_pin4) + "},"
+    "\"nema23\":{\"step\":" + String(config.nema23_step_pin) + 
+    ",\"dir\":" + String(config.nema23_dir_pin) + 
+    ",\"enable\":" + String(config.nema23_enable_pin) + "},"
+    "\"servo\":" + String(config.servo_pin) + ","
+    "\"led\":" + String(config.led_pin) + ","
+    "\"button\":" + String(config.button_pin) + ","
+    "\"wifi\":{\"ssid\":\"" + String(config.wifi_ssid) + 
+    "\",\"password\":\"" + String(config.wifi_password) + 
+    "\",\"hostname\":\"" + String(config.wifi_hostname) + "\"}"
+    "}";
+  
+  server.send(200, "application/json", jsonResponse);
+}
+
+// Save Pin Configuration Handler
+void handleSavePinConfig() {
+  if (server.hasArg("component")) {
+    String component = server.arg("component");
+    
+    if (component == "motor_28byj48") {
+      if (server.hasArg("pin1") && server.hasArg("pin2") && server.hasArg("pin3") && server.hasArg("pin4")) {
+        int pin1 = server.arg("pin1").toInt();
+        int pin2 = server.arg("pin2").toInt();
+        int pin3 = server.arg("pin3").toInt();
+        int pin4 = server.arg("pin4").toInt();
+        
+        set28BYJ48Pins(pin1, pin2, pin3, pin4);
+        
+        // Motor neu initialisieren mit neuen Pins
+        setup28BYJ48Motor();
+        
+        server.send(200, "text/plain", "28BYJ-48 Pins gespeichert und angewendet");
+      } else {
+        server.send(400, "text/plain", "Missing pin parameters");
+      }
+    } 
+    else if (component == "nema23") {
+      if (server.hasArg("stepPin") && server.hasArg("dirPin") && server.hasArg("enablePin")) {
+        int stepPin = server.arg("stepPin").toInt();
+        int dirPin = server.arg("dirPin").toInt();
+        int enablePin = server.arg("enablePin").toInt();
+        
+        setNEMA23Pins(stepPin, dirPin, enablePin);
+        server.send(200, "text/plain", "NEMA 23 Motor Pins gespeichert (Neustart erforderlich)");
+      } else {
+        server.send(400, "text/plain", "Missing pin parameters");
+      }
+    }
+    else if (component == "servo") {
+      if (server.hasArg("pin")) {
+        int pin = server.arg("pin").toInt();
+        setServoPin(pin);
+        
+        // Servo neu initialisieren mit neuem Pin
+        setupServo();
+        
+        server.send(200, "text/plain", "Servo Pin gespeichert und angewendet");
+      } else {
+        server.send(400, "text/plain", "Missing pin parameter");
+      }
+    }
+    else if (component == "led") {
+      if (server.hasArg("pin")) {
+        int pin = server.arg("pin").toInt();
+        setLedPin(pin);
+        server.send(200, "text/plain", "LED Pin gespeichert (Neustart erforderlich)");
+      } else {
+        server.send(400, "text/plain", "Missing pin parameter");
+      }
+    }
+    else if (component == "button") {
+      if (server.hasArg("pin")) {
+        int pin = server.arg("pin").toInt();
+        setButtonPin(pin);
+        server.send(200, "text/plain", "Button Pin gespeichert (Neustart erforderlich)");
+      } else {
+        server.send(400, "text/plain", "Missing pin parameter");
+      }
+    }
+    else {
+      server.send(400, "text/plain", "Invalid component");
+    }
+  } else {
+    server.send(400, "text/plain", "Missing component parameter");
+  }
+}
+
+// Reset Pin Configuration Handler
+void handleResetPinConfig() {
+  resetPinConfigToDefaults();
+  savePinConfig();
+  
+  // Module neu initialisieren
+  setup28BYJ48Motor();
+  setupServo();
+  
+  server.send(200, "text/plain", "Pin-Konfiguration zurückgesetzt (Neustart empfohlen für vollständige Anwendung)");
+}
+
+// System Info Handler
+void handleSystemInfo() {
+  String jsonResponse = "{"
+    "\"chipModel\":\"" + String(ESP.getChipModel()) + "\","
+    "\"chipCores\":" + String(ESP.getChipCores()) + ","
+    "\"freeHeap\":" + String(ESP.getFreeHeap()) + ","
+    "\"heapSize\":" + String(ESP.getHeapSize()) + ","
+    "\"uptime\":" + String(millis() / 1000) + ","
+    "\"flashSize\":" + String(ESP.getFlashChipSize()) +
+    "}";
+  
+  server.send(200, "application/json", jsonResponse);
+}
+
+// Save WiFi Configuration Handler
+void handleSaveWiFiConfig() {
+  if (server.hasArg("ssid") && server.hasArg("password") && server.hasArg("hostname")) {
+    String ssid = server.arg("ssid");
+    String password = server.arg("password");
+    String hostname = server.arg("hostname");
+    
+    // Validierung
+    if (ssid.length() == 0 || ssid.length() > 63) {
+      server.send(400, "text/plain", "SSID ungültig (1-63 Zeichen)");
+      return;
+    }
+    
+    if (password.length() > 63) {
+      server.send(400, "text/plain", "Passwort zu lang (max 63 Zeichen)");
+      return;
+    }
+    
+    if (hostname.length() == 0 || hostname.length() > 31) {
+      server.send(400, "text/plain", "Hostname ungültig (1-31 Zeichen)");
+      return;
+    }
+    
+    // WiFi-Konfiguration speichern
+    setWiFiConfig(ssid.c_str(), password.c_str(), hostname.c_str());
+    
+    server.send(200, "text/plain", "WiFi-Konfiguration gespeichert. Neustart in 3 Sekunden...");
+    
+    // Kurze Verzögerung, dann ESP neu starten
+    delay(3000);
+    ESP.restart();
+  } else {
+    server.send(400, "text/plain", "Fehlende Parameter");
+  }
 }
 
 // Handle not found (404)

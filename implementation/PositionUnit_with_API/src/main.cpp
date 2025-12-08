@@ -7,6 +7,7 @@
 #include "advanced_motor.h" // Include advanced motor header
 #include "button_control.h" // Include button header
 #include "motor_28byj48.h"  // Include 28BYJ-48 motor header
+#include "pin_config.h"     // Include pin configuration header
 
 // Auto-Test Variablen
 bool auto_test_running = false;
@@ -22,6 +23,9 @@ void setup() {
   delay(1000);
   
   Serial.println("I-Scan Controller started");
+  
+  // Pin-Konfiguration initialisieren (lädt aus EEPROM oder setzt Defaults)
+  initPinConfig();
   
   // LED setup
   setupLEDs();

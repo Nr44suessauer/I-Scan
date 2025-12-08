@@ -1,14 +1,24 @@
 #include "wifi_manager.h"
+#include "pin_config.h"
 
-// Netzwerk-Konfiguration
-const char* SSID = "Teekanne";
-const char* PASSWORD = "49127983361694305550";
+// Netzwerk-Konfiguration - wird aus EEPROM geladen
+char current_ssid[64] = "Teekanne";
+char current_password[64] = "49127983361694305550";
+char current_hostname[32] = "ESP32-IScan";
 
 void setupWiFi() {
-  Serial.print("Verbindung mit WLAN wird hergestellt: ");
-  Serial.println(SSID);
+  // Lade WiFi-Konfiguration aus EEPROM
+  getWiFiConfig(current_ssid, current_password, current_hostname);
   
-  WiFi.begin(SSID, PASSWORD);
+  // Setze Hostname
+  WiFi.setHostname(current_hostname);
+  
+  Serial.print("Verbindung mit WLAN wird hergestellt: ");
+  Serial.println(current_ssid);
+  Serial.print("Hostname: ");
+  Serial.println(current_hostname);
+  
+  WiFi.begin(current_ssid, current_password);
   
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -24,7 +34,7 @@ void checkWiFiConnection() {
     Serial.println("WLAN-Verbindung verloren. Versuche Wiederverbindung...");
     setColorByIndex(0);  // Rot für Verbindungsverlust
     
-    WiFi.begin(SSID, PASSWORD);
+    WiFi.begin(current_ssid, current_password);
     
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);

@@ -5,9 +5,10 @@
 #include <WiFi.h>
 #include "led_control.h"
 
-// Network Configuration
-extern const char* SSID;
-extern const char* PASSWORD;
+// Network Configuration - werden aus EEPROM geladen
+extern char current_ssid[64];
+extern char current_password[64];
+extern char current_hostname[32];
 
 void setupWiFi();
 void checkWiFiConnection();
