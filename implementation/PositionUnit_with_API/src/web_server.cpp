@@ -29,6 +29,8 @@ void handleGetPinConfig(); // Get pin configuration as JSON
 void handleSetServoPin(); // Set servo pin
 void handleSetLedPin(); // Set LED pin
 void handleSetButtonPin(); // Set button pin
+void handleGetDeviceInfo(); // Get device information
+void handleSetDeviceInfo(); // Set device information
 
 
 // WebServer configuration
@@ -496,6 +498,38 @@ const char html[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
+      <!-- Device Information -->
+      <div class="control-container">
+        <h3>🏷️ Device Information (EEPROM gespeichert)</h3>
+        <div style="background: #fff; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+          <div style="margin: 15px 0;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Device Name:</label>
+            <input type="text" id="cfg_device_name" class="hex-input" maxlength="63" style="width: 100%; box-sizing: border-box;" placeholder="ESP32-IScan">
+            <small style="display: block; color: #666; margin-top: 5px;">z.B. I-Scan-Positionseinheit-1</small>
+          </div>
+          <div style="margin: 15px 0;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Device Number:</label>
+            <input type="text" id="cfg_device_number" class="hex-input" maxlength="31" style="width: 100%; box-sizing: border-box;" placeholder="0001">
+            <small style="display: block; color: #666; margin-top: 5px;">z.B. 0001, Unit-42, POS-001</small>
+          </div>
+          <div style="margin: 15px 0;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Configuration:</label>
+            <input type="text" id="cfg_device_config" class="hex-input" maxlength="127" style="width: 100%; box-sizing: border-box;" placeholder="Standard Configuration">
+            <small style="display: block; color: #666; margin-top: 5px;">z.B. Lab-Setup-A, Production-Config</small>
+          </div>
+          <div style="margin: 15px 0;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Description:</label>
+            <textarea id="cfg_device_description" class="hex-input" maxlength="255" style="width: 100%; box-sizing: border-box; height: 80px; resize: vertical; padding: 10px;" placeholder="Beschreibung des Geräts und seiner Verwendung"></textarea>
+            <small style="display: block; color: #666; margin-top: 5px;">Zusätzliche Informationen über dieses Gerät</small>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button class="btn btn-primary" onclick="saveDeviceInfo()">💾 Device Information speichern</button>
+          <button class="btn btn-secondary" onclick="loadDeviceInfo()">🔃 Aktualisieren</button>
+        </div>
+        <div id="deviceInfoStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+      </div>
+
       <!-- Pin Configuration -->
       <div class="control-container">
         <h3>📌 Pin Configuration</h3>
@@ -651,6 +685,13 @@ const char html[] PROGMEM = R"rawliteral(
         startMotorStatusUpdates();
       } else {
         stopMotorStatusUpdates();
+      }
+      
+      // Load system and device info when Status tab is opened
+      if (tabName === 'StatusTab') {
+        loadSystemInfo();
+        loadDeviceInfo();
+        loadPinConfig();
       }
     }
     
@@ -1615,6 +1656,71 @@ const char html[] PROGMEM = R"rawliteral(
           console.error('Error loading system info:', error);
         });
     }
+
+    // Device Information Funktionen
+    function loadDeviceInfo() {
+      fetch('/getDeviceInfo')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('cfg_device_name').value = data.deviceName || '';
+          document.getElementById('cfg_device_number').value = data.deviceNumber || '';
+          document.getElementById('cfg_device_config').value = data.configuration || '';
+          document.getElementById('cfg_device_description').value = data.description || '';
+          showDeviceInfoStatus('Device Information geladen', false);
+        })
+        .catch(error => {
+          console.error('Error loading device info:', error);
+          showDeviceInfoStatus('Fehler beim Laden der Device Information', true);
+        });
+    }
+
+    function saveDeviceInfo() {
+      const deviceName = document.getElementById('cfg_device_name').value;
+      const deviceNumber = document.getElementById('cfg_device_number').value;
+      const configuration = document.getElementById('cfg_device_config').value;
+      const description = document.getElementById('cfg_device_description').value;
+
+      let url = '/setDeviceInfo?';
+      const params = [];
+      
+      if (deviceName) params.push('deviceName=' + encodeURIComponent(deviceName));
+      if (deviceNumber) params.push('deviceNumber=' + encodeURIComponent(deviceNumber));
+      if (configuration) params.push('configuration=' + encodeURIComponent(configuration));
+      if (description) params.push('description=' + encodeURIComponent(description));
+      
+      if (params.length === 0) {
+        showDeviceInfoStatus('Keine Änderungen zum Speichern', true);
+        return;
+      }
+      
+      url += params.join('&');
+      
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          showDeviceInfoStatus('✅ ' + data, false);
+          // Aktualisiere nach dem Speichern
+          setTimeout(() => loadDeviceInfo(), 500);
+        })
+        .catch(error => {
+          console.error('Error saving device info:', error);
+          showDeviceInfoStatus('❌ Fehler beim Speichern', true);
+        });
+    }
+
+    function showDeviceInfoStatus(message, isError) {
+      const statusElement = document.getElementById('deviceInfoStatus');
+      statusElement.textContent = message;
+      statusElement.style.display = 'block';
+      statusElement.style.backgroundColor = isError ? '#ffebee' : '#e8f5e9';
+      statusElement.style.color = isError ? '#c62828' : '#2e7d32';
+      statusElement.style.border = '1px solid ' + (isError ? '#ef9a9a' : '#a5d6a7');
+      
+      // Verstecke Status nach 5 Sekunden
+      setTimeout(() => {
+        statusElement.style.display = 'none';
+      }, 5000);
+    }
   </script>
 </body>
 </html>
@@ -1654,6 +1760,8 @@ void setupWebServer() {
   server.on("/setServoPin", HTTP_GET, handleSetServoPin);
   server.on("/setLedPin", HTTP_GET, handleSetLedPin);
   server.on("/setButtonPin", HTTP_GET, handleSetButtonPin);
+  server.on("/getDeviceInfo", HTTP_GET, handleGetDeviceInfo);
+  server.on("/setDeviceInfo", HTTP_GET, handleSetDeviceInfo);
 
   
   server.onNotFound(handleNotFound);
@@ -2338,4 +2446,60 @@ void handleSetButtonPin() {
 // Handle not found (404)
 void handleNotFound() {
   server.send(404, "text/plain", "404: Not found");
+}
+
+// Get Device Information
+void handleGetDeviceInfo() {
+  DeviceInfo info = getDeviceInfo();
+  
+  String json = "{";
+  json += "\"deviceName\":\"" + info.deviceName + "\",";
+  json += "\"deviceNumber\":\"" + info.deviceNumber + "\",";
+  json += "\"configuration\":\"" + info.configuration + "\",";
+  json += "\"description\":\"" + info.description + "\"";
+  json += "}";
+  
+  server.send(200, "application/json", json);
+}
+
+// Set Device Information
+void handleSetDeviceInfo() {
+  bool updated = false;
+  String message = "Device Information aktualisiert: ";
+  
+  if (server.hasArg("deviceName")) {
+    String deviceName = server.arg("deviceName");
+    setDeviceName(deviceName.c_str());
+    message += "DeviceName, ";
+    updated = true;
+  }
+  
+  if (server.hasArg("deviceNumber")) {
+    String deviceNumber = server.arg("deviceNumber");
+    setDeviceNumber(deviceNumber.c_str());
+    message += "DeviceNumber, ";
+    updated = true;
+  }
+  
+  if (server.hasArg("configuration")) {
+    String configuration = server.arg("configuration");
+    setConfiguration(configuration.c_str());
+    message += "Configuration, ";
+    updated = true;
+  }
+  
+  if (server.hasArg("description")) {
+    String description = server.arg("description");
+    setDescription(description.c_str());
+    message += "Description, ";
+    updated = true;
+  }
+  
+  if (updated) {
+    // Entferne das letzte Komma und Leerzeichen
+    message = message.substring(0, message.length() - 2);
+    server.send(200, "text/plain", message);
+  } else {
+    server.send(400, "text/plain", "Keine Parameter angegeben");
+  }
 }

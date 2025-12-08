@@ -6,6 +6,7 @@
 
 // EEPROM Namespace
 #define EEPROM_NAMESPACE "pin_config"
+#define DEVICE_INFO_NAMESPACE "device_info"
 
 // Pin-Konfigurationsstruktur
 struct PinConfiguration {
@@ -66,5 +67,23 @@ int getServoPin();
 int getLedPin();
 int getButtonPin();
 void getWiFiConfig(char* ssid, char* password, char* hostname);
+
+// Device Information Struktur
+struct DeviceInfo {
+    String deviceName;
+    String deviceNumber;
+    String configuration;
+    String description;
+};
+
+// Device Information Funktionen
+void initDeviceInfo();
+void loadDeviceInfo();
+void saveDeviceInfo();
+DeviceInfo getDeviceInfo();
+void setDeviceName(const char* name);
+void setDeviceNumber(const char* number);
+void setConfiguration(const char* config);
+void setDescription(const char* desc);
 
 #endif // PIN_CONFIG_H

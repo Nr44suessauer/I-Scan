@@ -27,6 +27,9 @@ void setup() {
   // Pin-Konfiguration initialisieren (lädt aus EEPROM oder setzt Defaults)
   initPinConfig();
   
+  // Device Information initialisieren
+  initDeviceInfo();
+  
   // LED setup
   setupLEDs();
   

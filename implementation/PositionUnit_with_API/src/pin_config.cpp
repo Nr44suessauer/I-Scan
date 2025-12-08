@@ -298,3 +298,96 @@ void getWiFiConfig(char* ssid, char* password, char* hostname) {
     if (password) strcpy(password, currentPinConfig.wifi_password);
     if (hostname) strcpy(hostname, currentPinConfig.wifi_hostname);
 }
+
+// ==================== Device Information Functions ====================
+
+// Globale Device Information
+DeviceInfo currentDeviceInfo;
+
+/**
+ * Initialisiert die Device Information
+ * Lädt gespeicherte Werte oder setzt Standardwerte
+ */
+void initDeviceInfo() {
+    loadDeviceInfo();
+}
+
+/**
+ * Lädt die Device Information aus dem EEPROM
+ */
+void loadDeviceInfo() {
+    preferences.begin(DEVICE_INFO_NAMESPACE, false);
+    
+    currentDeviceInfo.deviceName = preferences.getString("deviceName", "ESP32-Device");
+    currentDeviceInfo.deviceNumber = preferences.getString("deviceNumber", "0001");
+    currentDeviceInfo.configuration = preferences.getString("configuration", "Default Configuration");
+    currentDeviceInfo.description = preferences.getString("description", "");
+    
+    preferences.end();
+    
+    Serial.println("✅ Device Information aus EEPROM geladen");
+    Serial.println("   Device Name: " + currentDeviceInfo.deviceName);
+    Serial.println("   Device Number: " + currentDeviceInfo.deviceNumber);
+    Serial.println("   Configuration: " + currentDeviceInfo.configuration);
+    Serial.println("   Description: " + currentDeviceInfo.description);
+}
+
+/**
+ * Speichert die aktuelle Device Information im EEPROM
+ */
+void saveDeviceInfo() {
+    preferences.begin(DEVICE_INFO_NAMESPACE, false);
+    
+    preferences.putString("deviceName", currentDeviceInfo.deviceName);
+    preferences.putString("deviceNumber", currentDeviceInfo.deviceNumber);
+    preferences.putString("configuration", currentDeviceInfo.configuration);
+    preferences.putString("description", currentDeviceInfo.description);
+    
+    preferences.end();
+    
+    Serial.println("💾 Device Information im EEPROM gespeichert");
+}
+
+/**
+ * Gibt die aktuelle Device Information zurück
+ */
+DeviceInfo getDeviceInfo() {
+    return currentDeviceInfo;
+}
+
+/**
+ * Setzt den Device Name
+ */
+void setDeviceName(const char* name) {
+    currentDeviceInfo.deviceName = String(name);
+    saveDeviceInfo();
+    Serial.println("✅ Device Name gesetzt: " + currentDeviceInfo.deviceName);
+}
+
+/**
+ * Setzt die Device Number
+ */
+void setDeviceNumber(const char* number) {
+    currentDeviceInfo.deviceNumber = String(number);
+    saveDeviceInfo();
+    Serial.println("✅ Device Number gesetzt: " + currentDeviceInfo.deviceNumber);
+}
+
+/**
+ * Setzt die Configuration
+ */
+void setConfiguration(const char* config) {
+    currentDeviceInfo.configuration = String(config);
+    saveDeviceInfo();
+    Serial.println("✅ Configuration gesetzt: " + currentDeviceInfo.configuration);
+}
+
+/**
+ * Setzt die Description
+ */
+void setDescription(const char* desc) {
+    currentDeviceInfo.description = String(desc);
+    saveDeviceInfo();
+    Serial.println("✅ Description gesetzt: " + currentDeviceInfo.description);
+}
+
