@@ -1,0 +1,9 @@
+type,params,description
+servo,"{""angle"": 70}",Set servo to 70°
+photo,"{""delay"": 2.0}",Capture photo
+stepper,"{""steps"": 500, ""direction"": -1, ""speed"": 80}",Move down
+servo,"{""angle"": 80}",Set servo to 80°
+photo,"{""delay"": 2.0}",Capture photo
+stepper,"{""steps"": 500, ""direction"": -1, ""speed"": 80}",Move down
+servo,"{""angle"": 90}",Set servo to 90°
+photo,"{""delay"": 2.0}",Capture photo

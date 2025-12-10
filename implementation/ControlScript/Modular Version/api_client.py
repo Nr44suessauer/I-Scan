@@ -157,4 +157,5 @@ class ApiClient:
             bool: True, wenn der Button gedrückt ist, sonst False
         """
         btn_str = str(response).lower()
+        print(response)
         return ('true' in btn_str) or ('1' in btn_str) or ('"pressed": true' in btn_str)

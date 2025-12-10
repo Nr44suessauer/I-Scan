@@ -3,9 +3,9 @@
     {
       "index": 1,
       "connection": "USB:0",
-      "description": "Second camera USB port 1",
-      "name": "Web Cam",
-      "enabled": true,
+      "description": "External USB WebCam",
+      "name": "External Cam",
+      "enabled": false,
       "resolution": [
         640,
         480
@@ -13,34 +13,23 @@
       "fps": 30
     },
     {
-      "index": 2,
-      "connection": "HTTP:http://192.168.178.100:4747",
-      "description": "DroidCam app",
-      "name": "MobilePhone DroidCam",
+      "index": 0,
+      "connection": "USB:1",
+      "description": "Webcam",
+      "name": "Webcam",
       "enabled": true,
       "resolution": [
         640,
         480
-      ]
+      ],
+      "fps": 30
     },
     {
       "index": 3,
-      "connection": "HTTP:http://192.168.178.100:8080",
-      "description": "IP Webcam app",
-      "name": "MobilePhone IP Webcam",
-      "enabled": true,
-      "resolution": [
-        640,
-        480
-      ],
-      "fps": 30
-    },
-    {
-      "index": 4,
-      "connection": "USB:4",
-      "description": "New camera description 4",
-      "name": "Camera 5",
-      "enabled": true,
+      "connection": "HTTP:http://192.168.137.163:81",
+      "description": "ESP",
+      "name": "ESP",
+      "enabled": false,
       "resolution": [
         640,
         480

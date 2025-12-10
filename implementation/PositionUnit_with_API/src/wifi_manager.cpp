@@ -14,7 +14,7 @@ void setupWiFi() {
     delay(500);
     Serial.print(".");
   }
-  
+   
   Serial.println();
   printNetworkStatus();
 }
