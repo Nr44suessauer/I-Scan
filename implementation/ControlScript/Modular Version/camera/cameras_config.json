@@ -17,7 +17,7 @@
       "connection": "HTTP:http://192.168.178.100:4747",
       "description": "DroidCam app",
       "name": "MobilePhone DroidCam",
-      "enabled": true,
+      "enabled": false,
       "resolution": [
         640,
         480
@@ -28,7 +28,7 @@
       "connection": "HTTP:http://192.168.178.100:8080",
       "description": "IP Webcam app",
       "name": "MobilePhone IP Webcam",
-      "enabled": true,
+      "enabled": false,
       "resolution": [
         640,
         480
@@ -40,7 +40,7 @@
       "connection": "USB:4",
       "description": "New camera description 4",
       "name": "Camera 5",
-      "enabled": true,
+      "enabled": false,
       "resolution": [
         640,
         480
