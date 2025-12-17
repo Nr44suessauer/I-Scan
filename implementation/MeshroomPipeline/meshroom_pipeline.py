@@ -14,7 +14,7 @@ MR_PIPELINE_DIR = r"C:\_MAIN\ARBEIT\STUDIUM\MASTER\SEMESTER1\MRL\Repo\I-Scan\imp
 # IMAGES_DIR = r"C:\_MAIN\ARBEIT\STUDIUM\MASTER\SEMESTER1\MRL\Repo\I-Scan\implementation\ControlScript\Modular Version\pictures"
 IMAGES_DIR = MR_PIPELINE_DIR + r"\images\skull"
 
-SFM_DIR = MR_PIPELINE_DIR + r"\images"
+SFM_DIR = MR_PIPELINE_DIR + r"\images\cameraInit.sfm"
 PIPELINE_DIR = MR_PIPELINE_DIR + "\\pipelines\\" # Templates can be found here: C:\_MAIN\PROGRAMME\MESHROOM\Meshroom-2025.1.0-Windows\Meshroom-2025.1.0\aliceVision\share\meshroom
 OVERRIDE_PATH = MR_PIPELINE_DIR + r"\overrides\meshroom_override.json"
 CACHE_DIR = MR_PIPELINE_DIR + r"\cache"
@@ -28,7 +28,7 @@ def run_meshroom_pipeline():
         print("\nConvert Images to SFM.")
         convert_images()
         print("\nStarting Meshroom Pipeline.")
-        # run_meshroom()
+        run_meshroom()
         print("\nPipeline execution complete.")
     except Exception as e:
         print(f"\nFATAL ERROR: Pipeline aborted: {e}")
@@ -45,11 +45,12 @@ def convert_images():
         CAMERA_INIT_EXE,
         "--sensorDatabase", SENSOR_DB_PATH,
         "--imageFolder", IMAGES_DIR,
-        "--output", os.path.join(SFM_DIR, "cameraInit.sfm"),
-        "--defaultFieldOfView", CAMERA_FOV
+        "--output", SFM_DIR,
+        "--defaultFieldOfView", CAMERA_FOV,
+        "--groupCameraFallback", "folder", 
+        "--allowSingleView", "1"
     ]
 
-    print("\n\n====================")
     try:
         subprocess.run(command, check=True, env=env)
         print(f"✅ Created SFM file at: {SFM_DIR}")

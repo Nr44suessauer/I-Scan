@@ -15,6 +15,7 @@ import threading
 from datetime import datetime
 from PIL import Image, ImageTk
 import numpy as np
+import piexif
 
 
 class CameraHelper:
@@ -242,9 +243,22 @@ class CameraHelper:
             pictures_dir = os.path.join(os.getcwd(), "pictures")
             os.makedirs(pictures_dir, exist_ok=True)
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"photo_{timestamp}.png"
+            filename = f"photo_{self.model.replace(' ', '_')}_{timestamp}.jpg"
             filepath = os.path.join(pictures_dir, filename)
             cv2.imwrite(filepath, frame)
+
+            # Camera Metadata
+            focal_length_mm = (350, 100) # 3.5mm
+        
+            exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}}
+            exif_dict["0th"][piexif.ImageIFD.Make] = "Espressif"
+            exif_dict["0th"][piexif.ImageIFD.Model] = "ESP32-CAM-MODULAR"
+            exif_dict["Exif"][piexif.ExifIFD.FocalLength] = focal_length_mm
+            
+            # 3. Write EXIF to file
+            exif_bytes = piexif.dump(exif_dict)
+            piexif.insert(exif_bytes, filepath)
+
             return filepath
         return None
     
