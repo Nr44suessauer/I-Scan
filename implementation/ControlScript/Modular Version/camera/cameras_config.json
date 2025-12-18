@@ -5,7 +5,7 @@
       "connection": "USB:0",
       "description": "Second camera USB port 1",
       "name": "Web Cam",
-      "enabled": true,
+      "enabled": false,
       "resolution": [
         640,
         480
@@ -13,14 +13,14 @@
       "fps": 30
     },
     {
-      "index": 2,
-      "connection": "HTTP:http://192.168.178.100:4747",
-      "description": "DroidCam app",
-      "name": "MobilePhone DroidCam",
-      "enabled": false,
+      "index": 0,
+      "connection": "HTTP:http://192.168.137.122:81/video",
+      "description": "ESP Cam",
+      "name": "ESP Cam",
+      "enabled": true,
       "resolution": [
-        640,
-        480
+        1280,
+        720
       ]
     },
     {

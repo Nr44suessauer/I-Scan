@@ -113,6 +113,7 @@ class CameraHelper:
         cap_source = self.device_index
         # If device_index is an HTTP URL, use it directly
         if isinstance(cap_source, str) and cap_source.lower().startswith("http"):
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "timeout;5000000"
             # Open HTTP stream (e.g. DroidCam)
             self.cap = cv2.VideoCapture(cap_source)
         else:

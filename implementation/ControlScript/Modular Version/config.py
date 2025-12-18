@@ -7,7 +7,7 @@ All default values and configuration constants in one place.
 PI = 3.141592653589793
 
  # API Configuration
-DEFAULT_BASE_URL = "http://192.168.137.7"
+DEFAULT_BASE_URL = "http://192.168.137.161"
 
  # Hardware Defaults
 DEFAULT_DIAMETER = "28"
