@@ -16,6 +16,8 @@ from datetime import datetime
 from PIL import Image, ImageTk
 import numpy as np
 import piexif
+import math
+import requests
 
 
 class CameraHelper:
@@ -229,7 +231,8 @@ class CameraHelper:
     
     def capture_image(self, delay=0.2):
         """
-        Capture the current camera image and save it as a PNG file in the 'pictures' folder.
+        Capture the current camera image and save it as a JPG file in the 'pictures' folder.
+        For HTTP cameras, uses the /capture endpoint. For USB cameras, reads a frame directly.
         Performs a delay after capture.
         Returns the path to the saved file.
         
@@ -238,8 +241,40 @@ class CameraHelper:
         """
         # Short delay before capture so camera can provide a new frame
         time.sleep(delay)
-        # Try to read a current frame directly from the camera
-        frame = self.read_frame()
+        
+        frame = None
+        
+        # Check if this is an HTTP camera with capture
+        if isinstance(self.device_index, str) and self.device_index.lower().startswith("http"):
+            # Use the /capture endpoint for HTTP cameras (ESP32-CAM).
+            # If /capture fails (network error, non-200 or decode error), fall back to reading a frame from the stream.
+            try:
+                # Construct a capture URL from the video URL in a robust way
+                capture_url = self.device_index
+                if capture_url.endswith(":81/video"):
+                    capture_url = self.device_index.replace(":81/video", "/capture")
+                elif capture_url.endswith("/video"):
+                    capture_url = self.device_index.replace("/video", "/capture")
+
+                print("Trying to take image from: " + capture_url)
+
+                response = requests.get(capture_url, timeout=5)
+                response.raise_for_status()
+
+                # Decode the image from the response
+                frame_array = np.frombuffer(response.content, np.uint8)
+                frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+                if frame is None:
+                    # Decoding failed -> raise to trigger fallback
+                    raise ValueError("Failed to decode image from capture endpoint")
+            except Exception as e:
+                # Log and fall back to reading from the active stream
+                print(f"Error capturing image from endpoint {self.device_index}: {e}; falling back to stream read_frame()")
+                frame = self.read_frame()
+        else:
+            # For USB cameras and streams, read a frame directly from the stream
+            frame = self.read_frame()
+
         if frame is not None:
             pictures_dir = os.path.join(os.getcwd(), "pictures")
             os.makedirs(pictures_dir, exist_ok=True)
@@ -255,6 +290,21 @@ class CameraHelper:
             exif_dict["0th"][piexif.ImageIFD.Make] = "Espressif"
             exif_dict["0th"][piexif.ImageIFD.Model] = "ESP32-CAM-MODULAR"
             exif_dict["Exif"][piexif.ExifIFD.FocalLength] = focal_length_mm
+
+            # lat_val, lon_val, alt_val = self.get_fake_gps(current_angle, current_z_pos)
+
+            # exif_dict["GPS"] = {
+            #     piexif.GPSIFD.GPSLatitudeRef: 'N' if lat_val >= 0 else 'S',
+            #     piexif.GPSIFD.GPSLatitude: self.to_deg_min_sec(lat_val),
+            #     piexif.GPSIFD.GPSLongitudeRef: 'E' if lon_val >= 0 else 'W',
+            #     piexif.GPSIFD.GPSLongitude: self.to_deg_min_sec(lon_val),
+            #     piexif.GPSIFD.GPSAltitudeRef: 0,
+            #     piexif.GPSIFD.GPSAltitude: (int(alt_val), 1)
+            # }
+
+            # Now dump and insert as you were doing before
+            exif_bytes = piexif.dump(exif_dict)
+            piexif.insert(exif_bytes, filepath)
             
             # 3. Write EXIF to file
             exif_bytes = piexif.dump(exif_dict)
@@ -262,6 +312,29 @@ class CameraHelper:
 
             return filepath
         return None
+    
+    def get_fake_gps(self, angle_degrees, height_mm, radius=0.0001):
+      """
+      Calculates fake GPS rational tuples.
+      radius: How far 'out' the camera is. 0.0001 is roughly 11 meters.
+      """
+      # Convert turntable angle to radians
+      # Note: If object rotates clockwise, camera 'appears' to move counter-clockwise
+      rad = math.radians(angle_degrees)
+      
+      # Calculate offset from center (0,0)
+      fake_lat = radius * math.cos(rad)
+      fake_lon = radius * math.sin(rad)
+      
+      return fake_lat, fake_lon, height_mm
+
+    def to_deg_min_sec(self, value):
+        """Converts decimal degrees to (degrees, minutes, seconds) for EXIF."""
+        abs_val = abs(value)
+        d = int(abs_val)
+        m = int((abs_val - d) * 60)
+        s = int((abs_val - d - m/60) * 3600 * 100)
+        return ((d, 1), (m, 1), (s, 100))
     
     def _make_square_frame(self, frame, target_size):
         """
