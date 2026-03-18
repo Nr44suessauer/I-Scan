@@ -1,4 +1,5 @@
 #include "button_control.h"
+#include "driver/gpio.h"
 
 // Variables for faster debouncing
 unsigned long lastDebounceTime = 0;
@@ -11,7 +12,13 @@ bool buttonStateChanged = false;     // Flag for state change
  * @brief Initializes the button pin as input with pull-up resistor.
  */
 void setupButton() {
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    if (!GPIO_IS_VALID_GPIO(static_cast<gpio_num_t>(BUTTON_PIN))) {
+        Serial.println("Button GPIO ungültig, Button-Init uebersprungen");
+        return;
+    }
+
+    // INPUT is safer on all S3 GPIOs. External pull-up/down can be provided in hardware.
+    pinMode(BUTTON_PIN, INPUT);
     Serial.println("Button at pin " + String(BUTTON_PIN) + " initialized");
     
     // Initially read and output button status

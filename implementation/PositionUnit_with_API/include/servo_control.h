@@ -14,8 +14,12 @@
 #include "freertos/task.h"
 #include "driver/ledc.h"
 
-// Pin für den Servo-Motor (definiert in main.cpp)
+// Multi-servo support
+#define MAX_SERVOS 3
+
+// Backward-compatible legacy pin alias (servo 1)
 extern int SERVO_GPIO_PIN;
+extern int SERVO_GPIO_PINS[MAX_SERVOS];
 
 // Definitions for the servo motor
 #define SERVO_MIN_PULSE   500       ///< Minimum pulse width in microseconds (0°)
@@ -27,7 +31,7 @@ extern int SERVO_GPIO_PIN;
 // LEDC timer and channel definitions
 #define LEDC_TIMER        LEDC_TIMER_0       ///< LEDC timer used for PWM
 #define LEDC_MODE         LEDC_LOW_SPEED_MODE///< LEDC mode used for PWM
-#define LEDC_CHANNEL      LEDC_CHANNEL_0     ///< LEDC channel used for PWM
+#define LEDC_CHANNEL      LEDC_CHANNEL_0     ///< Legacy channel alias for servo 1
 
 /**
  * @brief Calculate the duty cycle in microseconds for a given pulse width.
@@ -60,6 +64,15 @@ void setupServo();
 void setServoAngle(int angle);
 
 /**
+ * @brief Set a specific servo motor to a specific angle.
+ *
+ * @param servoId Servo ID (1..MAX_SERVOS)
+ * @param angle Desired angle (0..180)
+ * @return true if successful, false if servoId is invalid
+ */
+bool setServoAngleById(uint8_t servoId, int angle);
+
+/**
  * @brief Sweep the servo motor from one position to another.
  *
  * This function smoothly moves the servo from its current position to the target position.
@@ -75,5 +88,22 @@ void sweepServo(int targetAngle, int speed = 15);
  * @return The current angle of the servo motor.
  */
 int getCurrentServoAngle();
+
+/**
+ * @brief Get current angle of one servo.
+ *
+ * @param servoId Servo ID (1..MAX_SERVOS)
+ * @return Current angle, or -1 if invalid servo ID
+ */
+int getCurrentServoAngleById(uint8_t servoId);
+
+/**
+ * @brief Reconfigure one servo pin and reinitialize that servo channel.
+ *
+ * @param servoId Servo ID (1..MAX_SERVOS)
+ * @param pin GPIO pin number
+ * @return true if successful, false otherwise
+ */
+bool reconfigureServoPin(uint8_t servoId, int pin);
 
 #endif // SERVO_CONTROL_H

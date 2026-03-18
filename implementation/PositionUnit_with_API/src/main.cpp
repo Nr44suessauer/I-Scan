@@ -19,36 +19,47 @@ int auto_test_between_delay = 1000;
 int auto_test_timeout = 10; // Sekunden
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(1000);
   
   Serial.println("I-Scan Controller started");
+  Serial.println("[BOOT] initPinConfig");
   
   // Pin-Konfiguration initialisieren (lädt aus EEPROM oder setzt Defaults)
   initPinConfig();
   
   // Device Information initialisieren
+  Serial.println("[BOOT] initDeviceInfo");
   initDeviceInfo();
   
   // LED setup
+  Serial.println("[BOOT] setupLEDs");
   setupLEDs();
   
-  // Servo setup
-  setupServo();  // Initialize servo
-  
   // Motor setup
+  Serial.println("[BOOT] setupMotor");
   setupMotor();  // Initialize stepper motor (legacy)
+  Serial.println("[BOOT] setupAdvancedMotor");
   setupAdvancedMotor();  // Initialize advanced stepper motor
+  Serial.println("[BOOT] setup28BYJ48Motor");
   setup28BYJ48Motor();  // Initialize 28BYJ-48 motor (GPIO 4-7)
   
   // Button setup
+  Serial.println("[BOOT] setupButton");
   setupButton(); // Initialize button
+
+  // Servo setup last so persisted servo pins win if another module touched the same GPIO.
+  Serial.println("[BOOT] setupServo");
+  setupServo();  // Initialize servo channels and attach final configured pins
   
   // Establish WiFi connection
+  Serial.println("[BOOT] setupWiFi");
   setupWiFi();
   
   // Start web server
+  Serial.println("[BOOT] setupWebServer");
   setupWebServer();
+  Serial.println("[BOOT] setup complete");
 }
 
 void loop() {

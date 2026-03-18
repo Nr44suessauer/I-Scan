@@ -4,12 +4,69 @@
 #include "servo_control.h"
 #include "led_control.h"
 #include "button_control.h"
+#include "driver/gpio.h"
 
 // Globale Pin-Konfiguration
 PinConfiguration currentPinConfig;
 
 // Preferences-Objekt für EEPROM-Zugriff
 Preferences preferences;
+
+static bool isValidInputGpio(int pin) {
+    return pin >= 0 && GPIO_IS_VALID_GPIO(static_cast<gpio_num_t>(pin));
+}
+
+static bool isValidOutputGpio(int pin) {
+    return pin >= 0 && GPIO_IS_VALID_OUTPUT_GPIO(static_cast<gpio_num_t>(pin));
+}
+
+static int sanitizeInputPin(int pin, int fallback) {
+    return isValidInputGpio(pin) ? pin : fallback;
+}
+
+static int sanitizeOutputPin(int pin, int fallback) {
+    if (isValidOutputGpio(pin)) return pin;
+    if (isValidOutputGpio(fallback)) return fallback;
+    return 21;
+}
+
+static int sanitizeEnablePin(int pin, int fallback) {
+    if (pin == -1) return -1;
+    return isValidOutputGpio(pin) ? pin : fallback;
+}
+
+static void sanitizePinConfig() {
+    currentPinConfig.motor_28byj48_pin1 = sanitizeOutputPin(currentPinConfig.motor_28byj48_pin1, MOTOR_28BYJ48_DEFAULT_PIN_1);
+    currentPinConfig.motor_28byj48_pin2 = sanitizeOutputPin(currentPinConfig.motor_28byj48_pin2, MOTOR_28BYJ48_DEFAULT_PIN_2);
+    currentPinConfig.motor_28byj48_pin3 = sanitizeOutputPin(currentPinConfig.motor_28byj48_pin3, MOTOR_28BYJ48_DEFAULT_PIN_3);
+    currentPinConfig.motor_28byj48_pin4 = sanitizeOutputPin(currentPinConfig.motor_28byj48_pin4, MOTOR_28BYJ48_DEFAULT_PIN_4);
+
+    currentPinConfig.nema23_step_pins[0] = sanitizeOutputPin(currentPinConfig.nema23_step_pins[0], STEP_PIN);
+    currentPinConfig.nema23_dir_pins[0] = sanitizeOutputPin(currentPinConfig.nema23_dir_pins[0], DIR_PIN);
+    currentPinConfig.nema23_enable_pins[0] = sanitizeEnablePin(currentPinConfig.nema23_enable_pins[0], ENABLE_PIN);
+
+    currentPinConfig.nema23_step_pins[1] = sanitizeOutputPin(currentPinConfig.nema23_step_pins[1], 35);
+    currentPinConfig.nema23_dir_pins[1] = sanitizeOutputPin(currentPinConfig.nema23_dir_pins[1], 34);
+    currentPinConfig.nema23_enable_pins[1] = sanitizeEnablePin(currentPinConfig.nema23_enable_pins[1], -1);
+
+    currentPinConfig.nema23_step_pins[2] = sanitizeOutputPin(currentPinConfig.nema23_step_pins[2], 33);
+    currentPinConfig.nema23_dir_pins[2] = sanitizeOutputPin(currentPinConfig.nema23_dir_pins[2], 36);
+    currentPinConfig.nema23_enable_pins[2] = sanitizeEnablePin(currentPinConfig.nema23_enable_pins[2], -1);
+
+    currentPinConfig.servo_pins[0] = sanitizeOutputPin(currentPinConfig.servo_pins[0], 48);
+    currentPinConfig.servo_pins[1] = sanitizeOutputPin(currentPinConfig.servo_pins[1], 47);
+    currentPinConfig.servo_pins[2] = sanitizeOutputPin(currentPinConfig.servo_pins[2], 21);
+
+    currentPinConfig.led_pins[0] = sanitizeOutputPin(currentPinConfig.led_pins[0], LED_PIN);
+    currentPinConfig.led_pins[1] = sanitizeOutputPin(currentPinConfig.led_pins[1], 39);
+    currentPinConfig.led_pins[2] = sanitizeOutputPin(currentPinConfig.led_pins[2], 40);
+
+    currentPinConfig.led_counts[0] = constrain(currentPinConfig.led_counts[0], 1, MAX_LEDS_PER_OUTPUT);
+    currentPinConfig.led_counts[1] = constrain(currentPinConfig.led_counts[1], 1, MAX_LEDS_PER_OUTPUT);
+    currentPinConfig.led_counts[2] = constrain(currentPinConfig.led_counts[2], 1, MAX_LEDS_PER_OUTPUT);
+
+    currentPinConfig.button_pin = sanitizeInputPin(currentPinConfig.button_pin, BUTTON_PIN);
+}
 
 /**
  * Initialisiert die Pin-Konfiguration
@@ -45,15 +102,28 @@ void loadPinConfig() {
         currentPinConfig.motor_28byj48_pin4 = preferences.getInt("m28_p4", MOTOR_28BYJ48_DEFAULT_PIN_4);
         
         // NEMA 23 Motor Pins
-        currentPinConfig.nema23_step_pin = preferences.getInt("nema_step", STEP_PIN);
-        currentPinConfig.nema23_dir_pin = preferences.getInt("nema_dir", DIR_PIN);
-        currentPinConfig.nema23_enable_pin = preferences.getInt("nema_en", ENABLE_PIN);
+        currentPinConfig.nema23_step_pins[0] = preferences.getInt("nema1_stp", STEP_PIN);
+        currentPinConfig.nema23_dir_pins[0] = preferences.getInt("nema1_dir", DIR_PIN);
+        currentPinConfig.nema23_enable_pins[0] = preferences.getInt("nema1_en", ENABLE_PIN);
+        currentPinConfig.nema23_step_pins[1] = preferences.getInt("nema2_stp", 35);
+        currentPinConfig.nema23_dir_pins[1] = preferences.getInt("nema2_dir", 34);
+        currentPinConfig.nema23_enable_pins[1] = preferences.getInt("nema2_en", -1);
+        currentPinConfig.nema23_step_pins[2] = preferences.getInt("nema3_stp", 33);
+        currentPinConfig.nema23_dir_pins[2] = preferences.getInt("nema3_dir", 36);
+        currentPinConfig.nema23_enable_pins[2] = preferences.getInt("nema3_en", -1);
         
-        // Servo Pin
-        currentPinConfig.servo_pin = preferences.getInt("servo_p", 48);
+        // Servo Pins
+        currentPinConfig.servo_pins[0] = preferences.getInt("servo1_p", 48);
+        currentPinConfig.servo_pins[1] = preferences.getInt("servo2_p", 47);
+        currentPinConfig.servo_pins[2] = preferences.getInt("servo3_p", 21);
         
-        // LED Pin
-        currentPinConfig.led_pin = preferences.getInt("led_p", LED_PIN);
+        // LED Pins and counts
+        currentPinConfig.led_pins[0] = preferences.getInt("led1_p", LED_PIN);
+        currentPinConfig.led_pins[1] = preferences.getInt("led2_p", 39);
+        currentPinConfig.led_pins[2] = preferences.getInt("led3_p", 40);
+        currentPinConfig.led_counts[0] = preferences.getInt("led1_c", 1);
+        currentPinConfig.led_counts[1] = preferences.getInt("led2_c", 1);
+        currentPinConfig.led_counts[2] = preferences.getInt("led3_c", 1);
         
         // Button Pin
         currentPinConfig.button_pin = preferences.getInt("btn_p", BUTTON_PIN);
@@ -79,6 +149,8 @@ void loadPinConfig() {
         Serial.println("⚠️ Keine gültige Pin-Konfiguration im EEPROM gefunden");
         resetPinConfigToDefaults();
     }
+
+    sanitizePinConfig();
     
     preferences.end();
 }
@@ -96,15 +168,28 @@ void savePinConfig() {
     preferences.putInt("m28_p4", currentPinConfig.motor_28byj48_pin4);
     
     // NEMA 23 Motor Pins
-    preferences.putInt("nema_step", currentPinConfig.nema23_step_pin);
-    preferences.putInt("nema_dir", currentPinConfig.nema23_dir_pin);
-    preferences.putInt("nema_en", currentPinConfig.nema23_enable_pin);
+    preferences.putInt("nema1_stp", currentPinConfig.nema23_step_pins[0]);
+    preferences.putInt("nema1_dir", currentPinConfig.nema23_dir_pins[0]);
+    preferences.putInt("nema1_en", currentPinConfig.nema23_enable_pins[0]);
+    preferences.putInt("nema2_stp", currentPinConfig.nema23_step_pins[1]);
+    preferences.putInt("nema2_dir", currentPinConfig.nema23_dir_pins[1]);
+    preferences.putInt("nema2_en", currentPinConfig.nema23_enable_pins[1]);
+    preferences.putInt("nema3_stp", currentPinConfig.nema23_step_pins[2]);
+    preferences.putInt("nema3_dir", currentPinConfig.nema23_dir_pins[2]);
+    preferences.putInt("nema3_en", currentPinConfig.nema23_enable_pins[2]);
     
-    // Servo Pin
-    preferences.putInt("servo_p", currentPinConfig.servo_pin);
+    // Servo Pins
+    preferences.putInt("servo1_p", currentPinConfig.servo_pins[0]);
+    preferences.putInt("servo2_p", currentPinConfig.servo_pins[1]);
+    preferences.putInt("servo3_p", currentPinConfig.servo_pins[2]);
     
-    // LED Pin
-    preferences.putInt("led_p", currentPinConfig.led_pin);
+    // LED Pins and counts
+    preferences.putInt("led1_p", currentPinConfig.led_pins[0]);
+    preferences.putInt("led2_p", currentPinConfig.led_pins[1]);
+    preferences.putInt("led3_p", currentPinConfig.led_pins[2]);
+    preferences.putInt("led1_c", currentPinConfig.led_counts[0]);
+    preferences.putInt("led2_c", currentPinConfig.led_counts[1]);
+    preferences.putInt("led3_c", currentPinConfig.led_counts[2]);
     
     // Button Pin
     preferences.putInt("btn_p", currentPinConfig.button_pin);
@@ -135,15 +220,28 @@ void resetPinConfigToDefaults() {
     currentPinConfig.motor_28byj48_pin4 = MOTOR_28BYJ48_DEFAULT_PIN_4;
     
     // NEMA 23 Motor Pins
-    currentPinConfig.nema23_step_pin = STEP_PIN;
-    currentPinConfig.nema23_dir_pin = DIR_PIN;
-    currentPinConfig.nema23_enable_pin = ENABLE_PIN;
+    currentPinConfig.nema23_step_pins[0] = STEP_PIN;
+    currentPinConfig.nema23_dir_pins[0] = DIR_PIN;
+    currentPinConfig.nema23_enable_pins[0] = ENABLE_PIN;
+    currentPinConfig.nema23_step_pins[1] = 35;
+    currentPinConfig.nema23_dir_pins[1] = 34;
+    currentPinConfig.nema23_enable_pins[1] = -1;
+    currentPinConfig.nema23_step_pins[2] = 33;
+    currentPinConfig.nema23_dir_pins[2] = 36;
+    currentPinConfig.nema23_enable_pins[2] = -1;
     
-    // Servo Pin
-    currentPinConfig.servo_pin = 48;
+    // Servo Pins
+    currentPinConfig.servo_pins[0] = 48;
+    currentPinConfig.servo_pins[1] = 47;
+    currentPinConfig.servo_pins[2] = 21;
     
-    // LED Pin
-    currentPinConfig.led_pin = LED_PIN;
+    // LED Pins and counts
+    currentPinConfig.led_pins[0] = LED_PIN;
+    currentPinConfig.led_pins[1] = 39;
+    currentPinConfig.led_pins[2] = 40;
+    currentPinConfig.led_counts[0] = 1;
+    currentPinConfig.led_counts[1] = 1;
+    currentPinConfig.led_counts[2] = 1;
     
     // Button Pin
     currentPinConfig.button_pin = BUTTON_PIN;
@@ -162,14 +260,32 @@ void resetPinConfigToDefaults() {
  * Wendet die aktuelle Pin-Konfiguration auf alle Module an
  */
 void applyPinConfig() {
+    sanitizePinConfig();
+
     // 28BYJ-48 Motor Pins setzen
     motor_28byj48_pin_1 = currentPinConfig.motor_28byj48_pin1;
     motor_28byj48_pin_2 = currentPinConfig.motor_28byj48_pin2;
     motor_28byj48_pin_3 = currentPinConfig.motor_28byj48_pin3;
     motor_28byj48_pin_4 = currentPinConfig.motor_28byj48_pin4;
     
-    // Servo Pin setzen
-    SERVO_GPIO_PIN = currentPinConfig.servo_pin;
+    // Servo Pins setzen
+    for (int i = 0; i < MAX_SERVOS; i++) {
+        SERVO_GPIO_PINS[i] = currentPinConfig.servo_pins[i];
+    }
+    SERVO_GPIO_PIN = SERVO_GPIO_PINS[0];
+
+    // NEMA23 Pins setzen
+    for (int i = 0; i < MAX_ADVANCED_MOTORS; i++) {
+        ADV_MOTOR_STEP_PINS[i] = currentPinConfig.nema23_step_pins[i];
+        ADV_MOTOR_DIR_PINS[i] = currentPinConfig.nema23_dir_pins[i];
+        ADV_MOTOR_ENABLE_PINS[i] = currentPinConfig.nema23_enable_pins[i];
+    }
+
+    // LED Pins und LED Counts setzen
+    for (int i = 0; i < MAX_LED_OUTPUTS; i++) {
+        LED_GPIO_PINS[i] = currentPinConfig.led_pins[i];
+        LED_COUNTS[i] = currentPinConfig.led_counts[i];
+    }
     
     Serial.println("✅ Pin-Konfiguration auf Module angewendet");
 }
@@ -201,12 +317,18 @@ void printPinConfig() {
                   currentPinConfig.motor_28byj48_pin2,
                   currentPinConfig.motor_28byj48_pin3,
                   currentPinConfig.motor_28byj48_pin4);
-    Serial.printf("NEMA 23 Motor: STEP=%d, DIR=%d, ENABLE=%d\n",
-                  currentPinConfig.nema23_step_pin,
-                  currentPinConfig.nema23_dir_pin,
-                  currentPinConfig.nema23_enable_pin);
-    Serial.printf("Servo: GPIO %d\n", currentPinConfig.servo_pin);
-    Serial.printf("LED: GPIO %d\n", currentPinConfig.led_pin);
+    Serial.printf("NEMA23: M1 STEP=%d DIR=%d EN=%d | M2 STEP=%d DIR=%d EN=%d | M3 STEP=%d DIR=%d EN=%d\n",
+                  currentPinConfig.nema23_step_pins[0], currentPinConfig.nema23_dir_pins[0], currentPinConfig.nema23_enable_pins[0],
+                  currentPinConfig.nema23_step_pins[1], currentPinConfig.nema23_dir_pins[1], currentPinConfig.nema23_enable_pins[1],
+                  currentPinConfig.nema23_step_pins[2], currentPinConfig.nema23_dir_pins[2], currentPinConfig.nema23_enable_pins[2]);
+    Serial.printf("Servo: S1=%d, S2=%d, S3=%d\n",
+                  currentPinConfig.servo_pins[0],
+                  currentPinConfig.servo_pins[1],
+                  currentPinConfig.servo_pins[2]);
+    Serial.printf("LED: O1 GPIO %d x%d, O2 GPIO %d x%d, O3 GPIO %d x%d\n",
+                  currentPinConfig.led_pins[0], currentPinConfig.led_counts[0],
+                  currentPinConfig.led_pins[1], currentPinConfig.led_counts[1],
+                  currentPinConfig.led_pins[2], currentPinConfig.led_counts[2]);
     Serial.printf("Button: GPIO %d\n", currentPinConfig.button_pin);
     Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }
@@ -232,20 +354,66 @@ void set28BYJ48Pins(int pin1, int pin2, int pin3, int pin4) {
 }
 
 void setNEMA23Pins(int stepPin, int dirPin, int enablePin) {
-    currentPinConfig.nema23_step_pin = stepPin;
-    currentPinConfig.nema23_dir_pin = dirPin;
-    currentPinConfig.nema23_enable_pin = enablePin;
+    currentPinConfig.nema23_step_pins[0] = stepPin;
+    currentPinConfig.nema23_dir_pins[0] = dirPin;
+    currentPinConfig.nema23_enable_pins[0] = enablePin;
+    ADV_MOTOR_STEP_PINS[0] = stepPin;
+    ADV_MOTOR_DIR_PINS[0] = dirPin;
+    ADV_MOTOR_ENABLE_PINS[0] = enablePin;
+    savePinConfig();
+}
+
+void setNEMA23PinsById(int motorId, int stepPin, int dirPin, int enablePin) {
+    if (motorId < 1 || motorId > MAX_ADVANCED_MOTORS) {
+        return;
+    }
+    currentPinConfig.nema23_step_pins[motorId - 1] = stepPin;
+    currentPinConfig.nema23_dir_pins[motorId - 1] = dirPin;
+    currentPinConfig.nema23_enable_pins[motorId - 1] = enablePin;
+    ADV_MOTOR_STEP_PINS[motorId - 1] = stepPin;
+    ADV_MOTOR_DIR_PINS[motorId - 1] = dirPin;
+    ADV_MOTOR_ENABLE_PINS[motorId - 1] = enablePin;
     savePinConfig();
 }
 
 void setServoPin(int pin) {
-    currentPinConfig.servo_pin = pin;
+    currentPinConfig.servo_pins[0] = pin;
+    SERVO_GPIO_PINS[0] = pin;
     SERVO_GPIO_PIN = pin;
     savePinConfig();
 }
 
+void setServoPinById(int servoId, int pin) {
+    if (servoId < 1 || servoId > MAX_SERVOS) {
+        return;
+    }
+    currentPinConfig.servo_pins[servoId - 1] = pin;
+    SERVO_GPIO_PINS[servoId - 1] = pin;
+    SERVO_GPIO_PIN = SERVO_GPIO_PINS[0];
+    savePinConfig();
+}
+
 void setLedPin(int pin) {
-    currentPinConfig.led_pin = pin;
+    currentPinConfig.led_pins[0] = pin;
+    LED_GPIO_PINS[0] = pin;
+    savePinConfig();
+}
+
+void setLedPinById(int ledId, int pin) {
+    if (ledId < 1 || ledId > MAX_LED_OUTPUTS) {
+        return;
+    }
+    currentPinConfig.led_pins[ledId - 1] = pin;
+    LED_GPIO_PINS[ledId - 1] = pin;
+    savePinConfig();
+}
+
+void setLedCountById(int ledId, int count) {
+    if (ledId < 1 || ledId > MAX_LED_OUTPUTS) {
+        return;
+    }
+    currentPinConfig.led_counts[ledId - 1] = constrain(count, 1, MAX_LEDS_PER_OUTPUT);
+    LED_COUNTS[ledId - 1] = currentPinConfig.led_counts[ledId - 1];
     savePinConfig();
 }
 
@@ -276,17 +444,50 @@ void get28BYJ48Pins(int* pin1, int* pin2, int* pin3, int* pin4) {
 }
 
 void getNEMA23Pins(int* stepPin, int* dirPin, int* enablePin) {
-    *stepPin = currentPinConfig.nema23_step_pin;
-    *dirPin = currentPinConfig.nema23_dir_pin;
-    *enablePin = currentPinConfig.nema23_enable_pin;
+    *stepPin = currentPinConfig.nema23_step_pins[0];
+    *dirPin = currentPinConfig.nema23_dir_pins[0];
+    *enablePin = currentPinConfig.nema23_enable_pins[0];
+}
+
+void getNEMA23PinsById(int motorId, int* stepPin, int* dirPin, int* enablePin) {
+    if (motorId < 1 || motorId > MAX_ADVANCED_MOTORS) {
+        if (stepPin) *stepPin = -1;
+        if (dirPin) *dirPin = -1;
+        if (enablePin) *enablePin = -1;
+        return;
+    }
+    if (stepPin) *stepPin = currentPinConfig.nema23_step_pins[motorId - 1];
+    if (dirPin) *dirPin = currentPinConfig.nema23_dir_pins[motorId - 1];
+    if (enablePin) *enablePin = currentPinConfig.nema23_enable_pins[motorId - 1];
 }
 
 int getServoPin() {
-    return currentPinConfig.servo_pin;
+    return currentPinConfig.servo_pins[0];
+}
+
+int getServoPinById(int servoId) {
+    if (servoId < 1 || servoId > MAX_SERVOS) {
+        return -1;
+    }
+    return currentPinConfig.servo_pins[servoId - 1];
 }
 
 int getLedPin() {
-    return currentPinConfig.led_pin;
+    return currentPinConfig.led_pins[0];
+}
+
+int getLedPinById(int ledId) {
+    if (ledId < 1 || ledId > MAX_LED_OUTPUTS) {
+        return -1;
+    }
+    return currentPinConfig.led_pins[ledId - 1];
+}
+
+int getLedCountById(int ledId) {
+    if (ledId < 1 || ledId > MAX_LED_OUTPUTS) {
+        return -1;
+    }
+    return currentPinConfig.led_counts[ledId - 1];
 }
 
 int getButtonPin() {

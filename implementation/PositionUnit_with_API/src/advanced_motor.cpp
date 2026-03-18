@@ -1,11 +1,23 @@
 ﻿#include "advanced_motor.h"
 #include "button_control.h"  // Für Button-Status Abfrage
+#include "driver/gpio.h"
 
 // Globale Debug-Variable
 bool motorDebugEnabled = false;  // Standardmäßig ausgeschaltet
 
-// Globale Instanz
+// Multi-motor pin configuration defaults
+int ADV_MOTOR_STEP_PINS[MAX_ADVANCED_MOTORS] = {STEP_PIN, 35, 33};
+int ADV_MOTOR_DIR_PINS[MAX_ADVANCED_MOTORS] = {DIR_PIN, 34, 36};
+int ADV_MOTOR_ENABLE_PINS[MAX_ADVANCED_MOTORS] = {ENABLE_PIN, -1, -1};
+
+// Globale Instanzen
 AdvancedStepperMotor advancedMotor(STEP_PIN, DIR_PIN, ENABLE_PIN, ADVANCED_STEPS_PER_REVOLUTION);
+AdvancedStepperMotor advancedMotor2(35, 34, -1, ADVANCED_STEPS_PER_REVOLUTION);
+AdvancedStepperMotor advancedMotor3(33, 36, -1, ADVANCED_STEPS_PER_REVOLUTION);
+
+static bool isValidOutputPin(int pin) {
+    return pin >= 0 && GPIO_IS_VALID_OUTPUT_GPIO(static_cast<gpio_num_t>(pin));
+}
 
 // Konstruktor
 AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePin, int stepsPerRevolution)
@@ -26,6 +38,13 @@ AdvancedStepperMotor::AdvancedStepperMotor(int stepPin, int dirPin, int enablePi
 }
 
 void AdvancedStepperMotor::begin() {
+    if (!isValidOutputPin(stepPin) || !isValidOutputPin(dirPin) || (enablePin >= 0 && !isValidOutputPin(enablePin))) {
+        MOTOR_DEBUG_PRINTF("Ungueltige Motor-Pins STEP=%d DIR=%d EN=%d - Motor deaktiviert\n", stepPin, dirPin, enablePin);
+        isEnabled = false;
+        isMoving = false;
+        return;
+    }
+
     pinMode(stepPin, OUTPUT);
     pinMode(dirPin, OUTPUT);
     if (enablePin >= 0) {
@@ -36,6 +55,25 @@ void AdvancedStepperMotor::begin() {
     digitalWrite(dirPin, LOW);
     enable();
     MOTOR_DEBUG_PRINTLN("Erweiterter Motor initialisiert");
+}
+
+void AdvancedStepperMotor::reconfigurePins(int newStepPin, int newDirPin, int newEnablePin) {
+    disable();
+
+    // Keep previous valid pins if new values are invalid.
+    if (isValidOutputPin(newStepPin)) {
+        stepPin = newStepPin;
+    }
+    if (isValidOutputPin(newDirPin)) {
+        dirPin = newDirPin;
+    }
+    if (newEnablePin == -1 || isValidOutputPin(newEnablePin)) {
+        enablePin = newEnablePin;
+    }
+
+    begin();
+    setSpeed(currentSpeedRPM);
+    enable();
 }
 
 void AdvancedStepperMotor::enable() {
@@ -330,14 +368,42 @@ void AdvancedStepperMotor::update() {
 
 // Globale Setup-Funktion
 void setupAdvancedMotor() {
-    advancedMotor.begin();
-    advancedMotor.setSpeed(60);  // Default speed 60 RPM
+    advancedMotor.reconfigurePins(ADV_MOTOR_STEP_PINS[0], ADV_MOTOR_DIR_PINS[0], ADV_MOTOR_ENABLE_PINS[0]);
+    advancedMotor2.reconfigurePins(ADV_MOTOR_STEP_PINS[1], ADV_MOTOR_DIR_PINS[1], ADV_MOTOR_ENABLE_PINS[1]);
+    advancedMotor3.reconfigurePins(ADV_MOTOR_STEP_PINS[2], ADV_MOTOR_DIR_PINS[2], ADV_MOTOR_ENABLE_PINS[2]);
+
+    advancedMotor.setSpeed(60);
+    advancedMotor2.setSpeed(60);
+    advancedMotor3.setSpeed(60);
+
     advancedMotor.enable();
+    advancedMotor2.enable();
+    advancedMotor3.enable();
 }
 
 // Globale Update-Funktion für main loop
 void updateMotor() {
     advancedMotor.update();
+    advancedMotor2.update();
+    advancedMotor3.update();
+}
+
+AdvancedStepperMotor& getAdvancedMotorById(uint8_t motorId) {
+    if (motorId == 2) return advancedMotor2;
+    if (motorId == 3) return advancedMotor3;
+    return advancedMotor;
+}
+
+bool configureAdvancedMotorPinsById(uint8_t motorId, int stepPin, int dirPin, int enablePin) {
+    if (motorId < 1 || motorId > MAX_ADVANCED_MOTORS) return false;
+
+    ADV_MOTOR_STEP_PINS[motorId - 1] = stepPin;
+    ADV_MOTOR_DIR_PINS[motorId - 1] = dirPin;
+    ADV_MOTOR_ENABLE_PINS[motorId - 1] = enablePin;
+
+    AdvancedStepperMotor& motor = getAdvancedMotorById(motorId);
+    motor.reconfigurePins(stepPin, dirPin, enablePin);
+    return true;
 }
 
 // Globale Home-Funktion mit Button

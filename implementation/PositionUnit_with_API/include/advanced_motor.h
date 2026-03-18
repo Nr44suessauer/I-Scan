@@ -8,6 +8,13 @@
 #define DIR_PIN 36
 #define ENABLE_PIN -1  // Optional: Pin zum Aktivieren/Deaktivieren des Motors
 
+// Multi-motor support (same concept as servo)
+#define MAX_ADVANCED_MOTORS 3
+
+extern int ADV_MOTOR_STEP_PINS[MAX_ADVANCED_MOTORS];
+extern int ADV_MOTOR_DIR_PINS[MAX_ADVANCED_MOTORS];
+extern int ADV_MOTOR_ENABLE_PINS[MAX_ADVANCED_MOTORS];
+
 // Motor-Konfiguration
 #define ADVANCED_STEPS_PER_REVOLUTION 200  // Standard für NEMA17 (1.8° pro Schritt)
 #define MICROSTEPS 1                       // Microstepping-Faktor
@@ -78,6 +85,7 @@ public:
     
     // Initialisierung
     void begin();
+    void reconfigurePins(int newStepPin, int newDirPin, int newEnablePin = -1);
     void enable();
     void disable();
     void setPinsIdle();  // Neue Funktion: Pins in Ruhezustand setzen
@@ -126,6 +134,11 @@ public:
 
 // Globale Instanz
 extern AdvancedStepperMotor advancedMotor;
+extern AdvancedStepperMotor advancedMotor2;
+extern AdvancedStepperMotor advancedMotor3;
+
+AdvancedStepperMotor& getAdvancedMotorById(uint8_t motorId);
+bool configureAdvancedMotorPinsById(uint8_t motorId, int stepPin, int dirPin, int enablePin);
 
 // Hilfsfunktionen
 void setupAdvancedMotor();

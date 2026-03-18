@@ -6,6 +6,7 @@
 #include "motor_28byj48.h" // Include for 28BYJ-48 motor control
 #include "pin_config.h" // Include for pin configuration
 #include "led_control.h" // Include for LED control
+#include "driver/gpio.h"
 
 // Function declarations
 void handleRoot();
@@ -31,6 +32,10 @@ void handleSetLedPin(); // Set LED pin
 void handleSetButtonPin(); // Set button pin
 void handleGetDeviceInfo(); // Get device information
 void handleSetDeviceInfo(); // Set device information
+
+static bool isValidOutputPinForServo(int pin) {
+  return pin >= 0 && GPIO_IS_VALID_OUTPUT_GPIO(static_cast<gpio_num_t>(pin));
+}
 
 
 // WebServer configuration
@@ -84,6 +89,31 @@ const char html[] PROGMEM = R"rawliteral(
     .status-item { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; }
     .status-label { font-weight: bold; color: #666; margin-bottom: 5px; }
     .status-value { font-size: 18px; color: #333; }
+
+    .pin-conflict {
+      border: 1px solid #ddd !important;
+      background-color: #fff !important;
+      color: inherit !important;
+      font-weight: normal;
+    }
+
+    .pin-option-occupied {
+      color: inherit;
+      font-weight: normal;
+    }
+
+    .pin-option-unavailable {
+      text-decoration: line-through;
+      font-style: normal;
+    }
+
+    /* Component manager */
+    .component-manager { margin: 15px 0 25px 0; padding: 16px; background: #eef6ff; border: 1px solid #cfe6ff; border-radius: 8px; }
+    .component-manager-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .component-manager-meta { font-size: 13px; color: #335; }
+    .component-list { margin-top: 12px; display: grid; gap: 8px; }
+    .component-card { background: #fff; border: 1px solid #d9e7f5; border-radius: 6px; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .component-card-name { font-weight: bold; color: #1f3b57; }
     
     /* Motor-specific Styles */
     .position-input { padding: 10px; font-size: 16px; width: 100px; text-align: center; border: 1px solid #ddd; border-radius: 4px; }
@@ -131,6 +161,7 @@ const char html[] PROGMEM = R"rawliteral(
     }
     .collapsible-header:hover { background: #1976D2; }
     .collapsible-header.active { background: #1565C0; border-radius: 8px 8px 0 0; margin-bottom: 0; }
+    .pinout-toggle { margin-top: 24px; }
     .collapsible-content { 
       max-height: 0; 
       overflow: hidden; 
@@ -151,6 +182,47 @@ const char html[] PROGMEM = R"rawliteral(
       display: block; 
       margin: 0 auto;
       border-radius: 8px;
+      cursor: zoom-in;
+    }
+
+    .pinout-modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .pinout-modal.active {
+      display: flex;
+    }
+
+    .pinout-modal-image {
+      max-width: 92vw;
+      max-height: 86vh;
+      width: auto;
+      height: auto;
+      transform-origin: center center;
+      transition: transform 0.08s linear;
+      cursor: zoom-out;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .pinout-modal-hint {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 13px;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 6px 10px;
+      border-radius: 999px;
     }
     .arrow { 
       transition: transform 0.3s; 
@@ -177,11 +249,24 @@ const char html[] PROGMEM = R"rawliteral(
       <button class="tablinks" onclick="openTab(event, 'ServoTab')">🔄 Servo Control</button>
       <button class="tablinks" onclick="openTab(event, 'LEDTab')">💡 LED Control</button>
       <button class="tablinks" onclick="openTab(event, 'StatusTab')">📊 Status & Info</button>
+      <button class="tablinks" onclick="openTab(event, 'InfoTab')">ℹ️ Info</button>
     </div>
 
     <!-- Motor Control Tab -->
-    <div id="MotorTab" class="tabcontent active">
+    <div id="MotorTab" class="tabcontent active" data-component="nema23_motor" data-label="NEMA 23 Motor">
       <h2>🔩 Advanced Stepper Motor Control</h2>
+
+      <div class="control-container">
+        <h3>Motor Selection</h3>
+        <div class="slider-wrapper">
+          <label>Motor ID:</label>
+          <select id="motorIdSelect" class="position-input" style="width: 140px;" onchange="updateMotorStatus()">
+            <option value="1">Motor 1</option>
+            <option value="2">Motor 2</option>
+            <option value="3">Motor 3</option>
+          </select>
+        </div>
+      </div>
       
       <!-- Motor Status -->
       <div class="control-container">
@@ -255,6 +340,40 @@ const char html[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
+      <div class="control-container">
+        <h3>📌 Pin Assignment (NEMA 23)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+          <div>
+            <label>Motor 1 STEP/DIR/EN:</label><br>
+            <input type="number" id="cfg_nema_step_1" class="position-input" min="0" max="48" style="width: 70px;" placeholder="STEP">
+            <input type="number" id="cfg_nema_dir_1" class="position-input" min="0" max="48" style="width: 70px;" placeholder="DIR">
+            <input type="number" id="cfg_nema_en_1" class="position-input" min="-1" max="48" style="width: 70px;" placeholder="EN">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveNEMA23PinsById(1)">💾 Save + Apply M1</button>
+          </div>
+          <div>
+            <label>Motor 2 STEP/DIR/EN:</label><br>
+            <input type="number" id="cfg_nema_step_2" class="position-input" min="0" max="48" style="width: 70px;" placeholder="STEP">
+            <input type="number" id="cfg_nema_dir_2" class="position-input" min="0" max="48" style="width: 70px;" placeholder="DIR">
+            <input type="number" id="cfg_nema_en_2" class="position-input" min="-1" max="48" style="width: 70px;" placeholder="EN">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveNEMA23PinsById(2)">💾 Save + Apply M2</button>
+          </div>
+          <div>
+            <label>Motor 3 STEP/DIR/EN:</label><br>
+            <input type="number" id="cfg_nema_step_3" class="position-input" min="0" max="48" style="width: 70px;" placeholder="STEP">
+            <input type="number" id="cfg_nema_dir_3" class="position-input" min="0" max="48" style="width: 70px;" placeholder="DIR">
+            <input type="number" id="cfg_nema_en_3" class="position-input" min="-1" max="48" style="width: 70px;" placeholder="EN">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveNEMA23PinsById(3)">💾 Save + Apply M3</button>
+          </div>
+        </div>
+        <button class="collapsible-header pinout-toggle" onclick="toggleCollapsible(this)">
+          📍 Pinout anzeigen
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img class="pinout-image" src="https://devboards.info/images/boards/esp32-s3-devkitc-1/esp32-s3-devkitc-1-pinout.webp" alt="ESP32-S3-DevKitC-1 Pinout" loading="lazy" onclick="openPinoutZoom(this.src)">
+        </div>
+      </div>
+
       <!-- Button Pass Function -->
       <div class="control-container">
         <h3>🔄 Button Pass Function</h3>
@@ -286,7 +405,7 @@ const char html[] PROGMEM = R"rawliteral(
     </div>
 
     <!-- 28BYJ-48 Motor Control Tab -->
-    <div id="Motor28BYJ48Tab" class="tabcontent">
+    <div id="Motor28BYJ48Tab" class="tabcontent" data-component="motor_28byj48" data-label="28BYJ-48 Motor">
       <h2>⚙️ 28BYJ-48 Stepper Motor Control (GPIO 4-7)</h2>
       
       <!-- Motor Status -->
@@ -396,15 +515,30 @@ const char html[] PROGMEM = R"rawliteral(
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
           Current Pins: <span id="current28byj48Pins">4, 5, 6, 7</span>
         </div>
+        <button class="collapsible-header pinout-toggle" onclick="toggleCollapsible(this)">
+          📍 Pinout anzeigen
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img class="pinout-image" src="https://devboards.info/images/boards/esp32-s3-devkitc-1/esp32-s3-devkitc-1-pinout.webp" alt="ESP32-S3-DevKitC-1 Pinout" loading="lazy" onclick="openPinoutZoom(this.src)">
+        </div>
       </div>
     </div>
 
     <!-- Servo Control Tab -->
-    <div id="ServoTab" class="tabcontent">
+    <div id="ServoTab" class="tabcontent" data-component="servo" data-label="Servo">
       <h2>🔄 Servo Control</h2>
       
       <div class="control-container">
         <h3>Servo Positioning</h3>
+        <div class="slider-wrapper" style="margin-bottom: 12px;">
+          <label>Servo ID:</label>
+          <select id="servoIdSelect" class="position-input" style="width: 120px;">
+            <option value="1">Servo 1</option>
+            <option value="2">Servo 2</option>
+            <option value="3">Servo 3</option>
+          </select>
+        </div>
         <div class="slider-wrapper">
           <label>Angle:</label>
           <input type="range" id="servoSlider" min="0" max="180" value="90" oninput="updateServoValue(this.value)">
@@ -423,11 +557,51 @@ const char html[] PROGMEM = R"rawliteral(
           <button class="btn btn-success" onclick="setServoPreset(180)">180° (Right)</button>
         </div>
       </div>
+
+      <div class="control-container">
+        <h3>📌 Pin Assignment (Servo)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+          <div>
+            <label>Servo 1 GPIO:</label>
+            <input type="number" id="cfg_servo_p_1" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveServoPinById(1)">💾 Save + Apply S1</button>
+          </div>
+          <div>
+            <label>Servo 2 GPIO:</label>
+            <input type="number" id="cfg_servo_p_2" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveServoPinById(2)">💾 Save + Apply S2</button>
+          </div>
+          <div>
+            <label>Servo 3 GPIO:</label>
+            <input type="number" id="cfg_servo_p_3" class="position-input" min="0" max="48" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveServoPinById(3)">💾 Save + Apply S3</button>
+          </div>
+        </div>
+        <button class="collapsible-header pinout-toggle" onclick="toggleCollapsible(this)">
+          📍 Pinout anzeigen
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img class="pinout-image" src="https://devboards.info/images/boards/esp32-s3-devkitc-1/esp32-s3-devkitc-1-pinout.webp" alt="ESP32-S3-DevKitC-1 Pinout" loading="lazy" onclick="openPinoutZoom(this.src)">
+        </div>
+      </div>
     </div>
 
     <!-- LED Control Tab -->
-    <div id="LEDTab" class="tabcontent">
+    <div id="LEDTab" class="tabcontent" data-component="led" data-label="LED">
       <h2>💡 LED Control</h2>
+
+      <div class="control-container">
+        <h3>LED Output Selection</h3>
+        <div class="slider-wrapper">
+          <label>LED Output:</label>
+          <select id="ledIdSelect" class="position-input" style="width: 140px;">
+            <option value="1">LED Output 1</option>
+            <option value="2">LED Output 2</option>
+            <option value="3">LED Output 3</option>
+          </select>
+        </div>
+      </div>
       
       <!-- Brightness -->
       <div class="control-container">
@@ -461,12 +635,46 @@ const char html[] PROGMEM = R"rawliteral(
           <button class="btn btn-white" onclick="changeColor(6)">White</button>
         </div>
       </div>
+
+      <div class="control-container">
+        <h3>📌 Pin Assignment (LED)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+          <div>
+            <label>LED 1 GPIO:</label>
+            <input type="number" id="cfg_led_p_1" class="position-input" min="0" max="48" style="width: 80px;">
+            <label style="margin-left: 10px;">Count:</label>
+            <input type="number" id="cfg_led_c_1" class="position-input" min="1" max="300" value="1" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveLedPinById(1)">💾 Save + Apply O1</button>
+          </div>
+          <div>
+            <label>LED 2 GPIO:</label>
+            <input type="number" id="cfg_led_p_2" class="position-input" min="0" max="48" style="width: 80px;">
+            <label style="margin-left: 10px;">Count:</label>
+            <input type="number" id="cfg_led_c_2" class="position-input" min="1" max="300" value="1" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveLedPinById(2)">💾 Save + Apply O2</button>
+          </div>
+          <div>
+            <label>LED 3 GPIO:</label>
+            <input type="number" id="cfg_led_p_3" class="position-input" min="0" max="48" style="width: 80px;">
+            <label style="margin-left: 10px;">Count:</label>
+            <input type="number" id="cfg_led_c_3" class="position-input" min="1" max="300" value="1" style="width: 80px;">
+            <button class="btn btn-primary" style="margin-top: 8px;" onclick="saveLedPinById(3)">💾 Save + Apply O3</button>
+          </div>
+        </div>
+        <button class="collapsible-header pinout-toggle" onclick="toggleCollapsible(this)">
+          📍 Pinout anzeigen
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img class="pinout-image" src="https://devboards.info/images/boards/esp32-s3-devkitc-1/esp32-s3-devkitc-1-pinout.webp" alt="ESP32-S3-DevKitC-1 Pinout" loading="lazy" onclick="openPinoutZoom(this.src)">
+        </div>
+      </div>
     </div>
 
-    <!-- Status Tab -->
-    <div id="StatusTab" class="tabcontent">
-      <h2>📊 System Status & Information</h2>
-      
+    <!-- Info Tab -->
+    <div id="InfoTab" class="tabcontent" data-component="button" data-label="Button">
+      <h2>ℹ️ Info</h2>
+
       <!-- Button Status -->
       <div class="control-container">
         <h3>Button Status (Pin 45)</h3>
@@ -478,6 +686,27 @@ const char html[] PROGMEM = R"rawliteral(
         </div>
         <button class="btn btn-secondary" onclick="refreshButtonStatus()">Update Status</button>
       </div>
+
+      <div class="control-container">
+        <h3>📌 Pin Assignment (Button)</h3>
+        <div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;">
+          <label>GPIO Pin:</label>
+          <input type="number" id="cfg_btn_p" class="position-input" min="0" max="48" style="width: 80px;">
+          <button class="btn btn-primary" onclick="saveButtonPin()">💾 Save + Apply</button>
+        </div>
+        <button class="collapsible-header pinout-toggle" onclick="toggleCollapsible(this)">
+          📍 Pinout anzeigen
+          <span class="arrow">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <img class="pinout-image" src="https://devboards.info/images/boards/esp32-s3-devkitc-1/esp32-s3-devkitc-1-pinout.webp" alt="ESP32-S3-DevKitC-1 Pinout" loading="lazy" onclick="openPinoutZoom(this.src)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Tab -->
+    <div id="StatusTab" class="tabcontent" data-component="system" data-label="System">
+      <h2>📊 System Status & Information</h2>
 
       <!-- System Information -->
       <div class="control-container">
@@ -530,134 +759,16 @@ const char html[] PROGMEM = R"rawliteral(
         <div id="deviceInfoStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
       </div>
 
-      <!-- Pin Configuration -->
-      <div class="control-container">
-        <h3>📌 Pin Configuration</h3>
-        
-        <!-- ESP32-S3 Pinout Diagram -->
-        <button class="collapsible-header" onclick="toggleCollapsible(this)">
-          🖼️ ESP32-S3 DevKit Pinout Diagram
-          <span class="arrow">▼</span>
-        </button>
-        <div class="collapsible-content">
-          <img src="https://imgs.search.brave.com/Z7qpRZZI18oEhodGlO_A3ril0MmGB2mmY2SwBrOFNbA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/c2hvcGlmeS5jb20v/cy9maWxlcy8xLzAx/NzYvMzI3NC9maWxl/cy9FU1AzMi1TMy1E/ZXZLaXRDLTEtcGlu/b3V0XzEuanBnP3Y9/MTY2Njk2OTc0OQ" 
-               alt="ESP32-S3 DevKit Pinout" 
-               class="pinout-image"
-               onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=color:red;text-align:center;>Bild konnte nicht geladen werden</p>';">
-        </div>
-        
-        <!-- 28BYJ-48 Motor Pins -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-          <h4 style="margin-top: 0;">⚙️ 28BYJ-48 Motor</h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
-            <div>
-              <label>IN1:</label>
-              <input type="number" id="cfg_m28_p1" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-            <div>
-              <label>IN2:</label>
-              <input type="number" id="cfg_m28_p2" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-            <div>
-              <label>IN3:</label>
-              <input type="number" id="cfg_m28_p3" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-            <div>
-              <label>IN4:</label>
-              <input type="number" id="cfg_m28_p4" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="save28BYJ48Pins()" style="margin-top: 10px;">💾 Speichern & Anwenden</button>
-        </div>
-
-        <!-- NEMA 23 Motor Pins -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-          <h4 style="margin-top: 0;">⚡ NEMA 23 Motor</h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-            <div>
-              <label>STEP Pin:</label>
-              <input type="number" id="cfg_nema_step" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-            <div>
-              <label>DIR Pin:</label>
-              <input type="number" id="cfg_nema_dir" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-            <div>
-              <label>ENABLE Pin:</label>
-              <input type="number" id="cfg_nema_en" class="position-input" min="0" max="48" style="width: 70px;">
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="saveNEMA23Pins()" style="margin-top: 10px;">💾 Speichern & Anwenden</button>
-        </div>
-
-        <!-- Servo Pin -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-          <h4 style="margin-top: 0;">🔄 Servo</h4>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <label>GPIO Pin:</label>
-            <input type="number" id="cfg_servo_p" class="position-input" min="0" max="48" style="width: 80px;">
-            <button class="btn btn-primary" onclick="saveServoPin()">💾 Speichern & Anwenden</button>
-          </div>
-        </div>
-
-        <!-- LED Pin -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-          <h4 style="margin-top: 0;">💡 LED</h4>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <label>GPIO Pin:</label>
-            <input type="number" id="cfg_led_p" class="position-input" min="0" max="48" style="width: 80px;">
-            <button class="btn btn-primary" onclick="saveLedPin()">💾 Speichern & Anwenden</button>
-          </div>
-        </div>
-
-        <!-- Button Pin -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-          <h4 style="margin-top: 0;">🔘 Button</h4>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <label>GPIO Pin:</label>
-            <input type="number" id="cfg_btn_p" class="position-input" min="0" max="48" style="width: 80px;">
-            <button class="btn btn-primary" onclick="saveButtonPin()">💾 Speichern & Anwenden</button>
-          </div>
-        </div>
-
-        <!-- WiFi Configuration -->
-        <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 5px;">
-          <h4 style="margin-top: 0;">📡 WLAN-Konfiguration</h4>
-          <div style="background: #fff; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-            <div style="margin: 10px 0;">
-              <label style="display: block; font-weight: bold;">SSID (Netzwerkname):</label>
-              <input type="text" id="cfg_wifi_ssid" class="hex-input" maxlength="63" style="width: 100%; box-sizing: border-box;">
-            </div>
-            <div style="margin: 10px 0;">
-              <label style="display: block; font-weight: bold;">Passwort:</label>
-              <input type="password" id="cfg_wifi_password" class="hex-input" maxlength="63" style="width: 100%; box-sizing: border-box;">
-              <label style="display: block; margin-top: 5px;">
-                <input type="checkbox" onclick="togglePasswordVisibility()"> Passwort anzeigen
-              </label>
-            </div>
-            <div style="margin: 10px 0;">
-              <label style="display: block; font-weight: bold;">Hostname (Gerätename):</label>
-              <input type="text" id="cfg_wifi_hostname" class="hex-input" maxlength="31" style="width: 100%; box-sizing: border-box;">
-              <small style="display: block; color: #666; margin-top: 5px;">z.B. ESP32-IScan</small>
-            </div>
-          </div>
-          <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-            <strong>⚠️ Wichtig:</strong> Nach dem Speichern wird das Gerät neu gestartet und versucht sich mit dem neuen WLAN zu verbinden.
-          </div>
-          <button class="btn btn-warning" onclick="saveWiFiConfig()">💾 WLAN-Konfiguration speichern & neu starten</button>
-        </div>
-
-        <!-- Reset to Defaults -->
-        <div style="margin: 20px 0; text-align: center;">
-          <button class="btn btn-warning" onclick="resetPinConfig()">🔄 Auf Standardwerte zurücksetzen</button>
-          <button class="btn btn-secondary" onclick="loadPinConfig()" style="margin-left: 10px;">🔃 Aktualisieren</button>
-        </div>
-      </div>
     </div>
 
     <!-- Status Display -->
     <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: #333; color: white; padding: 10px; border-radius: 5px; z-index: 1000;">
       <span id="status">Status: System ready</span>
+    </div>
+
+    <div id="pinoutModal" class="pinout-modal" onclick="closePinoutZoom(event)">
+      <div class="pinout-modal-hint">Mausrad: Zoom | Klick aufs Bild: Schliessen</div>
+      <img id="pinoutModalImage" class="pinout-modal-image" alt="Pinout Zoom" onclick="closePinoutZoom(event)">
     </div>
   </div>
   
@@ -665,6 +776,383 @@ const char html[] PROGMEM = R"rawliteral(
     // Globale Variablen
     let motorStatusInterval;
     let isPassingActive = false;
+    let pinoutZoomLevel = 1;
+
+    // Tab <-> component binding with dynamic instance management
+    const componentRegistry = {};
+    const componentStorageKey = 'positionunit_component_instances_v1';
+    const componentPinFieldMap = {};
+
+    // ESP32-S3-DevKitM-1 pin sets derived from board header pinout.
+    // Output-capable pins used for Servo/LED/Motor control in this UI.
+    const BOARD_OUTPUT_PINS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 26, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48];
+    const BOARD_INPUT_PINS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 26, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48];
+    const ALL_GPIO_CANDIDATES = Array.from({ length: 49 }, (_, i) => i);
+    const RESERVED_OUTPUT_PINS = [0, 19, 20, 45, 46];
+    const RESERVED_INPUT_PINS = [0, 46];
+
+    const PIN_SELECTOR_IDS_OUTPUT = [
+      'cfg_servo_p_1', 'cfg_servo_p_2', 'cfg_servo_p_3',
+      'cfg_led_p_1', 'cfg_led_p_2', 'cfg_led_p_3',
+      'cfg_nema_step_1', 'cfg_nema_dir_1', 'cfg_nema_en_1',
+      'cfg_nema_step_2', 'cfg_nema_dir_2', 'cfg_nema_en_2',
+      'cfg_nema_step_3', 'cfg_nema_dir_3', 'cfg_nema_en_3',
+      'pin28byj48_1', 'pin28byj48_2', 'pin28byj48_3', 'pin28byj48_4'
+    ];
+    const PIN_SELECTOR_IDS_INPUT = ['cfg_btn_p'];
+    const PIN_SELECTOR_IDS_WITH_DISABLE = ['cfg_nema_en_1', 'cfg_nema_en_2', 'cfg_nema_en_3'];
+
+    function buildPinSelect(original, pinList, allowDisabled, reservedPins) {
+      const select = document.createElement('select');
+      select.id = original.id;
+      select.className = original.className;
+      select.style.cssText = original.style.cssText;
+      const allowed = new Set(pinList.map(pin => String(pin)));
+      const reserved = new Set((reservedPins || []).map(pin => String(pin)));
+
+      if (allowDisabled) {
+        const noneOption = document.createElement('option');
+        noneOption.value = '-1';
+        noneOption.textContent = 'Disabled (-1)';
+        select.appendChild(noneOption);
+      }
+
+      ALL_GPIO_CANDIDATES.forEach(pin => {
+        const option = document.createElement('option');
+        option.value = String(pin);
+        option.textContent = 'GPIO ' + pin;
+
+        const isAllowed = allowed.has(option.value) && !reserved.has(option.value);
+        if (!isAllowed) {
+          option.disabled = true;
+          option.classList.add('pin-option-unavailable');
+        }
+
+        select.appendChild(option);
+      });
+
+      const initial = original.value;
+      if (initial !== undefined && initial !== null && initial !== '') {
+        const exists = Array.from(select.options).some(opt => opt.value === String(initial));
+        if (!exists) {
+          const dynamicOption = document.createElement('option');
+          dynamicOption.value = String(initial);
+          dynamicOption.textContent = 'GPIO ' + initial;
+          dynamicOption.classList.add('pin-option-unavailable');
+          dynamicOption.disabled = true;
+          select.appendChild(dynamicOption);
+        }
+        select.value = String(initial);
+      }
+
+      select.addEventListener('change', updatePinConflictVisualization);
+      return select;
+    }
+
+    function setupPinSelectors() {
+      PIN_SELECTOR_IDS_OUTPUT.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element || element.tagName === 'SELECT') return;
+        const allowDisabled = PIN_SELECTOR_IDS_WITH_DISABLE.includes(id);
+        const select = buildPinSelect(element, BOARD_OUTPUT_PINS, allowDisabled, RESERVED_OUTPUT_PINS);
+        element.parentNode.replaceChild(select, element);
+      });
+
+      PIN_SELECTOR_IDS_INPUT.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element || element.tagName === 'SELECT') return;
+        const select = buildPinSelect(element, BOARD_INPUT_PINS, false, RESERVED_INPUT_PINS);
+        element.parentNode.replaceChild(select, element);
+      });
+    }
+
+    function collectPinSelectors() {
+      const ids = [...PIN_SELECTOR_IDS_OUTPUT, ...PIN_SELECTOR_IDS_INPUT];
+      return ids
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    }
+
+    function updatePinConflictVisualization() {
+      const selectors = collectPinSelectors();
+      const usage = {};
+
+      selectors.forEach(select => {
+        const value = select.value;
+        if (value === '' || value === '-1') return;
+        usage[value] = (usage[value] || 0) + 1;
+      });
+
+      selectors.forEach(select => {
+        const value = select.value;
+        const isConflict = value !== '' && value !== '-1' && usage[value] > 1;
+        select.classList.toggle('pin-conflict', isConflict);
+
+        Array.from(select.options).forEach(option => {
+          const ownClaim = (select.value === option.value) ? 1 : 0;
+          const occupiedByOthers = option.value !== '' && option.value !== '-1' && ((usage[option.value] || 0) - ownClaim) > 0;
+          option.classList.toggle('pin-option-occupied', occupiedByOthers);
+        });
+      });
+    }
+
+    function showStatus(message, isError) {
+      const statusEl = document.getElementById('status');
+      if (!statusEl) return;
+      statusEl.textContent = 'Status: ' + message;
+      statusEl.style.color = isError ? '#ffb3b3' : '#ffffff';
+    }
+
+    function loadComponentRegistry() {
+      try {
+        const raw = localStorage.getItem(componentStorageKey);
+        return raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        console.error('Error loading component registry:', error);
+        return {};
+      }
+    }
+
+    function saveComponentRegistry() {
+      localStorage.setItem(componentStorageKey, JSON.stringify(componentRegistry));
+    }
+
+    function ensureComponentRegistry() {
+      const persisted = loadComponentRegistry();
+      document.querySelectorAll('.tabcontent[data-component]').forEach(tab => {
+        const tabId = tab.id;
+        const componentType = tab.dataset.component;
+        const componentLabel = tab.dataset.label || componentType;
+        const existing = persisted[tabId] || {};
+
+        componentRegistry[tabId] = {
+          componentType,
+          componentLabel,
+          nextId: existing.nextId || 1,
+          activeInstanceId: existing.activeInstanceId || null,
+          instances: Array.isArray(existing.instances) ? existing.instances : []
+        };
+
+        // Ensure active instance is valid
+        const hasActive = componentRegistry[tabId].instances.some(i => i.id === componentRegistry[tabId].activeInstanceId);
+        if (!hasActive) {
+          componentRegistry[tabId].activeInstanceId = componentRegistry[tabId].instances.length > 0
+            ? componentRegistry[tabId].instances[0].id
+            : null;
+        }
+      });
+
+      saveComponentRegistry();
+    }
+
+    function removeComponentInstance(tabId, instanceId) {
+      const state = componentRegistry[tabId];
+      if (!state) return;
+
+      state.instances = state.instances.filter(instance => instance.id !== instanceId);
+      if (state.activeInstanceId === instanceId) {
+        state.activeInstanceId = state.instances.length > 0 ? state.instances[0].id : null;
+      }
+      saveComponentRegistry();
+      renderComponentManager(tabId);
+      showStatus(state.componentLabel + ' Instanz #' + instanceId + ' entfernt');
+    }
+
+    function setActiveComponentInstance(tabId, instanceId) {
+      const state = componentRegistry[tabId];
+      if (!state) return;
+
+      const instance = state.instances.find(i => i.id === instanceId);
+      if (!instance) return;
+
+      state.activeInstanceId = instanceId;
+      saveComponentRegistry();
+      renderComponentManager(tabId);
+      loadPinsFromActiveInstance(tabId);
+      showStatus(state.componentLabel + ' Instanz #' + instanceId + ' ist aktiv');
+    }
+
+    function addComponentInstance(tabId) {
+      const state = componentRegistry[tabId];
+      if (!state) return;
+
+      const instanceId = state.nextId;
+      state.nextId += 1;
+      state.instances.push({
+        id: instanceId,
+        name: state.componentLabel + ' #' + instanceId,
+        pins: {},
+        createdAt: Date.now()
+      });
+
+      if (!state.activeInstanceId) {
+        state.activeInstanceId = instanceId;
+      }
+
+      saveComponentRegistry();
+      renderComponentManager(tabId);
+      showStatus(state.componentLabel + ' Instanz #' + instanceId + ' erstellt');
+    }
+
+    function renderComponentManager(tabId) {
+      const tab = document.getElementById(tabId);
+      const state = componentRegistry[tabId];
+      if (!tab || !state) return;
+
+      // Component manager header/cards are intentionally hidden in all tabs.
+      const existing = document.getElementById('componentManager-' + tabId);
+      if (existing) existing.remove();
+      return;
+
+      let container = document.getElementById('componentManager-' + tabId);
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'componentManager-' + tabId;
+        container.className = 'component-manager';
+
+        const heading = tab.querySelector('h2');
+        if (heading && heading.nextSibling) {
+          tab.insertBefore(container, heading.nextSibling);
+        } else {
+          tab.insertBefore(container, tab.firstChild);
+        }
+      }
+
+      const cards = state.instances.map(instance =>
+        '<div class="component-card">' +
+          '<div>' +
+            '<div class="component-card-name">' + instance.name + '</div>' +
+            '<div class="component-manager-meta">ID: ' + instance.id + (state.activeInstanceId === instance.id ? ' | AKTIV' : '') + '</div>' +
+          '</div>' +
+          '<div style="display:flex; gap:8px; flex-wrap: wrap;">' +
+            '<button class="btn btn-secondary" style="width:auto; padding:8px 12px;" onclick="setActiveComponentInstance(\'' + tabId + '\',' + instance.id + ')">Aktiv</button>' +
+            '<button class="btn btn-danger" style="width:auto; padding:8px 12px;" onclick="removeComponentInstance(\'' + tabId + '\',' + instance.id + ')">Entfernen</button>' +
+          '</div>' +
+        '</div>'
+      ).join('');
+
+      container.innerHTML =
+        '<div class="component-manager-header">' +
+          '<div>' +
+            '<strong>Bauteil-Zuordnung:</strong> ' + state.componentLabel + '<br>' +
+            '<span class="component-manager-meta">Tab: ' + tabId + ' | Typ: ' + state.componentType + '</span>' +
+          '</div>' +
+          '<button class="btn btn-primary" style="width:auto;" onclick="addComponentInstance(\'' + tabId + '\')">+ Neues Bauteil</button>' +
+        '</div>' +
+        '<div class="component-list">' +
+          (cards || '<div class="component-manager-meta">Noch keine Instanzen angelegt.</div>') +
+        '</div>';
+    }
+
+    function getActiveInstance(tabId) {
+      const state = componentRegistry[tabId];
+      if (!state || !state.activeInstanceId) return null;
+      return state.instances.find(i => i.id === state.activeInstanceId) || null;
+    }
+
+    function getPinValuesFromUI(tabId) {
+      const fields = componentPinFieldMap[tabId] || [];
+      const values = {};
+      fields.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el) values[fieldId] = el.value;
+      });
+      return values;
+    }
+
+    function setPinValuesToUI(tabId, values) {
+      const fields = componentPinFieldMap[tabId] || [];
+      fields.forEach(fieldId => {
+        const el = document.getElementById(fieldId);
+        if (el && values[fieldId] !== undefined) {
+          el.value = values[fieldId];
+        }
+      });
+    }
+
+    function savePinsToActiveInstance(tabId) {
+      const state = componentRegistry[tabId];
+      const active = getActiveInstance(tabId);
+      if (!state || !active) {
+        showStatus('Bitte zuerst eine Instanz anlegen und aktiv setzen', true);
+        return false;
+      }
+
+      active.pins = getPinValuesFromUI(tabId);
+      saveComponentRegistry();
+      showStatus('Pins in ' + active.name + ' gespeichert');
+      return true;
+    }
+
+    function loadPinsFromActiveInstance(tabId) {
+      const active = getActiveInstance(tabId);
+      if (!active) {
+        showStatus('Keine aktive Instanz vorhanden', true);
+        return false;
+      }
+
+      setPinValuesToUI(tabId, active.pins || {});
+      showStatus('Pins aus ' + active.name + ' geladen');
+      return true;
+    }
+
+    function applyPinsFromActiveInstance(tabId) {
+      if (!loadPinsFromActiveInstance(tabId)) return;
+
+      if (tabId === 'MotorTab') saveNEMA23Pins();
+      if (tabId === 'Motor28BYJ48Tab') apply28BYJ48PinConfig();
+      if (tabId === 'ServoTab') saveServoPinForActive();
+      if (tabId === 'LEDTab') saveLedPin();
+      if (tabId === 'InfoTab') saveButtonPin();
+    }
+
+    function getActiveServoIdFromInstance() {
+      const active = getActiveInstance('ServoTab');
+      if (!active) return 1;
+      if (active.id >= 1 && active.id <= 3) {
+        return active.id;
+      }
+      return 1;
+    }
+
+    function saveNEMA23PinsForActive() {
+      if (!savePinsToActiveInstance('MotorTab')) return;
+      saveNEMA23Pins();
+    }
+
+    function saveServoPinForActive() {
+      if (!savePinsToActiveInstance('ServoTab')) return;
+      const servoId = getActiveServoIdFromInstance();
+      saveServoPinById(servoId);
+    }
+
+    function saveLedPinForActive() {
+      if (!savePinsToActiveInstance('LEDTab')) return;
+      saveLedPin();
+    }
+
+    function saveButtonPinForActive() {
+      if (!savePinsToActiveInstance('InfoTab')) return;
+      saveButtonPin();
+    }
+
+    function initializeComponentManagers() {
+      ensureComponentRegistry();
+      Object.keys(componentRegistry).forEach(renderComponentManager);
+    }
+
+    function syncMissingInstancePinsFromUI() {
+      Object.keys(componentRegistry).forEach(tabId => {
+        if (!componentPinFieldMap[tabId]) return;
+        const active = getActiveInstance(tabId);
+        if (!active) return;
+
+        if (!active.pins || Object.keys(active.pins).length === 0) {
+          active.pins = getPinValuesFromUI(tabId);
+        }
+      });
+      saveComponentRegistry();
+    }
     
     // Tab-Funktionalität
     function openTab(evt, tabName) {
@@ -693,6 +1181,16 @@ const char html[] PROGMEM = R"rawliteral(
         loadDeviceInfo();
         loadPinConfig();
       }
+      
+      // Refresh button status when Info tab is opened
+      if (tabName === 'InfoTab') {
+        refreshButtonStatus();
+      }
+
+      // Keep component manager in sync with the active tab
+      renderComponentManager(tabName);
+
+      // Pin fields are sourced from device config only (no local profile overwrite).
     }
     
     // Update motor status automatically with dynamic interval
@@ -720,6 +1218,8 @@ const char html[] PROGMEM = R"rawliteral(
     
     // Page Load Event
     document.addEventListener('DOMContentLoaded', function() {
+      initializeComponentManagers();
+      setupPinSelectors();
       updateColorPreview();
       refreshButtonStatus();
       updateMotorStatus();
@@ -740,7 +1240,8 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function updateMotorStatus() {
-      fetch('/motorStatus')
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
+      fetch('/motorStatus?motorId=' + motorId)
         .then(response => response.json())
         .then(data => {
           document.getElementById('currentPosition').textContent = data.currentPosition || 0;
@@ -779,12 +1280,13 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function moveToPosition() {
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
       const position = parseInt(document.getElementById('positionInput').value) || 0;
       const speed = parseInt(document.getElementById('speedSlider').value) || 60;
       
       document.getElementById('status').innerHTML = 'Status: Motor moving to position ' + position + '...';
       
-      fetch('/advancedMotor?action=moveTo&position=' + position + '&speed=' + speed)
+      fetch('/advancedMotor?motorId=' + motorId + '&action=moveTo&position=' + position + '&speed=' + speed)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -796,11 +1298,12 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function moveRelative(steps) {
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
       const speed = parseInt(document.getElementById('speedSlider').value); 
       
       document.getElementById('status').innerHTML = 'Status: Motor moving ' + steps + ' steps...';
       
-      fetch('/advancedMotor?action=moveRelative&steps=' + steps + '&speed=' + speed)
+      fetch('/advancedMotor?motorId=' + motorId + '&action=moveRelative&steps=' + steps + '&speed=' + speed)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -829,12 +1332,13 @@ const char html[] PROGMEM = R"rawliteral(
     // }
     
     function homeToButton() {
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
       document.getElementById('status').innerHTML = 'Status: Motor homing to button position...';
       
       // Geschwindigkeit vom Speed-Slider übernehmen
       const speed = document.getElementById('speedSlider').value;
       
-      fetch('/motorHome?speed=' + speed + '&type=button')
+      fetch('/motorHome?motorId=' + motorId + '&speed=' + speed + '&type=button')
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -846,6 +1350,7 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function passButtonTimes() {
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
       const count = parseInt(document.getElementById('passCountInput').value) || 10;
       const speed = document.getElementById('speedSlider').value;
       
@@ -860,7 +1365,7 @@ const char html[] PROGMEM = R"rawliteral(
       isPassingActive = true;
       restartMotorStatusUpdates();
       
-      fetch('/passButton?count=' + count + '&speed=' + speed)
+      fetch('/passButton?motorId=' + motorId + '&count=' + count + '&speed=' + speed)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -896,9 +1401,10 @@ const char html[] PROGMEM = R"rawliteral(
 
     
     function stopMotor() {
+      const motorId = parseInt(document.getElementById('motorIdSelect').value) || 1;
       document.getElementById('status').innerHTML = 'Status: Motor stopping...';
       
-      fetch('/motorStop')
+      fetch('/motorStop?motorId=' + motorId)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -919,10 +1425,11 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function setServoAngle() {
+      const servoId = parseInt(document.getElementById('servoIdSelect').value) || 1;
       const angle = document.getElementById('servoSlider').value;
-      document.getElementById('status').innerHTML = 'Status: Servo positioning...';
+      document.getElementById('status').innerHTML = 'Status: Servo ' + servoId + ' positioning...';
       
-      fetch('/setServo?angle=' + angle)
+      fetch('/setServo?servoId=' + servoId + '&angle=' + angle)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -945,9 +1452,10 @@ const char html[] PROGMEM = R"rawliteral(
     
     function setBrightness() {
       const brightness = document.getElementById('brightnessSlider').value;
+      const ledId = parseInt(document.getElementById('ledIdSelect').value) || 1;
       document.getElementById('status').innerHTML = 'Status: Setting brightness...';
       
-      fetch('/setBrightness?value=' + brightness)
+      fetch('/setBrightness?ledId=' + ledId + '&value=' + brightness)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -967,8 +1475,9 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function changeColor(colorIndex) {
+      const ledId = parseInt(document.getElementById('ledIdSelect').value) || 1;
       document.getElementById('status').innerHTML = 'Status: Changing color...';
-      fetch('/color?index=' + colorIndex)
+      fetch('/color?ledId=' + ledId + '&index=' + colorIndex)
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -979,13 +1488,14 @@ const char html[] PROGMEM = R"rawliteral(
     }
     
     function changeHexColor() {
+      const ledId = parseInt(document.getElementById('ledIdSelect').value) || 1;
       var hexValue = document.getElementById('hexInput').value;
       if (hexValue.charAt(0) !== '#') {
         hexValue = '#' + hexValue;
       }
       
       document.getElementById('status').innerHTML = 'Status: Changing color...';
-      fetch('/hexcolor?hex=' + encodeURIComponent(hexValue))
+      fetch('/hexcolor?ledId=' + ledId + '&hex=' + encodeURIComponent(hexValue))
         .then(response => response.text())
         .then(data => {
           document.getElementById('status').innerHTML = 'Status: ' + data;
@@ -1434,36 +1944,73 @@ const char html[] PROGMEM = R"rawliteral(
     });
 
     // Pin Configuration Functions
+    function setInputValueIfExists(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    }
+
     function loadPinConfig() {
       fetch('/pinConfig')
         .then(response => response.json())
         .then(data => {
           // 28BYJ-48 Motor
-          document.getElementById('cfg_m28_p1').value = data.motor_28byj48.pin1;
-          document.getElementById('cfg_m28_p2').value = data.motor_28byj48.pin2;
-          document.getElementById('cfg_m28_p3').value = data.motor_28byj48.pin3;
-          document.getElementById('cfg_m28_p4').value = data.motor_28byj48.pin4;
+          setInputValueIfExists('pin28byj48_1', data.motor_28byj48.pin1);
+          setInputValueIfExists('pin28byj48_2', data.motor_28byj48.pin2);
+          setInputValueIfExists('pin28byj48_3', data.motor_28byj48.pin3);
+          setInputValueIfExists('pin28byj48_4', data.motor_28byj48.pin4);
+          setInputValueIfExists('cfg_m28_p1', data.motor_28byj48.pin1);
+          setInputValueIfExists('cfg_m28_p2', data.motor_28byj48.pin2);
+          setInputValueIfExists('cfg_m28_p3', data.motor_28byj48.pin3);
+          setInputValueIfExists('cfg_m28_p4', data.motor_28byj48.pin4);
           
           // NEMA 23 Motor
-          document.getElementById('cfg_nema_step').value = data.nema23.step;
-          document.getElementById('cfg_nema_dir').value = data.nema23.dir;
-          document.getElementById('cfg_nema_en').value = data.nema23.enable;
+          if (typeof data.nema23 === 'object' && data.nema23 !== null) {
+            setInputValueIfExists('cfg_nema_step_1', data.nema23.step1);
+            setInputValueIfExists('cfg_nema_dir_1', data.nema23.dir1);
+            setInputValueIfExists('cfg_nema_en_1', data.nema23.enable1);
+            setInputValueIfExists('cfg_nema_step_2', data.nema23.step2);
+            setInputValueIfExists('cfg_nema_dir_2', data.nema23.dir2);
+            setInputValueIfExists('cfg_nema_en_2', data.nema23.enable2);
+            setInputValueIfExists('cfg_nema_step_3', data.nema23.step3);
+            setInputValueIfExists('cfg_nema_dir_3', data.nema23.dir3);
+            setInputValueIfExists('cfg_nema_en_3', data.nema23.enable3);
+          }
           
           // Servo
-          document.getElementById('cfg_servo_p').value = data.servo;
+          if (typeof data.servo === 'object' && data.servo !== null) {
+            setInputValueIfExists('cfg_servo_p_1', data.servo.pin1);
+            setInputValueIfExists('cfg_servo_p_2', data.servo.pin2);
+            setInputValueIfExists('cfg_servo_p_3', data.servo.pin3);
+          } else {
+            setInputValueIfExists('cfg_servo_p_1', data.servo);
+          }
           
           // LED
-          document.getElementById('cfg_led_p').value = data.led;
+          if (typeof data.led === 'object' && data.led !== null) {
+            setInputValueIfExists('cfg_led_p_1', data.led.pin1);
+            setInputValueIfExists('cfg_led_p_2', data.led.pin2);
+            setInputValueIfExists('cfg_led_p_3', data.led.pin3);
+            setInputValueIfExists('cfg_led_c_1', data.led.count1);
+            setInputValueIfExists('cfg_led_c_2', data.led.count2);
+            setInputValueIfExists('cfg_led_c_3', data.led.count3);
+          } else {
+            setInputValueIfExists('cfg_led_p_1', data.led);
+          }
           
           // Button
-          document.getElementById('cfg_btn_p').value = data.button;
+          setInputValueIfExists('cfg_btn_p', data.button);
           
           // WiFi
           if (data.wifi) {
-            document.getElementById('cfg_wifi_ssid').value = data.wifi.ssid || '';
-            document.getElementById('cfg_wifi_password').value = data.wifi.password || '';
-            document.getElementById('cfg_wifi_hostname').value = data.wifi.hostname || '';
+            setInputValueIfExists('cfg_wifi_ssid', data.wifi.ssid || '');
+            setInputValueIfExists('cfg_wifi_password', data.wifi.password || '');
+            setInputValueIfExists('cfg_wifi_hostname', data.wifi.hostname || '');
           }
+
+          updatePinConflictVisualization();
+
+          syncMissingInstancePinsFromUI();
+          Object.keys(componentRegistry).forEach(renderComponentManager);
         })
         .catch(error => {
           console.error('Error loading pin config:', error);
@@ -1472,10 +2019,10 @@ const char html[] PROGMEM = R"rawliteral(
     }
 
     function save28BYJ48Pins() {
-      const pin1 = document.getElementById('cfg_m28_p1').value;
-      const pin2 = document.getElementById('cfg_m28_p2').value;
-      const pin3 = document.getElementById('cfg_m28_p3').value;
-      const pin4 = document.getElementById('cfg_m28_p4').value;
+      const pin1 = document.getElementById('pin28byj48_1').value;
+      const pin2 = document.getElementById('pin28byj48_2').value;
+      const pin3 = document.getElementById('pin28byj48_3').value;
+      const pin4 = document.getElementById('pin28byj48_4').value;
       
       const formData = new FormData();
       formData.append('component', 'motor_28byj48');
@@ -1496,12 +2043,13 @@ const char html[] PROGMEM = R"rawliteral(
     }
 
     function saveNEMA23Pins() {
-      const stepPin = document.getElementById('cfg_nema_step').value;
-      const dirPin = document.getElementById('cfg_nema_dir').value;
-      const enablePin = document.getElementById('cfg_nema_en').value;
+      const stepPin = document.getElementById('cfg_nema_step_1').value;
+      const dirPin = document.getElementById('cfg_nema_dir_1').value;
+      const enablePin = document.getElementById('cfg_nema_en_1').value;
       
       const formData = new FormData();
       formData.append('component', 'nema23');
+      formData.append('motorId', '1');
       formData.append('stepPin', stepPin);
       formData.append('dirPin', dirPin);
       formData.append('enablePin', enablePin);
@@ -1517,11 +2065,35 @@ const char html[] PROGMEM = R"rawliteral(
         });
     }
 
+    function saveNEMA23PinsById(motorId) {
+      const stepPin = document.getElementById('cfg_nema_step_' + motorId).value;
+      const dirPin = document.getElementById('cfg_nema_dir_' + motorId).value;
+      const enablePin = document.getElementById('cfg_nema_en_' + motorId).value;
+
+      const formData = new FormData();
+      formData.append('component', 'nema23');
+      formData.append('motorId', String(motorId));
+      formData.append('stepPin', stepPin);
+      formData.append('dirPin', dirPin);
+      formData.append('enablePin', enablePin);
+
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
     function saveServoPin() {
-      const pin = document.getElementById('cfg_servo_p').value;
+      const pin = document.getElementById('cfg_servo_p_1').value;
       
       const formData = new FormData();
       formData.append('component', 'servo');
+      formData.append('servoId', '1');
       formData.append('pin', pin);
       
       fetch('/savePinConfig', { method: 'POST', body: formData })
@@ -1535,13 +2107,69 @@ const char html[] PROGMEM = R"rawliteral(
         });
     }
 
+    function saveServoPinById(servoId) {
+      const field = document.getElementById('cfg_servo_p_' + servoId);
+      if (!field) {
+        showStatus('Servo-Pin Feld nicht gefunden', true);
+        return;
+      }
+
+      const pin = field.value;
+
+      const formData = new FormData();
+      formData.append('component', 'servo');
+      formData.append('servoId', String(servoId));
+      formData.append('pin', pin);
+
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
     function saveLedPin() {
-      const pin = document.getElementById('cfg_led_p').value;
+      const pin = document.getElementById('cfg_led_p_1').value;
+      const count = document.getElementById('cfg_led_c_1').value;
       
       const formData = new FormData();
       formData.append('component', 'led');
+      formData.append('ledId', '1');
       formData.append('pin', pin);
+      formData.append('count', count);
       
+      fetch('/savePinConfig', { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          showStatus(data);
+          loadPinConfig();
+        })
+        .catch(error => {
+          showStatus('Fehler beim Speichern', true);
+        });
+    }
+
+    function saveLedPinById(ledId) {
+      const pinField = document.getElementById('cfg_led_p_' + ledId);
+      const countField = document.getElementById('cfg_led_c_' + ledId);
+      if (!pinField || !countField) {
+        showStatus('LED-Felder nicht gefunden', true);
+        return;
+      }
+
+      const pin = pinField.value;
+      const count = countField.value;
+
+      const formData = new FormData();
+      formData.append('component', 'led');
+      formData.append('ledId', String(ledId));
+      formData.append('pin', pin);
+      formData.append('count', count);
+
       fetch('/savePinConfig', { method: 'POST', body: formData })
         .then(response => response.text())
         .then(data => {
@@ -1603,6 +2231,43 @@ const char html[] PROGMEM = R"rawliteral(
         arrow.classList.add('active');
       }
     }
+
+    function openPinoutZoom(src) {
+      const modal = document.getElementById('pinoutModal');
+      const img = document.getElementById('pinoutModalImage');
+      if (!modal || !img) return;
+
+      pinoutZoomLevel = 1;
+      img.src = src;
+      img.style.transform = 'scale(1)';
+      modal.classList.add('active');
+    }
+
+    function closePinoutZoom(event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      const modal = document.getElementById('pinoutModal');
+      if (!modal) return;
+      modal.classList.remove('active');
+    }
+
+    document.addEventListener('wheel', function(event) {
+      const modal = document.getElementById('pinoutModal');
+      const img = document.getElementById('pinoutModalImage');
+      if (!modal || !img || !modal.classList.contains('active')) return;
+
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 0.12 : -0.12;
+      pinoutZoomLevel = Math.min(6, Math.max(1, pinoutZoomLevel + delta));
+      img.style.transform = 'scale(' + pinoutZoomLevel.toFixed(2) + ')';
+    }, { passive: false });
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closePinoutZoom();
+      }
+    });
 
     function saveWiFiConfig() {
       const ssid = document.getElementById('cfg_wifi_ssid').value;
@@ -1785,9 +2450,13 @@ void handleRoot() {
 // Handle color change request with predefined colors
 void handleColorChange() {
   if (server.hasArg("index")) {
+    int ledId = server.hasArg("ledId") ? server.arg("ledId").toInt() : 1;
     int colorIndex = server.arg("index").toInt();
-    setColorByIndex(colorIndex);
-    server.send(200, "text/plain", "Color changed to index " + String(colorIndex));
+    if (!setColorByIndexForLed(ledId, colorIndex)) {
+      server.send(400, "text/plain", "Invalid ledId (1..3)");
+      return;
+    }
+    server.send(200, "text/plain", "LED output " + String(ledId) + " color changed to index " + String(colorIndex));
   } else {
     server.send(400, "text/plain", "Missing 'index' parameter");
   }
@@ -1796,6 +2465,7 @@ void handleColorChange() {
 // Handle hex color change request
 void handleHexColorChange() {
   if (server.hasArg("hex")) {
+    int ledId = server.hasArg("ledId") ? server.arg("ledId").toInt() : 1;
     String hexColor = server.arg("hex");
     
     // Remove # if present
@@ -1810,9 +2480,12 @@ void handleHexColorChange() {
     int b = rgbColor & 0xFF;
     
     // Set color
-    setColorRGB(r, g, b);
+    if (!setColorRGBForLed(ledId, r, g, b)) {
+      server.send(400, "text/plain", "Invalid ledId (1..3)");
+      return;
+    }
     
-    server.send(200, "text/plain", "Color changed to #" + hexColor);
+    server.send(200, "text/plain", "LED output " + String(ledId) + " color changed to #" + hexColor);
   } else {
     server.send(400, "text/plain", "Missing 'hex' parameter");
   }
@@ -1821,9 +2494,13 @@ void handleHexColorChange() {
 // Handle servo control request
 void handleServoControl() {
   if (server.hasArg("angle")) {
+    int servoId = server.hasArg("servoId") ? server.arg("servoId").toInt() : 1;
     int angle = server.arg("angle").toInt();
-    setServoAngle(angle);  // Function from servo_control.h
-    server.send(200, "text/plain", "Servo positioned to " + String(angle) + " degrees");
+    if (!setServoAngleById(servoId, angle)) {
+      server.send(400, "text/plain", "Invalid servoId (1..3)");
+      return;
+    }
+    server.send(200, "text/plain", "Servo " + String(servoId) + " positioned to " + String(angle) + " degrees");
   } else {
     server.send(400, "text/plain", "Missing 'angle' parameter");
   }
@@ -1870,10 +2547,14 @@ void handleGetButtonState() {
 // Handle LED brightness control
 void handleBrightness() {
   if (server.hasArg("value")) {
+    int ledId = server.hasArg("ledId") ? server.arg("ledId").toInt() : 1;
     int brightness = server.arg("value").toInt();
     brightness = constrain(brightness, 0, 255);
-    setBrightness(brightness);
-    server.send(200, "text/plain", "Brightness set to " + String(brightness));
+    if (!setBrightnessForLed(ledId, brightness)) {
+      server.send(400, "text/plain", "Invalid ledId (1..3)");
+      return;
+    }
+    server.send(200, "text/plain", "LED output " + String(ledId) + " brightness set to " + String(brightness));
   } else {
     server.send(400, "text/plain", "Missing 'value' parameter");
   }
@@ -1886,28 +2567,30 @@ void handleAdvancedMotorControl() {
     return;
   }
   
+  uint8_t motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
+  AdvancedStepperMotor& motor = getAdvancedMotorById(motorId);
   String action = server.arg("action");
   
   if (action == "moveTo" && server.hasArg("position")) {
     int position = server.arg("position").toInt();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
     
-    advancedMotor.setSpeed(speed);
-    advancedMotor.moveTo(position);
+    motor.setSpeed(speed);
+    motor.moveTo(position);
     
-    server.send(200, "text/plain", "Motor moved to position " + String(position));
+    server.send(200, "text/plain", "Motor " + String(motorId) + " moved to position " + String(position));
     
   } else if (action == "moveRelative" && server.hasArg("steps")) {
     int steps = server.arg("steps").toInt();
     int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
     
-    advancedMotor.setSpeed(speed);
-    advancedMotor.moveRelative(steps);
+    motor.setSpeed(speed);
+    motor.moveRelative(steps);
     
-    server.send(200, "text/plain", "Motor moved " + String(steps) + " steps");
+    server.send(200, "text/plain", "Motor " + String(motorId) + " moved " + String(steps) + " steps");
     
   } else if (action == "setHome") {
-    advancedMotor.setHome();
+    motor.setHome();
     server.send(200, "text/plain", "Home position set");
     server.send(200, "text/plain", "Emergency stop executed");
     
@@ -1917,7 +2600,8 @@ void handleAdvancedMotorControl() {
 }
 
 void handleAdvancedMotorStatus() {
-  AdvancedMotorStatus status = advancedMotor.getStatus();
+  uint8_t motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
+  AdvancedMotorStatus status = getAdvancedMotorById(motorId).getStatus();
   
   String jsonResponse = "{"
     "\"currentPosition\":" + String(status.currentPosition) + ","
@@ -1935,11 +2619,14 @@ void handleAdvancedMotorStatus() {
 }
 
 void handleAdvancedMotorStop() {
-  advancedMotor.stop();
-  server.send(200, "text/plain", "Motor stopped");
+  uint8_t motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
+  getAdvancedMotorById(motorId).stop();
+  server.send(200, "text/plain", "Motor " + String(motorId) + " stopped");
 }
 
 void handleAdvancedMotorHome() {
+  uint8_t motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
+  AdvancedStepperMotor& motor = getAdvancedMotorById(motorId);
   // Geschwindigkeit setzen (gleiche Logik wie moveRelative)
   int speed = server.hasArg("speed") ? server.arg("speed").toInt() : 60;
   
@@ -1948,21 +2635,21 @@ void handleAdvancedMotorHome() {
   
   Serial.println("Home mit Speed: " + String(speed) + " RPM, Type: " + homeType);
   
-  advancedMotor.setSpeed(speed);
+  motor.setSpeed(speed);
   
   if (homeType == "button") {
     // Neue Button-basierte Home-Fahrt
     Serial.println("Starte Button-basierte Home-Fahrt");
-    advancedMotor.homeToButton();
-    server.send(200, "text/plain", "Motor homed to button position");
+    motor.homeToButton();
+    server.send(200, "text/plain", "Motor " + String(motorId) + " homed to button position");
   } else {
     // Alte Methode: Vereinfachte Home-Position: Fahre zu Position 0
-    int currentPos = advancedMotor.getCurrentPosition();
+    int currentPos = motor.getCurrentPosition();
     int stepsToHome = -currentPos;  // Anzahl Schritte zu Position 0
     Serial.println("Fahre zur Home-Position (0): " + String(stepsToHome) + " Schritte");
-    advancedMotor.moveRelative(stepsToHome);
-    advancedMotor.setHome();  // Position als Home markieren
-    server.send(200, "text/plain", "Motor moved to home position");
+    motor.moveRelative(stepsToHome);
+    motor.setHome();  // Position als Home markieren
+    server.send(200, "text/plain", "Motor " + String(motorId) + " moved to home position");
   }
 }
 
@@ -1980,6 +2667,8 @@ void handleSetHomingMode() {
 }
 
 void handlePassButton() {
+  uint8_t motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
+  AdvancedStepperMotor& motor = getAdvancedMotorById(motorId);
   // Überprüfe ob count Parameter vorhanden ist
   if (!server.hasArg("count")) {
     server.send(400, "text/plain", "Missing count parameter");
@@ -2003,8 +2692,9 @@ void handlePassButton() {
   Serial.println("Button-Pass-Fahrt mit Count: " + String(count) + ", Speed: " + String(speed) + " RPM");
   
   // Geschwindigkeit setzen und Button-Pass-Fahrt starten
-  advancedMotor.setSpeed(speed);
-  server.send(200, "text/plain", "Pass button command received");
+  motor.setSpeed(speed);
+  motor.passButtonTimes(count);
+  server.send(200, "text/plain", "Motor " + String(motorId) + " pass button command executed");
 }
 
 // 28BYJ-48 Motor Control Handler
@@ -2230,11 +2920,24 @@ void handlePinConfig() {
     ",\"pin2\":" + String(config.motor_28byj48_pin2) + 
     ",\"pin3\":" + String(config.motor_28byj48_pin3) + 
     ",\"pin4\":" + String(config.motor_28byj48_pin4) + "},"
-    "\"nema23\":{\"step\":" + String(config.nema23_step_pin) + 
-    ",\"dir\":" + String(config.nema23_dir_pin) + 
-    ",\"enable\":" + String(config.nema23_enable_pin) + "},"
-    "\"servo\":" + String(config.servo_pin) + ","
-    "\"led\":" + String(config.led_pin) + ","
+    "\"nema23\":{\"step1\":" + String(config.nema23_step_pins[0]) +
+    ",\"dir1\":" + String(config.nema23_dir_pins[0]) +
+    ",\"enable1\":" + String(config.nema23_enable_pins[0]) +
+    ",\"step2\":" + String(config.nema23_step_pins[1]) +
+    ",\"dir2\":" + String(config.nema23_dir_pins[1]) +
+    ",\"enable2\":" + String(config.nema23_enable_pins[1]) +
+    ",\"step3\":" + String(config.nema23_step_pins[2]) +
+    ",\"dir3\":" + String(config.nema23_dir_pins[2]) +
+    ",\"enable3\":" + String(config.nema23_enable_pins[2]) + "},"
+    "\"servo\":{\"pin1\":" + String(config.servo_pins[0]) +
+    ",\"pin2\":" + String(config.servo_pins[1]) +
+    ",\"pin3\":" + String(config.servo_pins[2]) + "},"
+    "\"led\":{\"pin1\":" + String(config.led_pins[0]) +
+    ",\"pin2\":" + String(config.led_pins[1]) +
+    ",\"pin3\":" + String(config.led_pins[2]) +
+    ",\"count1\":" + String(config.led_counts[0]) +
+    ",\"count2\":" + String(config.led_counts[1]) +
+    ",\"count3\":" + String(config.led_counts[2]) + "},"
     "\"button\":" + String(config.button_pin) + ","
     "\"wifi\":{\"ssid\":\"" + String(config.wifi_ssid) + 
     "\",\"password\":\"" + String(config.wifi_password) + 
@@ -2268,34 +2971,54 @@ void handleSavePinConfig() {
     } 
     else if (component == "nema23") {
       if (server.hasArg("stepPin") && server.hasArg("dirPin") && server.hasArg("enablePin")) {
+        int motorId = server.hasArg("motorId") ? server.arg("motorId").toInt() : 1;
         int stepPin = server.arg("stepPin").toInt();
         int dirPin = server.arg("dirPin").toInt();
         int enablePin = server.arg("enablePin").toInt();
         
-        setNEMA23Pins(stepPin, dirPin, enablePin);
-        server.send(200, "text/plain", "NEMA 23 Motor Pins gespeichert (Neustart erforderlich)");
+        setNEMA23PinsById(motorId, stepPin, dirPin, enablePin);
+        if (!configureAdvancedMotorPinsById(motorId, stepPin, dirPin, enablePin)) {
+          server.send(400, "text/plain", "Invalid motorId (1..3)");
+          return;
+        }
+        server.send(200, "text/plain", "NEMA 23 Motor " + String(motorId) + " Pins gespeichert und angewendet");
       } else {
         server.send(400, "text/plain", "Missing pin parameters");
       }
     }
     else if (component == "servo") {
       if (server.hasArg("pin")) {
+        int servoId = server.hasArg("servoId") ? server.arg("servoId").toInt() : 1;
         int pin = server.arg("pin").toInt();
-        setServoPin(pin);
+
+        if (!isValidOutputPinForServo(pin)) {
+          server.send(400, "text/plain", "Ungueltiger Servo-Pin (kein outputfaehiger GPIO)");
+          return;
+        }
+
+        if (!reconfigureServoPin(servoId, pin)) {
+          server.send(400, "text/plain", "Invalid servoId (1..3)");
+          return;
+        }
+
+        setServoPinById(servoId, pin);
         
-        // Servo neu initialisieren mit neuem Pin
-        setupServo();
-        
-        server.send(200, "text/plain", "Servo Pin gespeichert und angewendet");
+        server.send(200, "text/plain", "Servo " + String(servoId) + " Pin gespeichert und angewendet");
       } else {
         server.send(400, "text/plain", "Missing pin parameter");
       }
     }
     else if (component == "led") {
       if (server.hasArg("pin")) {
+        int ledId = server.hasArg("ledId") ? server.arg("ledId").toInt() : 1;
         int pin = server.arg("pin").toInt();
-        setLedPin(pin);
-        server.send(200, "text/plain", "LED Pin gespeichert (Neustart erforderlich)");
+        int count = server.hasArg("count") ? server.arg("count").toInt() : 1;
+
+        setLedPinById(ledId, pin);
+        setLedCountById(ledId, count);
+        setupLEDs();
+
+        server.send(200, "text/plain", "LED Output " + String(ledId) + " Pin/Count gespeichert und angewendet");
       } else {
         server.send(400, "text/plain", "Missing pin parameter");
       }
@@ -2390,8 +3113,19 @@ void handleGetPinConfig() {
   json += "\"pin3\":" + String(config.motor_28byj48_pin3) + ",";
   json += "\"pin4\":" + String(config.motor_28byj48_pin4);
   json += "},";
-  json += "\"servo\":" + String(config.servo_pin) + ",";
-  json += "\"led\":" + String(config.led_pin) + ",";
+  json += "\"servo\":{";
+  json += "\"pin1\":" + String(config.servo_pins[0]) + ",";
+  json += "\"pin2\":" + String(config.servo_pins[1]) + ",";
+  json += "\"pin3\":" + String(config.servo_pins[2]);
+  json += "},";
+  json += "\"led\":{";
+  json += "\"pin1\":" + String(config.led_pins[0]) + ",";
+  json += "\"pin2\":" + String(config.led_pins[1]) + ",";
+  json += "\"pin3\":" + String(config.led_pins[2]) + ",";
+  json += "\"count1\":" + String(config.led_counts[0]) + ",";
+  json += "\"count2\":" + String(config.led_counts[1]) + ",";
+  json += "\"count3\":" + String(config.led_counts[2]);
+  json += "},";
   json += "\"button\":" + String(config.button_pin);
   json += "}";
   
@@ -2401,13 +3135,22 @@ void handleGetPinConfig() {
 // Set Servo Pin
 void handleSetServoPin() {
   if (server.hasArg("pin")) {
+    int servoId = server.hasArg("servoId") ? server.arg("servoId").toInt() : 1;
     int pin = server.arg("pin").toInt();
+
+    if (!isValidOutputPinForServo(pin)) {
+      server.send(400, "text/plain", "Ungueltiger Servo-Pin (kein outputfaehiger GPIO)");
+      return;
+    }
+
+    Serial.printf("Setze Servo %d Pin auf GPIO %d\n", servoId, pin);
+    if (!reconfigureServoPin(servoId, pin)) {
+      server.send(400, "text/plain", "Invalid servoId (1..3)");
+      return;
+    }
+    setServoPinById(servoId, pin);
     
-    Serial.printf("Setze Servo Pin auf GPIO %d\n", pin);
-    setServoPin(pin);
-    setupServo();  // Hardware neu initialisieren
-    
-    server.send(200, "text/plain", "Servo Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
+    server.send(200, "text/plain", "Servo " + String(servoId) + " Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
   } else {
     server.send(400, "text/plain", "Fehlender 'pin' Parameter");
   }
@@ -2416,13 +3159,16 @@ void handleSetServoPin() {
 // Set LED Pin
 void handleSetLedPin() {
   if (server.hasArg("pin")) {
+    int ledId = server.hasArg("ledId") ? server.arg("ledId").toInt() : 1;
     int pin = server.arg("pin").toInt();
+    int count = server.hasArg("count") ? server.arg("count").toInt() : getLedCountById(ledId);
     
-    Serial.printf("Setze LED Pin auf GPIO %d\n", pin);
-    setLedPin(pin);
+    Serial.printf("Setze LED Output %d Pin auf GPIO %d (count=%d)\n", ledId, pin, count);
+    setLedPinById(ledId, pin);
+    setLedCountById(ledId, count);
     setupLEDs();  // Hardware neu initialisieren
     
-    server.send(200, "text/plain", "LED Pin auf GPIO " + String(pin) + " gesetzt und im EEPROM gespeichert");
+    server.send(200, "text/plain", "LED Output " + String(ledId) + " Pin auf GPIO " + String(pin) + " (Count=" + String(count) + ") gesetzt und im EEPROM gespeichert");
   } else {
     server.send(400, "text/plain", "Fehlender 'pin' Parameter");
   }
